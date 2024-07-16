@@ -1,4 +1,0 @@
-The parameter latitude is mentioned several times. Please check the input file!
-The parameter longitude is mentioned several times. Please check the input file!
-The parameter reproducibleResults is mentioned several times. Please check the input file!
-The parameter randomNumberGeneratorSeed is mentioned several times. Please check the input file!
