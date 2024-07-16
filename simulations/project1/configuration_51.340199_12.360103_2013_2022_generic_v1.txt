@@ -1,0 +1,83 @@
+# =============================================================================
+# 		Simulation location	
+# =============================================================================
+
+deimsID	102ae489-04e3-481d-97df-45905837dc1a
+\datatype:string
+\description:DEIMS.ID of the simulated site
+\details:NA if not available
+
+latitude	51.340199
+\datatype:float
+\unit:coordinate
+\description:latitude of the local site which is simulated
+\details:six digits of precision
+
+longitude	12.360103
+\datatype:float
+\unit:coordinate
+\description:longitude of the local site which is simulated
+\details:six digits of precision
+
+# =============================================================================
+# 		Simulation Time	
+# =============================================================================
+
+firstYear	2013
+\datatype:integer
+\unit:year
+\description:Year at which the simulation starts (1st January)
+
+lastYear	2022
+\datatype:integer
+\unit:year
+\description:Year at which the simulation ends (31th December)
+		
+# =============================================================================
+# 		Input files for model simulation  
+# =============================================================================	
+
+weatherFile	weather_51.340199_12.360103_2013_2022.txt
+\datatype:string
+\description:File name of daily weather data 
+
+soilFile	soil_51.340199_12.360103_referenceYear2020.txt
+\datatype:string
+\description:File name of soil properties 
+
+managementFile	management_51.340199_12.360103_2013_2022.txt
+\datatype:string
+\description:File name of management actions (sowing, mowing, fertilization, irrigation)
+	
+speciesFile	BioDT-generic/parameters_generic_v1.txt
+\datatype:string
+\description:File name of model parameters for species or plant functional types 
+
+# =============================================================================
+# 		Output files of simulation results (and settings)  
+# =============================================================================	
+
+outputFile	true
+\datatype:boolean
+\description:Select if the output file is written to the created results folder
+
+outputWritingDatesFile	outputWritingDates_51.340199_12.360103_2013_2022.txt
+\datatype:string
+\description:File name of selected dates at which simulation results should be written
+\details:if no file is given (NA), output is written every day of the simulation time
+
+clippingHeightForBiomassCalibration	0.0
+\datatype:float
+\unit:meter
+\description:Clipping height of biomass measurements if used for model calibration with real data
+
+reproducibleResults	true
+\datatype:boolean
+\description: De-/Activation of reproducible simulation results. 
+\details:Value = true: simulation results are reproducible (randomNumberGeneratorSeed is used as initializer for generating random numbers). 
+\details:Value = false: simulation results are not reproducible (local machine time is used as initializer)
+
+randomNumberGeneratorSeed	0
+\datatype:integer
+\description:Initializer for the random number generator. Only needed if reproducibleResults is set true
+
