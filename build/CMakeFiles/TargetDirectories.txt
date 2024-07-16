@@ -1,0 +1,3 @@
+C:/Users/taubert/Desktop/uGRASSMIND3.0/build/CMakeFiles/grassmind.dir
+C:/Users/taubert/Desktop/uGRASSMIND3.0/build/CMakeFiles/edit_cache.dir
+C:/Users/taubert/Desktop/uGRASSMIND3.0/build/CMakeFiles/rebuild_cache.dir
