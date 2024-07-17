@@ -22,8 +22,8 @@ public:
     std::vector<std::string> configParameterNames =
         {"deimsID", "latitude", "longitude", "lastYear", "firstYear",
          "weatherFile", "soilFile", "managementFile", "speciesFile",
-         "outputFile", "outputWritingDatesFile", "clippingHeightForBiomassCalibration",
-         "reproducibleResults", "randomNumberGeneratorSeed"};
+         "outputFile", "outputWritingDatesFile", /*"clippingHeightForBiomassCalibration",*/
+         "randomNumberGeneratorSeed"};
 
     std::string deimsID;
     float latitude;
@@ -36,8 +36,7 @@ public:
     std::string speciesFile;
     bool outputFile;
     std::string outputWritingDatesFile;
-    float clippingHeightForBiomassCalibration;
-    bool reproducibleResults;
+    // float clippingHeightForBiomassCalibration;
     int randomNumberGeneratorSeed;
 
     // **** parameters of the species file **** //

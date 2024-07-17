@@ -37,10 +37,11 @@ void INIT::initTimeVariables(PARAMETER &parameter)
 /* initialization of random number generator seed */
 void INIT::initRandomNumberGeneratorSeed(PARAMETER &parameter, COMMUNITY &community)
 {
-    if (!parameter.reproducibleResults)
+    if (parameter.randomNumberGeneratorSeed == -9999)
     {
         std::random_device rd; // seed generator
         parameter.randomNumberGeneratorSeed = rd();
+        // written to stdout.txt (printSimulationSettingsToConsole)
     }
 
     community.randomNumberIndex = parameter.randomNumberGeneratorSeed;

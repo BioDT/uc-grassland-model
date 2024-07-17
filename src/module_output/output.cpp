@@ -166,11 +166,9 @@ void OUTPUT::printSimulationSettingsToConsole(PARAMETER parameter)
     std::cout << "******* Simulation output writing *********" << std::endl
               << std::endl;
 
-    std::string yesNo = (parameter.reproducibleResults == true) ? "Yes" : "No";
-    std::string seed = (parameter.reproducibleResults == true) ? (" (seed = " + std::to_string(parameter.randomNumberGeneratorSeed) + ")") : "";
-    std::cout << "Reproducible simulation output? " << yesNo << seed << std::endl;
+    std::cout << "Seed of random number generator to reproduce simulation output: " << std::to_string(parameter.randomNumberGeneratorSeed) << std::endl;
 
-    yesNo = (parameter.outputFile == true) ? "Yes" : "No";
+    std::string yesNo = (parameter.outputFile == true) ? "Yes" : "No";
     std::string dates = (parameter.outputFile == true) ? (" (at dates provided in " + parameter.outputWritingDatesFile + ")") : "";
     std::cout << "Write output file? " << yesNo << dates << std::endl
               << std::endl;

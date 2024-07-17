@@ -496,8 +496,7 @@ void INPUT::transferConfigParameterValueToModelParameter(PARAMETER &parameter, U
     parameter.speciesFile = configParString["speciesFile"];
     parameter.outputFile = configParBool["outputFile"];
     parameter.outputWritingDatesFile = configParString["outputWritingDatesFile"];
-    parameter.clippingHeightForBiomassCalibration = configParFloat["clippingHeightForBiomassCalibration"];
-    parameter.reproducibleResults = configParBool["reproducibleResults"];
+    // parameter.clippingHeightForBiomassCalibration = configParFloat["clippingHeightForBiomassCalibration"];
     parameter.randomNumberGeneratorSeed = configParInt["randomNumberGeneratorSeed"];
 
     parameter.firstYear = configParInt["firstYear"];
