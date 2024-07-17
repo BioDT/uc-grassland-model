@@ -16,11 +16,11 @@ file(COPY src/module_parameter/parameter.h DESTINATION include/module_parameter)
 file(COPY src/module_weather/weather.h DESTINATION include/module_weather)
 file(COPY src/module_soil/soil.h DESTINATION include/module_soil)
 file(COPY src/module_management/management.h DESTINATION include/module_management)
+file(COPY src/module_plant/community.h DESTINATION include/module_plant)
 file(COPY src/module_plant/plant.h DESTINATION include/module_plant)
 file(COPY src/module_plant/allometry.h DESTINATION include/module_plant)
 file(COPY src/module_init/init.h DESTINATION include/module_init)
 file(COPY src/module_step/step.h DESTINATION include/module_step)
-file(COPY src/module_step/state.h DESTINATION include/module_step)
 file(COPY src/module_growth/growth.h DESTINATION include/module_growth)
 file(COPY src/module_mortality/mortality.h DESTINATION include/module_mortality)
 file(COPY src/module_recruitment/recruitment.h DESTINATION include/module_recruitment)
@@ -35,11 +35,11 @@ set(SOURCES
     src/module_weather/weather.cpp
     src/module_soil/soil.cpp
     src/module_management/management.cpp
+    src/module_plant/community.cpp
     src/module_plant/plant.cpp
     src/module_plant/allometry.cpp
     src/module_init/init.cpp
     src/module_step/step.cpp
-    src/module_step/state.cpp
     src/module_growth/growth.cpp
     src/module_mortality/mortality.cpp
     src/module_recruitment/recruitment.cpp
@@ -54,11 +54,11 @@ set(HEADERS
     include/module_weather/weather.h
     include/module_soil/soil.h
     include/module_management/management.h
+    include/module_plant/community.h
     include/module_plant/plant.h
     include/module_plant/allometry.h
     include/module_init/init.h
     include/module_step/step.h
-    include/module_step/state.h
     include/module_growth/growth.h
     include/module_mortality/mortality.h
     include/module_recruitment/recruitment.h

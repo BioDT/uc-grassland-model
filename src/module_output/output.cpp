@@ -4,43 +4,43 @@ OUTPUT::OUTPUT(){};
 OUTPUT::~OUTPUT(){};
 
 /* Creates result folder, output file and its header */
-void OUTPUT::prepareModelOutput(std::string path, UTILS ut, PARAMETER &param)
+void OUTPUT::prepareModelOutput(std::string path, UTILS utils, PARAMETER &parameter)
 {
     /* create a folder where result files are written (if not already existing) */
-    createOutputFolder(path, ut);
-    createAndOpenOutputFiles(param, ut);
-    writeHeaderInOutputFiles(param, ut);
-    openAndReadOutputWritingDates(path, ut, param);
+    createOutputFolder(path, utils);
+    createAndOpenOutputFiles(parameter, utils);
+    writeHeaderInOutputFiles(parameter, utils);
+    openAndReadOutputWritingDates(path, utils, parameter);
 }
 
 /* Creates the output file */
-void OUTPUT::createAndOpenOutputFiles(PARAMETER param, UTILS ut)
+void OUTPUT::createAndOpenOutputFiles(PARAMETER parameter, UTILS utils)
 {
-    if (param.outputFile)
+    if (parameter.outputFile)
     {
-        ut.strings.clear();
-        ut.splitString(param.speciesFile, '/');
-        std::string endingLocation = std::to_string(param.latitude) + "_" + std::to_string(param.longitude);
-        std::string endingYears = "_" + std::to_string(param.firstYear) + "_" + std::to_string(param.lastYear) + "_";
-        std::string endingParameter = ut.strings.at(1);
+        utils.strings.clear();
+        utils.splitString(parameter.speciesFile, '/');
+        std::string endingLocation = std::to_string(parameter.latitude) + "_" + std::to_string(parameter.longitude);
+        std::string endingYears = "_" + std::to_string(parameter.firstYear) + "_" + std::to_string(parameter.lastYear) + "_";
+        std::string endingParameter = utils.strings.at(1);
         std::string fileEnding = endingLocation + endingYears + endingParameter;
         std::string filename = outputDirectory + "output_" + fileEnding;
         outputFile.open(filename);
         if (!outputFile.is_open())
         {
-            ut.handleError("Error writing to the output file.");
+            utils.handleError("Error writing to the output file.");
         }
     }
 };
 
 /* Writes the header in the output file */
-void OUTPUT::writeHeaderInOutputFiles(PARAMETER param, UTILS ut)
+void OUTPUT::writeHeaderInOutputFiles(PARAMETER parameter, UTILS utils)
 {
-    if (param.outputFile)
+    if (parameter.outputFile)
     {
         if (!outputFile.is_open())
         {
-            ut.handleError("Error writing to the output file.");
+            utils.handleError("Error writing to the output file.");
         }
         else
         {
@@ -51,32 +51,32 @@ void OUTPUT::writeHeaderInOutputFiles(PARAMETER param, UTILS ut)
 }
 
 /* writes daily simulation resulst (state variables of the community) to the output file */
-void OUTPUT::writeSimulationResultsToOutputFiles(PARAMETER param, UTILS ut, STATE state)
+void OUTPUT::writeSimulationResultsToOutputFiles(PARAMETER parameter, UTILS utils, COMMUNITY community)
 {
-    if (param.outputFile)
+    if (parameter.outputFile)
     {
         if (outputFile.is_open())
         {
             for (auto day : outputWritingDates)
             {
-                if (param.day == day)
+                if (parameter.day == day)
                 {
-                    for (int pft = 0; pft < param.numberOfSpecies; pft++)
+                    for (int pft = 0; pft < parameter.numberOfSpecies; pft++)
                     {
-                        outputFile << param.day << "\t" << pft << "\t" << state.pftComposition[pft] << std::endl;
+                        outputFile << parameter.day << "\t" << pft << "\t" << community.pftComposition[pft] << std::endl;
                     }
                 }
             }
         }
         else
         {
-            ut.handleError("The output file is not open for writing.");
+            utils.handleError("The output file is not open for writing.");
         }
     }
 }
 
 /* Closes the output file */
-void OUTPUT::closeOutputFiles(UTILS ut)
+void OUTPUT::closeOutputFiles(UTILS utils)
 {
     if (outputFile.is_open())
     {
@@ -84,33 +84,33 @@ void OUTPUT::closeOutputFiles(UTILS ut)
     }
     else
     {
-        ut.handleError("The output file is not open.");
+        utils.handleError("The output file is not open.");
     }
 }
 
 /* Creates a folder for the output file */
-void OUTPUT::createOutputFolder(std::string path, UTILS ut)
+void OUTPUT::createOutputFolder(std::string path, UTILS utils)
 {
     char separator = '\\';
-    ut.splitString(path, separator);
-    for (int it = 0; it < ut.strings.size() - 1; it++)
+    utils.splitString(path, separator);
+    for (int it = 0; it < utils.strings.size() - 1; it++)
     {
-        outputDirectory = outputDirectory + ut.strings.at(it) + "\\";
+        outputDirectory = outputDirectory + utils.strings.at(it) + "\\";
     }
     outputDirectory = outputDirectory + "output\\";
     _mkdir(outputDirectory.c_str());
 }
 
 /* Read-in output writing dates from file */
-void OUTPUT::openAndReadOutputWritingDates(std::string path, UTILS ut, PARAMETER &param)
+void OUTPUT::openAndReadOutputWritingDates(std::string path, UTILS utils, PARAMETER &parameter)
 {
     char separator = '\\';
-    ut.splitString(path, separator);
-    for (int it = 0; it < ut.strings.size() - 1; it++)
+    utils.splitString(path, separator);
+    for (int it = 0; it < utils.strings.size() - 1; it++)
     {
-        fileDirectory = fileDirectory + ut.strings.at(it) + "\\";
+        fileDirectory = fileDirectory + utils.strings.at(it) + "\\";
     }
-    fileDirectory = fileDirectory + param.outputWritingDatesFile;
+    fileDirectory = fileDirectory + parameter.outputWritingDatesFile;
 
     const char *filename = fileDirectory.c_str();
     std::ifstream file(filename);
@@ -126,12 +126,12 @@ void OUTPUT::openAndReadOutputWritingDates(std::string path, UTILS ut, PARAMETER
             m++;
             if (m > 1)
             { // skip header line
-                ut.strings.clear();
-                ut.splitString(line, '-');
-                int day = std::stoi(ut.strings.at(2).c_str());
-                int month = std::stoi(ut.strings.at(1).c_str());
-                int year = std::stoi(ut.strings.at(0).c_str());
-                outputWritingDates.push_back(ut.calculateJulianDayFromDate(day, month, year) - param.referenceJulianDayStart + 1);
+                utils.strings.clear();
+                utils.splitString(line, '-');
+                int day = std::stoi(utils.strings.at(2).c_str());
+                int month = std::stoi(utils.strings.at(1).c_str());
+                int year = std::stoi(utils.strings.at(0).c_str());
+                outputWritingDates.push_back(utils.calculateJulianDayFromDate(day, month, year) - parameter.referenceJulianDayStart + 1);
             }
         }
         file.close();
@@ -139,7 +139,7 @@ void OUTPUT::openAndReadOutputWritingDates(std::string path, UTILS ut, PARAMETER
 }
 
 /* print important settings of the simulation to the console (stdout.txt) */
-void OUTPUT::printSimulationSettingsToConsole(PARAMETER param)
+void OUTPUT::printSimulationSettingsToConsole(PARAMETER parameter)
 {
 
     std::cout << "*******************************************" << std::endl;
@@ -147,31 +147,31 @@ void OUTPUT::printSimulationSettingsToConsole(PARAMETER param)
     std::cout << "*******************************************" << std::endl
               << std::endl;
 
-    std::cout << "DEIMS.id = " << param.deimsID << std::endl;
-    std::cout << "Latitude = " << param.latitude << std::endl;
-    std::cout << "Longitude = " << param.longitude << std::endl;
-    std::cout << "First year = " << param.firstYear << std::endl;
-    std::cout << "Last year = " << param.lastYear << std::endl
+    std::cout << "DEIMS.id = " << parameter.deimsID << std::endl;
+    std::cout << "Latitude = " << parameter.latitude << std::endl;
+    std::cout << "Longitude = " << parameter.longitude << std::endl;
+    std::cout << "First year = " << parameter.firstYear << std::endl;
+    std::cout << "Last year = " << parameter.lastYear << std::endl
               << std::endl;
 
     std::cout << "******* Input files *********" << std::endl
               << std::endl;
 
-    std::cout << "Weather data: " << param.weatherFile << std::endl;
-    std::cout << "Soil data: " << param.soilFile << std::endl;
-    std::cout << "Management data: " << param.managementFile << std::endl;
-    std::cout << "Plant species traits: " << param.speciesFile << std::endl
+    std::cout << "Weather data: " << parameter.weatherFile << std::endl;
+    std::cout << "Soil data: " << parameter.soilFile << std::endl;
+    std::cout << "Management data: " << parameter.managementFile << std::endl;
+    std::cout << "Plant species traits: " << parameter.speciesFile << std::endl
               << std::endl;
 
     std::cout << "******* Simulation output writing *********" << std::endl
               << std::endl;
 
-    std::string yesNo = (param.reproducibleResults == true) ? "Yes" : "No";
-    std::string seed = (param.reproducibleResults == true) ? (" (seed = " + std::to_string(param.randomNumberGeneratorSeed) + ")") : "";
+    std::string yesNo = (parameter.reproducibleResults == true) ? "Yes" : "No";
+    std::string seed = (parameter.reproducibleResults == true) ? (" (seed = " + std::to_string(parameter.randomNumberGeneratorSeed) + ")") : "";
     std::cout << "Reproducible simulation output? " << yesNo << seed << std::endl;
 
-    yesNo = (param.outputFile == true) ? "Yes" : "No";
-    std::string dates = (param.outputFile == true) ? (" (at dates provided in " + param.outputWritingDatesFile + ")") : "";
+    yesNo = (parameter.outputFile == true) ? "Yes" : "No";
+    std::string dates = (parameter.outputFile == true) ? (" (at dates provided in " + parameter.outputWritingDatesFile + ")") : "";
     std::cout << "Write output file? " << yesNo << dates << std::endl
               << std::endl;
 

@@ -1,6 +1,6 @@
 #pragma once
 #include "../module_parameter/parameter.h"
-#include "../module_step/state.h"
+#include "../module_plant/community.h"
 #include "../utils/utils.h"
 #include <iostream>
 #include <vector>
@@ -19,13 +19,13 @@ public:
 
     std::vector<int> outputWritingDates;
 
-    void prepareModelOutput(std::string path, UTILS ut, PARAMETER &param);
-    void createOutputFolder(std::string path, UTILS ut);
-    void openAndReadOutputWritingDates(std::string path, UTILS ut, PARAMETER &param);
-    void printSimulationSettingsToConsole(PARAMETER param);
+    void prepareModelOutput(std::string path, UTILS utils, PARAMETER &parameter);
+    void createOutputFolder(std::string path, UTILS utils);
+    void openAndReadOutputWritingDates(std::string path, UTILS utils, PARAMETER &parameter);
+    void printSimulationSettingsToConsole(PARAMETER parameter);
 
-    void createAndOpenOutputFiles(PARAMETER param, UTILS ut);
-    void writeHeaderInOutputFiles(PARAMETER param, UTILS ut);
-    void writeSimulationResultsToOutputFiles(PARAMETER param, UTILS ut, STATE state);
-    void closeOutputFiles(UTILS ut);
+    void createAndOpenOutputFiles(PARAMETER parameter, UTILS utils);
+    void writeHeaderInOutputFiles(PARAMETER parameter, UTILS utils);
+    void writeSimulationResultsToOutputFiles(PARAMETER parameter, UTILS utils, COMMUNITY community);
+    void closeOutputFiles(UTILS utils);
 };

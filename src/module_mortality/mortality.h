@@ -1,5 +1,5 @@
 #pragma once
-#include "../module_step/state.h"
+#include "../module_plant/community.h"
 #include "../module_parameter/parameter.h"
 #include "../utils/utils.h"
 #include <random>
@@ -10,9 +10,9 @@ public:
     MORTALITY();
     ~MORTALITY();
 
-    void doPlantMortality(PARAMETER param, STATE &state, UTILS ut);
+    void doPlantMortality(PARAMETER parameter, COMMUNITY &community, UTILS utils);
     void doSenescenceAndLitterFall();
     void doThinning();
-    void doBasicMortality(PARAMETER param, UTILS ut, STATE &state, int plantIndex, int pft);
-    double getPlantMortalityRate(PARAMETER param, STATE state, int plantIndex, int pft);
+    void doBasicMortality(PARAMETER parameter, UTILS utils, COMMUNITY &community, int plantIndex, int pft);
+    double getPlantMortalityRate(PARAMETER parameter, COMMUNITY community, int plantIndex, int pft);
 };

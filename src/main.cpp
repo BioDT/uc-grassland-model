@@ -10,7 +10,7 @@
 #include "module_management/management.h"
 #include "module_init/init.h"
 #include "module_step/step.h"
-#include "module_step/state.h"
+#include "module_plant/community.h"
 #include "utils/utils.h"
 
 #include "module_recruitment/recruitment.h"
@@ -32,36 +32,36 @@ int main(int argc, char *argv[])
     std::time_t startRunTime = std::time(nullptr);
 
     /* Create instances of required classes */
-    OUTPUT out;
-    INPUT in;
-    UTILS ut;
-    PARAMETER param;
+    OUTPUT output;
+    INPUT input;
+    UTILS utils;
+    PARAMETER parameter;
     WEATHER weather;
     SOIL soil;
-    MANAGEMENT manage;
-    ALLOMETRY allo;
-    INIT ini;
+    MANAGEMENT management;
+    ALLOMETRY allometry;
+    INIT init;
     STEP step;
-    STATE state;
-    RECRUITMENT recruit;
-    MORTALITY death;
-    GROWTH grow;
+    COMMUNITY community;
+    RECRUITMENT recruitment;
+    MORTALITY mortality;
+    GROWTH growth;
 
     /* Read data from input files (weather, soil, management, species parameter) */
-    in.getInputData(path, ut, param, weather, soil, manage);
-    out.printSimulationSettingsToConsole(param);
+    input.getInputData(path, utils, parameter, weather, soil, management);
+    output.printSimulationSettingsToConsole(parameter);
 
     /* Prepare simulation output files */
-    out.prepareModelOutput(path, ut, param);
+    output.prepareModelOutput(path, utils, parameter);
 
     /* Initialization of variables and initial conditions for the simulation */
-    ini.initModelSimulation(param, state);
+    init.initModelSimulation(parameter, community);
 
     /* Running each day of the model simulation */
-    step.runModelSimulation(ut, param, allo, state, recruit, death, grow, manage, out);
+    step.runModelSimulation(utils, parameter, allometry, community, recruitment, mortality, growth, management, output);
 
     /* Closing of output files */
-    out.closeOutputFiles(ut);
+    output.closeOutputFiles(utils);
 
     /* Stop tracking of computational runtime */
     std::time_t stopRunTime = std::time(nullptr);

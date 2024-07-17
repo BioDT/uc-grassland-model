@@ -4,31 +4,31 @@ STEP::STEP(){};
 STEP::~STEP(){};
 
 /* Simulates the entire simulation period */
-void STEP::runModelSimulation(UTILS ut, PARAMETER &param, ALLOMETRY allo, STATE &state, RECRUITMENT recruit, MORTALITY death, GROWTH grow, MANAGEMENT manage, OUTPUT &out)
+void STEP::runModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT recruitment, MORTALITY mortality, GROWTH growth, MANAGEMENT management, OUTPUT &output)
 {
     /* Perform daily plant processes for each day to be simulated */
-    for (int day = 1; day <= param.numberOfDaysToSimulate; day++)
+    for (int day = 1; day <= parameter.numberOfDaysToSimulate; day++)
     {
-        param.day = day; // increase day according to for-loop
-        doDayStepOfModelSimulation(ut, param, allo, state, recruit, death, grow, manage);
+        parameter.day = day; // increase day according to for-loop
+        doDayStepOfModelSimulation(utils, parameter, allometry, community, recruitment, mortality, growth, management);
 
         /* Writing of daily output of simulation results */
-        out.writeSimulationResultsToOutputFiles(param, ut, state);
+        output.writeSimulationResultsToOutputFiles(parameter, utils, community);
     }
 }
 
 /* Performs one day step of all plant processes */
-void STEP::doDayStepOfModelSimulation(UTILS ut, PARAMETER &param, ALLOMETRY allo, STATE &state, RECRUITMENT recruit, MORTALITY death, GROWTH grow, MANAGEMENT manage)
+void STEP::doDayStepOfModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT recruitment, MORTALITY mortality, GROWTH growth, MANAGEMENT management)
 {
     /* Plant recruitment */
-    recruit.doPlantRecruitment(param, allo, state, manage);
+    recruitment.doPlantRecruitment(parameter, allometry, community, management);
 
     /* Plant mortality */
-    death.doPlantMortality(param, state, ut);
+    mortality.doPlantMortality(parameter, community, utils);
 
     /* Plant growth */
-    grow.doPlantGrowth(param, state);
+    growth.doPlantGrowth(parameter, community);
 
     /* Calculation of dynamic state variables of the community */
-    state.updateCommunityStateVariables(param);
+    community.updateCommunityStateVariables(parameter);
 }

@@ -4,19 +4,19 @@ GROWTH::GROWTH(){};
 GROWTH::~GROWTH(){};
 
 /* main function of plant growth */
-void GROWTH::doPlantGrowth(PARAMETER param, STATE &state)
+void GROWTH::doPlantGrowth(PARAMETER parameter, COMMUNITY &community)
 {
     int pft;
-    if (state.community.size() > 0)
+    if (community.allPlants.size() > 0)
     {
-        for (int plantIndex = 0; plantIndex < state.community.size(); plantIndex++)
+        for (int plantIndex = 0; plantIndex < community.allPlants.size(); plantIndex++)
         {
-            pft = state.community[plantIndex]->pft;
-            if (state.community[plantIndex]->N > 0)
+            pft = community.allPlants[plantIndex]->pft;
+            if (community.allPlants[plantIndex]->N > 0)
             {
                 // TODO: add correct growth processes
-                state.community[plantIndex]->height += 1;
-                state.community[plantIndex]->age += 1;
+                community.allPlants[plantIndex]->height += 1;
+                community.allPlants[plantIndex]->age += 1;
             }
         }
     }

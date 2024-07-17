@@ -37,18 +37,18 @@ public:
     static std::map<std::string, std::string> configParString;
 
     /* functions of the INPUT class */
-    void getInputData(std::string path, UTILS ut, PARAMETER &param, WEATHER &weather, SOIL &soil, MANAGEMENT &manage);
-    void openAndReadConfigurationFile(std::string config, UTILS ut, PARAMETER &param);
-    void openAndReadSpeciesFile(std::string config, UTILS ut, PARAMETER &param);
-    void openAndReadWeatherFile(std::string path, UTILS ut, PARAMETER &param, WEATHER &weather);
-    void openAndReadSoilFile(std::string path, UTILS ut, PARAMETER &param, SOIL &soil);
-    void openAndReadManagementFile(std::string path, UTILS ut, PARAMETER &param, MANAGEMENT &manage);
+    void getInputData(std::string path, UTILS utils, PARAMETER &parameter, WEATHER &weather, SOIL &soil, MANAGEMENT &management);
+    void openAndReadConfigurationFile(std::string config, UTILS utils, PARAMETER &parameter);
+    void openAndReadSpeciesFile(std::string config, UTILS utils, PARAMETER &parameter);
+    void openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &parameter, WEATHER &weather);
+    void openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parameter, SOIL &soil);
+    void openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &parameter, MANAGEMENT &management);
 
-    void searchParameterInInputFile(std::string keyword, const char *filename, UTILS ut);
-    void checkIfParameterExistsAndExtractValues(UTILS ut, std::string keyword, std::vector<std::string> lineValues, std::vector<int> lineNumbers, std::vector<std::string> lineTypeValues);
-    void extractLinesOfCorrectFormat(UTILS ut, std::string keyword, std::vector<std::string> lineValues);
-    void extractDataTypeForExtractedValue(UTILS ut, std::string keyword);
-    void convertAndCheckAndSetParameterValue(UTILS ut, std::string keyword, std::string parameterType, PARAMETER param);
-    void transferConfigParameterValueToModelParameter(PARAMETER &param, UTILS ut);
-    void transferSpeciesParameterValueToModelParameter(PARAMETER &param);
+    void searchParameterInInputFile(std::string keyword, const char *filename, UTILS utils);
+    void checkIfParameterExistsAndExtractValues(UTILS utils, std::string keyword, std::vector<std::string> lineValues, std::vector<int> lineNumbers, std::vector<std::string> lineTypeValues);
+    void extractLinesOfCorrectFormat(UTILS utils, std::string keyword, std::vector<std::string> lineValues);
+    void extractDataTypeForExtractedValue(UTILS utils, std::string keyword);
+    void convertAndCheckAndSetParameterValue(UTILS utils, std::string keyword, std::string parameterType, PARAMETER parameter);
+    void transferConfigParameterValueToModelParameter(PARAMETER &parameter, UTILS utils);
+    void transferSpeciesParameterValueToModelParameter(PARAMETER &parameter);
 };

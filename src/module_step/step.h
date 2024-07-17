@@ -1,6 +1,6 @@
 #pragma once
-#include "state.h"
 #include "../module_parameter/parameter.h"
+#include "../module_plant/community.h"
 #include "../module_plant/plant.h"
 #include "../module_management/management.h"
 #include "../module_plant/allometry.h"
@@ -17,6 +17,6 @@ public:
     STEP();
     ~STEP();
 
-    void runModelSimulation(UTILS ut, PARAMETER &param, ALLOMETRY allo, STATE &state, RECRUITMENT recruit, MORTALITY death, GROWTH grow, MANAGEMENT manage, OUTPUT &out);
-    void doDayStepOfModelSimulation(UTILS ut, PARAMETER &param, ALLOMETRY allo, STATE &state, RECRUITMENT recruit, MORTALITY death, GROWTH grow, MANAGEMENT manage);
+    void runModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT recruitment, MORTALITY mortality, GROWTH growth, MANAGEMENT management, OUTPUT &output);
+    void doDayStepOfModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT recruitment, MORTALITY mortality, GROWTH growth, MANAGEMENT management);
 };

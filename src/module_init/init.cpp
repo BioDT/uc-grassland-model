@@ -4,56 +4,56 @@ INIT::INIT(){};
 INIT::~INIT(){};
 
 /* main function to initialize state variables of the simulation start */
-void INIT::initModelSimulation(PARAMETER &param, STATE &state)
+void INIT::initModelSimulation(PARAMETER &parameter, COMMUNITY &community)
 {
     /* init time variables */
-    initTimeVariables(param);
+    initTimeVariables(parameter);
 
     /* init random number generator seed */
-    initRandomNumberGeneratorSeed(param, state);
+    initRandomNumberGeneratorSeed(parameter, community);
 
     /* init state variables of community */
-    initCommunityStateVariables(state, param);
+    initCommunityStateVariables(community, parameter);
 }
 
 /* initialization of state variables of time */
-void INIT::initTimeVariables(PARAMETER &param)
+void INIT::initTimeVariables(PARAMETER &parameter)
 {
-    param.day = 1;                    // start with the first day
-    param.numberOfDaysToSimulate = 0; // calculate number of days to simulate considering leap years
-    for (int year = param.firstYear; year <= param.lastYear; year++)
+    parameter.day = 1;                    // start with the first day
+    parameter.numberOfDaysToSimulate = 0; // calculate number of days to simulate considering leap years
+    for (int year = parameter.firstYear; year <= parameter.lastYear; year++)
     {
         if (year % 4)
         {
-            param.numberOfDaysToSimulate += 366;
+            parameter.numberOfDaysToSimulate += 366;
         }
         else
         {
-            param.numberOfDaysToSimulate += 365;
+            parameter.numberOfDaysToSimulate += 365;
         }
     }
 }
 
 /* initialization of random number generator seed */
-void INIT::initRandomNumberGeneratorSeed(PARAMETER &param, STATE &state)
+void INIT::initRandomNumberGeneratorSeed(PARAMETER &parameter, COMMUNITY &community)
 {
-    if (!param.reproducibleResults)
+    if (!parameter.reproducibleResults)
     {
         std::random_device rd; // seed generator
-        param.randomNumberGeneratorSeed = rd();
+        parameter.randomNumberGeneratorSeed = rd();
     }
 
-    state.randomNumberIndex = param.randomNumberGeneratorSeed;
+    community.randomNumberIndex = parameter.randomNumberGeneratorSeed;
 }
 
 /* initialization of the community vector and grassland state variables */
-void INIT::initCommunityStateVariables(STATE &state, PARAMETER param)
+void INIT::initCommunityStateVariables(COMMUNITY &community, PARAMETER parameter)
 {
-    state.community.clear();
-    state.totalNumberOfPlantsInCommunity = 0;
-    state.pftComposition.clear();
-    for (int pft = 0; pft < param.numberOfSpecies; pft++)
+    community.allPlants.clear();
+    community.totalNumberOfPlantsInCommunity = 0;
+    community.pftComposition.clear();
+    for (int pft = 0; pft < parameter.numberOfSpecies; pft++)
     {
-        state.pftComposition.push_back(0);
+        community.pftComposition.push_back(0);
     }
 }
