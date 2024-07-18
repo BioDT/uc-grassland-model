@@ -30,3 +30,14 @@
 *.exe
 *.out
 *.app
+
+# Simulation outputs
+simulations/project1/output/**
+simulations/project1/sterr.txt
+simulations/project1/stout.txt
+
+# Build folder
+build*/
+
+# # VS Code folder
+# .vscode
