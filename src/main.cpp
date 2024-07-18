@@ -20,62 +20,62 @@
 
 int main(int argc, char *argv[])
 {
-    /* Read in command line arguments */
-    std::vector<std::string> commandLineInput;
-    for (int it = 0; it < argc; it++)
-    {
-        commandLineInput.push_back(argv[it]);
-    }
-    std::string path = commandLineInput.at(1);
+   /* Read in command line arguments */
+   std::vector<std::string> commandLineInput;
+   for (int it = 0; it < argc; it++)
+   {
+      commandLineInput.push_back(argv[it]);
+   }
+   std::string path = commandLineInput.at(1);
 
-    /* Start tracking of computational runtime */
-    std::time_t startRunTime = std::time(nullptr);
+   /* Start tracking of computational runtime */
+   std::time_t startRunTime = std::time(nullptr);
 
-    /* Create instances of required classes */
-    OUTPUT output;
-    INPUT input;
-    UTILS utils;
-    PARAMETER parameter;
-    WEATHER weather;
-    SOIL soil;
-    MANAGEMENT management;
-    ALLOMETRY allometry;
-    INIT init;
-    STEP step;
-    COMMUNITY community;
-    RECRUITMENT recruitment;
-    MORTALITY mortality;
-    GROWTH growth;
+   /* Create instances of required classes */
+   OUTPUT output;
+   INPUT input;
+   UTILS utils;
+   PARAMETER parameter;
+   WEATHER weather;
+   SOIL soil;
+   MANAGEMENT management;
+   ALLOMETRY allometry;
+   INIT init;
+   STEP step;
+   COMMUNITY community;
+   RECRUITMENT recruitment;
+   MORTALITY mortality;
+   GROWTH growth;
 
-    /* Read data from input files (weather, soil, management, species parameter) */
-    input.getInputData(path, utils, parameter, weather, soil, management);
-    output.printSimulationSettingsToConsole(parameter);
+   /* Read data from input files (weather, soil, management, species parameter) */
+   input.getInputData(path, utils, parameter, weather, soil, management);
+   output.printSimulationSettingsToConsole(parameter);
 
-    /* Prepare simulation output files */
-    output.prepareModelOutput(path, utils, parameter);
+   /* Prepare simulation output files */
+   output.prepareModelOutput(path, utils, parameter);
 
-    /* Initialization of variables and initial conditions for the simulation */
-    init.initModelSimulation(parameter, community);
+   /* Initialization of variables and initial conditions for the simulation */
+   init.initModelSimulation(parameter, community);
 
-    /* Running each day of the model simulation */
-    step.runModelSimulation(utils, parameter, allometry, community, recruitment, mortality, growth, management, output);
+   /* Running each day of the model simulation */
+   step.runModelSimulation(utils, parameter, allometry, community, recruitment, mortality, growth, management, output);
 
-    /* Closing of output files */
-    output.closeOutputFiles(utils);
+   /* Closing of output files */
+   output.closeOutputFiles(utils);
 
-    /* Stop tracking of computational runtime */
-    std::time_t stopRunTime = std::time(nullptr);
+   /* Stop tracking of computational runtime */
+   std::time_t stopRunTime = std::time(nullptr);
 
-    /* Printing information on console output window */
-    std::time_t runTimeDifferenceSeconds = (stopRunTime - startRunTime);
-    std::time_t runTimeDifferenceMinutes = (stopRunTime - startRunTime) / (time_t)60.0;
-    std::time_t runTimeDifferenceHours = (stopRunTime - startRunTime) / (time_t)(60.0 * 60.0);
+   /* Printing information on console output window */
+   std::time_t runTimeDifferenceSeconds = (stopRunTime - startRunTime);
+   std::time_t runTimeDifferenceMinutes = (stopRunTime - startRunTime) / (time_t)60.0;
+   std::time_t runTimeDifferenceHours = (stopRunTime - startRunTime) / (time_t)(60.0 * 60.0);
 
-    std::cout << "********* Successful simulation run ********" << std::endl;
-    std::cout << std::endl;
-    std::cout << "Computational runtime: " << runTimeDifferenceSeconds << " seconds" << "(" << runTimeDifferenceHours << "h " << runTimeDifferenceMinutes << "m)" << std::endl;
-    std::cout << std::endl;
-    std::cout << "********************************************" << std::endl;
+   std::cout << "********* Successful simulation run ********" << std::endl;
+   std::cout << std::endl;
+   std::cout << "Computational runtime: " << runTimeDifferenceSeconds << " seconds" << "(" << runTimeDifferenceHours << "h " << runTimeDifferenceMinutes << "m)" << std::endl;
+   std::cout << std::endl;
+   std::cout << "********************************************" << std::endl;
 
-    return 0;
+   return 0;
 }

@@ -7,12 +7,12 @@
 class MORTALITY
 {
 public:
-    MORTALITY();
-    ~MORTALITY();
+   MORTALITY();
+   ~MORTALITY();
 
-    void doPlantMortality(PARAMETER parameter, COMMUNITY &community, UTILS utils);
-    void doSenescenceAndLitterFall();
-    void doThinning();
-    void doBasicMortality(PARAMETER parameter, UTILS utils, COMMUNITY &community, int plantIndex, int pft);
-    double getPlantMortalityRate(PARAMETER parameter, COMMUNITY community, int plantIndex, int pft);
+   void doPlantMortality(PARAMETER parameter, COMMUNITY &community, UTILS utils);
+   void doSenescenceAndLitterFall();
+   void doThinning();
+   void doBasicMortality(PARAMETER parameter, UTILS utils, COMMUNITY &community, int plantIndex, int pft);
+   double getPlantMortalityRate(PARAMETER parameter, COMMUNITY community, int plantIndex, int pft);
 };

@@ -14,9 +14,9 @@
 class STEP
 {
 public:
-    STEP();
-    ~STEP();
+   STEP();
+   ~STEP();
 
-    void runModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT recruitment, MORTALITY mortality, GROWTH growth, MANAGEMENT management, OUTPUT &output);
-    void doDayStepOfModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT recruitment, MORTALITY mortality, GROWTH growth, MANAGEMENT management);
+   void runModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT recruitment, MORTALITY mortality, GROWTH growth, MANAGEMENT management, OUTPUT &output);
+   void doDayStepOfModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT recruitment, MORTALITY mortality, GROWTH growth, MANAGEMENT management);
 };

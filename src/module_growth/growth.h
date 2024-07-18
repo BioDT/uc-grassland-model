@@ -5,8 +5,8 @@
 class GROWTH
 {
 public:
-    GROWTH();
-    ~GROWTH();
+   GROWTH();
+   ~GROWTH();
 
-    void doPlantGrowth(PARAMETER parameter, COMMUNITY &community);
+   void doPlantGrowth(PARAMETER parameter, COMMUNITY &community);
 };

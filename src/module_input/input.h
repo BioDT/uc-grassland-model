@@ -13,42 +13,42 @@
 class INPUT
 {
 public:
-    INPUT();
-    ~INPUT();
+   INPUT();
+   ~INPUT();
 
-    std::string speciesDirectory;
-    std::string weatherDirectory;
-    std::string manageDirectory;
-    std::string soilDirectory;
+   std::string speciesDirectory;
+   std::string weatherDirectory;
+   std::string manageDirectory;
+   std::string soilDirectory;
 
-    /* vectors to store information of parsed lines for parameters */
-    std::vector<std::string> lineValues;        // stored parameter text lines
-    std::vector<std::string> lineTypeValues;    // stored datatype lines of parameters
-    std::vector<int> lineNumbers;               // stored line numbers of parameters
-    std::vector<int> keywordLineNumbers;        // vector which stores only those lines that start with the correct format i.e. parameterName (here keyword)
-    std::vector<std::string> keywordLineValues; // vector which stores only values of those lines that start with the correct format i.e. parameterName (here keyword)
-    std::string parameterValue;
-    std::string parameterType;
+   /* vectors to store information of parsed lines for parameters */
+   std::vector<std::string> lineValues;        // stored parameter text lines
+   std::vector<std::string> lineTypeValues;    // stored datatype lines of parameters
+   std::vector<int> lineNumbers;               // stored line numbers of parameters
+   std::vector<int> keywordLineNumbers;        // vector which stores only those lines that start with the correct format i.e. parameterName (here keyword)
+   std::vector<std::string> keywordLineValues; // vector which stores only values of those lines that start with the correct format i.e. parameterName (here keyword)
+   std::string parameterValue;
+   std::string parameterType;
 
-    /* auxillary structure to map parsed parameter to its name */
-    static std::map<std::string, int> configParInt;
-    static std::map<std::string, float> configParFloat;
-    static std::map<std::string, bool> configParBool;
-    static std::map<std::string, std::string> configParString;
+   /* auxillary structure to map parsed parameter to its name */
+   static std::map<std::string, int> configParInt;
+   static std::map<std::string, float> configParFloat;
+   static std::map<std::string, bool> configParBool;
+   static std::map<std::string, std::string> configParString;
 
-    /* functions of the INPUT class */
-    void getInputData(std::string path, UTILS utils, PARAMETER &parameter, WEATHER &weather, SOIL &soil, MANAGEMENT &management);
-    void openAndReadConfigurationFile(std::string config, UTILS utils, PARAMETER &parameter);
-    void openAndReadSpeciesFile(std::string config, UTILS utils, PARAMETER &parameter);
-    void openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &parameter, WEATHER &weather);
-    void openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parameter, SOIL &soil);
-    void openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &parameter, MANAGEMENT &management);
+   /* functions of the INPUT class */
+   void getInputData(std::string path, UTILS utils, PARAMETER &parameter, WEATHER &weather, SOIL &soil, MANAGEMENT &management);
+   void openAndReadConfigurationFile(std::string config, UTILS utils, PARAMETER &parameter);
+   void openAndReadSpeciesFile(std::string config, UTILS utils, PARAMETER &parameter);
+   void openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &parameter, WEATHER &weather);
+   void openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parameter, SOIL &soil);
+   void openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &parameter, MANAGEMENT &management);
 
-    void searchParameterInInputFile(std::string keyword, const char *filename, UTILS utils);
-    void checkIfParameterExistsAndExtractValues(UTILS utils, std::string keyword, std::vector<std::string> lineValues, std::vector<int> lineNumbers, std::vector<std::string> lineTypeValues);
-    void extractLinesOfCorrectFormat(UTILS utils, std::string keyword, std::vector<std::string> lineValues);
-    void extractDataTypeForExtractedValue(UTILS utils, std::string keyword);
-    void convertAndCheckAndSetParameterValue(UTILS utils, std::string keyword, std::string parameterType, PARAMETER parameter);
-    void transferConfigParameterValueToModelParameter(PARAMETER &parameter, UTILS utils);
-    void transferSpeciesParameterValueToModelParameter(PARAMETER &parameter);
+   void searchParameterInInputFile(std::string keyword, const char *filename, UTILS utils);
+   void checkIfParameterExistsAndExtractValues(UTILS utils, std::string keyword, std::vector<std::string> lineValues, std::vector<int> lineNumbers, std::vector<std::string> lineTypeValues);
+   void extractLinesOfCorrectFormat(UTILS utils, std::string keyword, std::vector<std::string> lineValues);
+   void extractDataTypeForExtractedValue(UTILS utils, std::string keyword);
+   void convertAndCheckAndSetParameterValue(UTILS utils, std::string keyword, std::string parameterType, PARAMETER parameter);
+   void transferConfigParameterValueToModelParameter(PARAMETER &parameter, UTILS utils);
+   void transferSpeciesParameterValueToModelParameter(PARAMETER &parameter);
 };

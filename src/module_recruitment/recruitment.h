@@ -7,11 +7,11 @@
 class RECRUITMENT
 {
 public:
-    RECRUITMENT();
-    ~RECRUITMENT();
+   RECRUITMENT();
+   ~RECRUITMENT();
 
-    void doPlantRecruitment(PARAMETER parameter, ALLOMETRY allometry, COMMUNITY &community, MANAGEMENT management);
-    void createSeedlingsByExternalInflux(PARAMETER parameter, ALLOMETRY allometry, COMMUNITY &community);
-    void createSeedlingsBySowing(PARAMETER parameter, ALLOMETRY allometry, COMMUNITY &community, MANAGEMENT management);
-    void createSeedlingsByPlantReproduction(PARAMETER parameter, ALLOMETRY allometry, COMMUNITY &community);
+   void doPlantRecruitment(PARAMETER parameter, ALLOMETRY allometry, COMMUNITY &community, MANAGEMENT management);
+   void createSeedlingsByExternalInflux(PARAMETER parameter, ALLOMETRY allometry, COMMUNITY &community);
+   void createSeedlingsBySowing(PARAMETER parameter, ALLOMETRY allometry, COMMUNITY &community, MANAGEMENT management);
+   void createSeedlingsByPlantReproduction(PARAMETER parameter, ALLOMETRY allometry, COMMUNITY &community);
 };

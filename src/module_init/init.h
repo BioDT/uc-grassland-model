@@ -8,11 +8,11 @@
 class INIT
 {
 public:
-    INIT();
-    ~INIT();
+   INIT();
+   ~INIT();
 
-    void initModelSimulation(PARAMETER &parameter, COMMUNITY &community);
-    void initTimeVariables(PARAMETER &parameter);
-    void initRandomNumberGeneratorSeed(PARAMETER &parameter, COMMUNITY &community);
-    void initCommunityStateVariables(COMMUNITY &community, PARAMETER parameter);
+   void initModelSimulation(PARAMETER &parameter, COMMUNITY &community);
+   void initTimeVariables(PARAMETER &parameter);
+   void initRandomNumberGeneratorSeed(PARAMETER &parameter, COMMUNITY &community);
+   void initCommunityStateVariables(COMMUNITY &community, PARAMETER parameter);
 };

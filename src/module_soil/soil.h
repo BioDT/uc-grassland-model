@@ -5,15 +5,15 @@
 class SOIL
 {
 public:
-    SOIL();
-    ~SOIL();
+   SOIL();
+   ~SOIL();
 
-    /* soil input parameter */
-    double siltContent;
-    double sandContent;
-    double clayContent;
-    std::vector<double> permanentWiltingPoint;
-    std::vector<double> fieldCapacity;
-    std::vector<double> porosity;
-    std::vector<double> saturatedHydraulicConductivity;
+   /* soil input parameter */
+   double siltContent;
+   double sandContent;
+   double clayContent;
+   std::vector<double> permanentWiltingPoint;
+   std::vector<double> fieldCapacity;
+   std::vector<double> porosity;
+   std::vector<double> saturatedHydraulicConductivity;
 };
