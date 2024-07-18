@@ -14,7 +14,7 @@ void COMMUNITY::checkPlantsAreAliveInCommunity(UTILS utils)
       /* go through all plant cohorts in the community vector and save indices of dying cohorts */
       for (int plantIndex = 0; plantIndex < allPlants.size(); plantIndex++)
       {
-         if (allPlants[plantIndex]->N <= 0)
+         if (allPlants[plantIndex]->count <= 0) // QTB: = 0 sufficient? can < 0 happen, should it be an error then?
          {
             idsOfDeadPlantCohorts.push_back(plantIndex);
          }
@@ -40,30 +40,27 @@ void COMMUNITY::checkPlantsAreAliveInCommunity(UTILS utils)
 /* Calculate aggregated state variables (for output) based on dynamic changes of the community vector */
 void COMMUNITY::updateCommunityStateVariables(PARAMETER parameter)
 {
-   int pftNumber;
    totalNumberOfPlantsInCommunity = 0;
-   for (int pft = 0; pft < parameter.numberOfSpecies; pft++)
+   for (int pft = 0; pft < parameter.pftCount; pft++)
    {
       pftComposition[pft] = 0;
    }
 
    if (allPlants.size() > 0)
    {
-
       for (int plantIndex = 0; plantIndex < allPlants.size(); plantIndex++)
       {
          // PFT-specific calculations
-         pftNumber = allPlants[plantIndex]->pft;
-         pftComposition[pftNumber] += allPlants[plantIndex]->N;
+         pftComposition[allPlants[plantIndex]->pft] += allPlants[plantIndex]->count;
 
          // Community-wide calculations
-         totalNumberOfPlantsInCommunity += allPlants[plantIndex]->N;
+         totalNumberOfPlantsInCommunity += allPlants[plantIndex]->count;
       }
 
       // Normalizations
       if (totalNumberOfPlantsInCommunity > 0)
       {
-         for (int pft = 0; pft < parameter.numberOfSpecies; pft++)
+         for (int pft = 0; pft < parameter.pftCount; pft++)
          {
             pftComposition[pft] *= 100.0 / totalNumberOfPlantsInCommunity;
          }

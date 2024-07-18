@@ -49,9 +49,9 @@ void MORTALITY::doBasicMortality(PARAMETER parameter, UTILS utils, COMMUNITY &co
    /* let plants die according to the mortality rate */
    if (randomNumber <= mortalityRate)
    {
-      if (community.allPlants[plantIndex]->N > 0)
+      if (community.allPlants[plantIndex]->count > 0)
       {
-         community.allPlants[plantIndex]->N -= 1;
+         community.allPlants[plantIndex]->count -= 1;
       }
       else
       {

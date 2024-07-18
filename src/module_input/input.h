@@ -16,7 +16,7 @@ public:
    INPUT();
    ~INPUT();
 
-   std::string speciesDirectory;
+   std::string plantTraitsDirectory;
    std::string weatherDirectory;
    std::string manageDirectory;
    std::string soilDirectory;
@@ -39,7 +39,7 @@ public:
    /* functions of the INPUT class */
    void getInputData(std::string path, UTILS utils, PARAMETER &parameter, WEATHER &weather, SOIL &soil, MANAGEMENT &management);
    void openAndReadConfigurationFile(std::string config, UTILS utils, PARAMETER &parameter);
-   void openAndReadSpeciesFile(std::string config, UTILS utils, PARAMETER &parameter);
+   void openAndReadPlantTraitsFile(std::string config, UTILS utils, PARAMETER &parameter);
    void openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &parameter, WEATHER &weather);
    void openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parameter, SOIL &soil);
    void openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &parameter, MANAGEMENT &management);
@@ -50,5 +50,5 @@ public:
    void extractDataTypeForExtractedValue(UTILS utils, std::string keyword);
    void convertAndCheckAndSetParameterValue(UTILS utils, std::string keyword, std::string parameterType, PARAMETER parameter);
    void transferConfigParameterValueToModelParameter(PARAMETER &parameter, UTILS utils);
-   void transferSpeciesParameterValueToModelParameter(PARAMETER &parameter);
+   void transferPlantTraitsParameterValueToModelParameter(PARAMETER &parameter);
 };

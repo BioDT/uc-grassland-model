@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
    MORTALITY mortality;
    GROWTH growth;
 
-   /* Read data from input files (weather, soil, management, species parameter) */
+   /* Read data from input files (weather, soil, management, plant traits parameters) */
    input.getInputData(path, utils, parameter, weather, soil, management);
    output.printSimulationSettingsToConsole(parameter);
 

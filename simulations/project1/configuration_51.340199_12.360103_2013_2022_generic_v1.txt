@@ -49,9 +49,9 @@ managementFile	management_51.340199_12.360103_2013_2022.txt
 \datatype:string
 \description:File name of management actions (sowing, mowing, fertilization, irrigation)
 	
-speciesFile	BioDT-generic/parameters_generic_v1.txt
+plantTraitsFile	BioDT-generic/parameters_generic_v1.txt
 \datatype:string
-\description:File name of model parameters for species or plant functional types 
+\description:File name of model parameters for plant traits (species or plant functional types) 
 
 # =============================================================================
 # 		Output files of simulation results (and settings)  

@@ -95,3 +95,10 @@ int UTILS::calculateJulianDayFromDate(int day, int month, int year)
    int julianDay = day + (153 * m + 2) / 5 + y * 365 + y / 4 - y / 100 + y / 400 - 32045;
    return julianDay;
 }
+
+/* Calculate the day (int number) of a given date, counted starting from 1 for a reference day (given as julian day) */
+int UTILS::calculateDayCountFromDate(int day, int month, int year, int startDay)
+{
+   int dayCount = calculateJulianDayFromDate(day, month, year) - startDay + 1;
+   return dayCount;
+}

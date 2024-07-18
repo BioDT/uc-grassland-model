@@ -53,7 +53,7 @@ void INIT::initCommunityStateVariables(COMMUNITY &community, PARAMETER parameter
    community.allPlants.clear();
    community.totalNumberOfPlantsInCommunity = 0;
    community.pftComposition.clear();
-   for (int pft = 0; pft < parameter.numberOfSpecies; pft++)
+   for (int pft = 0; pft < parameter.pftCount; pft++)
    {
       community.pftComposition.push_back(0);
    }

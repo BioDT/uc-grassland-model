@@ -12,7 +12,7 @@ void GROWTH::doPlantGrowth(PARAMETER parameter, COMMUNITY &community)
       for (int plantIndex = 0; plantIndex < community.allPlants.size(); plantIndex++)
       {
          pft = community.allPlants[plantIndex]->pft;
-         if (community.allPlants[plantIndex]->N > 0)
+         if (community.allPlants[plantIndex]->count > 0)
          {
             // TODO: add correct growth processes
             community.allPlants[plantIndex]->height += 1;

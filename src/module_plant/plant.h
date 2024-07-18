@@ -9,7 +9,7 @@ class PLANT
 {
 public:
    PLANT();
-   PLANT(PARAMETER param, ALLOMETRY allo, int pft, double height, int seedlings) : pft(pft), height(height), N(seedlings)
+   PLANT(PARAMETER param, ALLOMETRY allo, int pft, double height, int count) : pft(pft), height(height), count(count)
    {
       isAdult = false;     // status whether seedling (0) or adult (1)
       age = 0;             // age [days]
@@ -19,10 +19,11 @@ public:
       coveredArea = allo.areaFromWidth(width);
 
       shootBiomassGreen = allo.biomassFromHeightWidthForm(height, width, param.plantShootCorrectionFactor[pft]);
-      shootBiomass = shootBiomassGreen;
       shootBiomassBrown = 0.0;
-      shootBiomassFractionGreen = 1.0;
-      shootBiomassFractionBrown = 0.0;
+      // QTB: slightly modified here, using calculations to be robust in case of changes
+      shootBiomass = shootBiomassGreen + shootBiomassBrown;
+      shootBiomassFractionGreen = shootBiomassGreen / shootBiomass; // 1.0
+      shootBiomassFractionBrown = shootBiomassBrown / shootBiomass; // 0.0
       shootBiomassAboveClippingHeight = 0.0;
       rootBiomass = shootBiomass / param.plantShootRootRatio[pft];
       recruitmentBiomass = 0.0;
@@ -30,8 +31,8 @@ public:
       rootingDepth = param.plantRootDepthParamIntercept[pft] * pow((param.plantShootRootRatio[pft] / param.plantShootCorrectionFactor[pft]), param.plantRootDepthParamExponent[pft]) * pow((double)rootBiomass, (double)param.plantRootDepthParamExponent[pft]);
       numberOfSoilLayersRooting = 1;
 
-      shootNitrogenContent = (shootBiomass * CONVERT_ODM_TO_C) / param.plantCNRatioGreen[pft];
-      rootNitrogenContent = (rootBiomass * CONVERT_ODM_TO_C) / param.plantCNRatioBrown[pft];
+      shootNitrogenContent = shootBiomass * carbonContentOdm / param.plantCNRatioGreen[pft];
+      rootNitrogenContent = rootBiomass * carbonContentOdm / param.plantCNRatioBrown[pft];
       recruitmentNitrogenContent = 0.0;
 
       laiGreen = allo.laiFromBiomassAreaSla(shootBiomassGreen, coveredArea, param.plantSpecificLeafArea[pft]);
@@ -51,9 +52,9 @@ public:
       growthRespiration = 0.0;
       maintenanceRespiration = 0.0;
 
-      nppAllocationToShoot = param.plantShootRootRatio[pft] / (1 + param.plantShootRootRatio[pft]); // Note: init with full allocation to shoot and root
-      nppAllocationToRoot = (1 / (1 + param.plantShootRootRatio[pft]));
-      nppAllocationToRecruitment = 0.0;
+      nppAllocationShoot = param.plantShootRootRatio[pft] / (1 + param.plantShootRootRatio[pft]); // Note: init with full allocation to shoot and root
+      nppAllocationRoot = 1 / (1 + param.plantShootRootRatio[pft]);
+      nppAllocationRecruitment = 0.0;
 
       limitingFactorGppWater = 1.0;
       limitingFactorGppNitrogen = 1.0;
@@ -66,7 +67,7 @@ public:
    }
    ~PLANT();
 
-   int N;            // Number of plants in cohort with equal properties listed below (representative for ONE plant)
+   int count;        // Number of plants in cohort with equal properties listed below (representative for ONE plant)
    short pft;        // number of plant functional type (PFT)
    bool isAdult;     // status whether seedling (0) or adult (1)
    double age;       // age [days]
@@ -100,21 +101,21 @@ public:
 
    double laiAbove;          // cumulative leaf area index above plant [m^2 m^-2] including light extinction coefficient
    double incomingRadiation; // incoming radiation [micromol (photon) m^-2 s^-1]
-   double gpp;               // gpp [g_odm / d]
+   double gpp;               // GPP [g_odm / d]
    double npp;
-   double nppBuffer;              // buffer of gpp [g_odm / d] if npp <0
+   double nppBuffer;              // buffer of GPP [g_odm / d] if NPP <0
    double totalRespiration;       // total respiration [g_odm / d]
    double growthRespiration;      // growth respiration [g_odm / d]
    double maintenanceRespiration; // maintanance respiration [g_odm / d]
    double airTemperatureEffectOnRespiration;
-   double airTemperatureEffectOnGPP;
+   double airTemperatureEffectOnGpp;
 
-   double nppAllocationToShoot;
-   double nppAllocationToRoot;
-   double nppAllocationToRecruitment;
+   double nppAllocationShoot;
+   double nppAllocationRoot;
+   double nppAllocationRecruitment;
 
-   double limitingFactorGppWater;          //  water reduction factor
-   double limitingFactorGppNitrogen;       //  reduction factor for nitrogen
+   double limitingFactorGppWater;          // water reduction factor
+   double limitingFactorGppNitrogen;       // reduction factor for nitrogen
    double limitingFactorSymbiosisRhizobia; // changed from (1 - nppSymbiosisCostToRhizobia)
 
    // individual reduction factor for costs (fraction of NPP) invested in rhizobia to get fixed Nitrogen

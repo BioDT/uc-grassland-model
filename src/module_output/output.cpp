@@ -19,7 +19,7 @@ void OUTPUT::createAndOpenOutputFiles(PARAMETER parameter, UTILS utils)
    if (parameter.outputFile)
    {
       utils.strings.clear();
-      utils.splitString(parameter.speciesFile, '/');
+      utils.splitString(parameter.plantTraitsFile, '/');
       std::string endingLocation = std::to_string(parameter.latitude) + "_" + std::to_string(parameter.longitude);
       std::string endingYears = "_" + std::to_string(parameter.firstYear) + "_" + std::to_string(parameter.lastYear) + "_";
       std::string endingParameter = utils.strings.at(1);
@@ -61,7 +61,7 @@ void OUTPUT::writeSimulationResultsToOutputFiles(PARAMETER parameter, UTILS util
          {
             if (parameter.day == day)
             {
-               for (int pft = 0; pft < parameter.numberOfSpecies; pft++)
+               for (int pft = 0; pft < parameter.pftCount; pft++)
                {
                   outputFile << parameter.day << "\t" << pft << "\t" << community.pftComposition[pft] << std::endl;
                }
@@ -131,7 +131,7 @@ void OUTPUT::openAndReadOutputWritingDates(std::string path, UTILS utils, PARAME
             int day = std::stoi(utils.strings.at(2).c_str());
             int month = std::stoi(utils.strings.at(1).c_str());
             int year = std::stoi(utils.strings.at(0).c_str());
-            outputWritingDates.push_back(utils.calculateJulianDayFromDate(day, month, year) - parameter.referenceJulianDayStart + 1);
+            outputWritingDates.push_back(utils.calculateDayCountFromDate(day, month, year, parameter.referenceJulianDayStart));
          }
       }
       file.close();
@@ -160,7 +160,7 @@ void OUTPUT::printSimulationSettingsToConsole(PARAMETER parameter)
    std::cout << "Weather data: " << parameter.weatherFile << std::endl;
    std::cout << "Soil data: " << parameter.soilFile << std::endl;
    std::cout << "Management data: " << parameter.managementFile << std::endl;
-   std::cout << "Plant species traits: " << parameter.speciesFile << std::endl
+   std::cout << "Plant traits: " << parameter.plantTraitsFile << std::endl
              << std::endl;
 
    std::cout << "******* Simulation output writing *********" << std::endl

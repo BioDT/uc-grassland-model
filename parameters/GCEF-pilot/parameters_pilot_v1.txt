@@ -1,14 +1,14 @@
 # =============================================================================
 #
 #  GRASSMIND parametrization
-#  Groups of plant species (species or PFT): PFT
+#  Groups of plants (species or PFT): PFT
 #  Groups: 1-grasses, 2-forbs, 3-legumes
 #
 # =============================================================================
 #  Species/PFT number   
 # =============================================================================
 
-numberOfSpecies	3
+pftCount	3
 \datatype:integer
 \description:number of plant species or plant functional types
 	
@@ -166,7 +166,7 @@ maintenanceRespirationRate	0.2
 \unit:d-1
 \description:maintenance respiration rate (proportional to plant biomass)
 
-plantNPPAllocationToPlantGrowth	0.7907	0.4417	0.9916
+plantNppAllocationGrowth	0.7907	0.4417	0.9916
 \datatype:float-array
 \description:NPP allocation of a plant to shoot and root growth
 
@@ -215,12 +215,12 @@ plantWaterUseEfficiency	1.5	1.5	1.5
 \unit:g(odm) kg(h2O)-1
 \description:water use efficiency coefficient
 
-plantMinimalSoilWaterForGPPReduction	33.4	26.5	19.6
+plantMinimalSoilWaterForGppReduction	33.4	26.5	19.6
 \datatype:float-array
 \unit:d-1
 \description:soil water content threshold below which plant GPP is reduced
 
-plantMaximalSoilWaterForGPPReduction	46.0	46.0	40.0
+plantMaximalSoilWaterForGppReduction	46.0	46.0	40.0
 \datatype:float-array
 \unit:d-1
 \description:soil water content threshold above which plant GPP is reduced

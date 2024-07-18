@@ -12,7 +12,7 @@ std::map<std::string, std::string> INPUT::configParString;
 void INPUT::getInputData(std::string path, UTILS utils, PARAMETER &parameter, WEATHER &weather, SOIL &soil, MANAGEMENT &management)
 {
    openAndReadConfigurationFile(path, utils, parameter);
-   openAndReadSpeciesFile(path, utils, parameter);
+   openAndReadPlantTraitsFile(path, utils, parameter);
    openAndReadWeatherFile(path, utils, parameter, weather);
    openAndReadSoilFile(path, utils, parameter, soil);
    openAndReadManagementFile(path, utils, parameter, management);
@@ -262,15 +262,15 @@ void INPUT::convertAndCheckAndSetParameterValue(UTILS utils, std::string keyword
          int month = std::stoi(utils.strings.at(1));
          int year = std::stoi(utils.strings.at(0));
 
-         // calculate julian day // TODO: rename this integer variable here
-         int julianDay = utils.calculateJulianDayFromDate(day, month, year) - parameter.referenceJulianDayStart + 1;
-         if (julianDay < 0)
+         // calculate given day as count from first simulated day
+         int dayCount = utils.calculateDayCountFromDate(day, month, year, parameter.referenceJulianDayStart);
+         if (dayCount < 0)
          {
             throw std::out_of_range("Value of parameter " + keyword + " is outside the valid range! Please check the date!");
          }
          else
          {
-            configParInt[keyword] = julianDay;
+            configParInt[keyword] = dayCount;
          }
       }
       catch (const std::out_of_range &e)
@@ -460,15 +460,15 @@ void INPUT::convertAndCheckAndSetParameterValue(UTILS utils, std::string keyword
             int month = std::stoi(utils.strings.at(1));
             int year = std::stoi(utils.strings.at(0));
 
-            // calculate julian day // TODO: rename this variable here (see also above)
-            int julianDay = utils.calculateJulianDayFromDate(day, month, year) - parameter.referenceJulianDayStart + 1;
-            if (julianDay < 0)
+            // calculate given day as count from first simulated day
+            int dayCount = utils.calculateDayCountFromDate(day, month, year, parameter.referenceJulianDayStart);
+            if (dayCount < 0)
             {
                throw std::out_of_range("Value of parameter " + keyword + array_pos.c_str() + " is outside the valid range! Please check the date!");
             }
             else
             {
-               configParInt[keyword + array_pos.c_str()] = julianDay;
+               configParInt[keyword + array_pos.c_str()] = dayCount;
             }
          }
       }
@@ -493,7 +493,7 @@ void INPUT::transferConfigParameterValueToModelParameter(PARAMETER &parameter, U
    parameter.weatherFile = configParString["weatherFile"];
    parameter.soilFile = configParString["soilFile"];
    parameter.managementFile = configParString["managementFile"];
-   parameter.speciesFile = configParString["speciesFile"];
+   parameter.plantTraitsFile = configParString["plantTraitsFile"];
    parameter.outputFile = configParBool["outputFile"];
    parameter.outputWritingDatesFile = configParString["outputWritingDatesFile"];
    // parameter.clippingHeightForBiomassCalibration = configParFloat["clippingHeightForBiomassCalibration"];
@@ -504,14 +504,15 @@ void INPUT::transferConfigParameterValueToModelParameter(PARAMETER &parameter, U
    // calculate reference julian days (1 Jan of param.firstYear and 31 Dec of param.lastYear)
    parameter.referenceJulianDayStart = utils.calculateJulianDayFromDate(1, 1, parameter.firstYear);
    parameter.referenceJulianDayEnd = utils.calculateJulianDayFromDate(31, 12, parameter.lastYear);
+   parameter.simulationTimeInDays = parameter.referenceJulianDayEnd - parameter.referenceJulianDayStart + 1;
 }
 
-/* transfer the mapped values of all species parameter names to their variables in class PARAMETER */
-void INPUT::transferSpeciesParameterValueToModelParameter(PARAMETER &parameter)
+/* transfer the mapped values of all plant trait parameter names to their variables in class PARAMETER */
+void INPUT::transferPlantTraitsParameterValueToModelParameter(PARAMETER &parameter)
 {
-   parameter.numberOfSpecies = configParInt["numberOfSpecies"];
+   parameter.pftCount = configParInt["pftCount"];
 
-   /* parameter independent of species type */
+   /* parameters independent of species or PFT */
    parameter.crowdingMortalityActivated = configParBool["crowdingMortalityActivated"];
    parameter.externalSeedInfluxActivated = configParBool["externalSeedInfluxActivated"];
    parameter.dayOfExternalSeedInfluxStart = configParInt["dayOfExternalSeedInfluxStart"];
@@ -523,8 +524,8 @@ void INPUT::transferSpeciesParameterValueToModelParameter(PARAMETER &parameter)
    parameter.growthRespirationFraction = configParFloat["growthRespirationFraction"];
    parameter.maintenanceRespirationRate = configParFloat["maintenanceRespirationRate"];
 
-   /* parameter dependent of species type */
-   for (int pft = 0; pft < parameter.numberOfSpecies; pft++)
+   /* parameters dependent on species or PFT */
+   for (int pft = 0; pft < parameter.pftCount; pft++)
    {
       std::string array_pos = std::to_string(pft);
       parameter.maximumPlantHeight.push_back(configParInt["maximumPlantHeight" + array_pos]);
@@ -548,30 +549,30 @@ void INPUT::transferSpeciesParameterValueToModelParameter(PARAMETER &parameter)
       parameter.maximumGrossLeafPhotosynthesisRate.push_back(configParFloat["maximumGrossLeafPhotosynthesisRate" + array_pos]);
       parameter.initialSlopeOfLightResponseCurve.push_back(configParFloat["initialSlopeOfLightResponseCurve" + array_pos]);
       parameter.lightExtinctionCoefficients.push_back(configParFloat["lightExtinctionCoefficients" + array_pos]);
-      parameter.plantNPPAllocationToPlantGrowth.push_back(configParFloat["plantNPPAllocationToPlantGrowth" + array_pos]);
+      parameter.plantNppAllocationGrowth.push_back(configParFloat["plantNppAllocationGrowth" + array_pos]);
       parameter.plantCNRatioGreen.push_back(configParFloat["plantCNRatioGreen" + array_pos]);
       parameter.plantCNRatioBrown.push_back(configParFloat["plantCNRatioBrown" + array_pos]);
       parameter.nitrogenFixationAbility.push_back(configParBool["nitrogenFixationAbility" + array_pos]);
       parameter.plantWaterUseEfficiency.push_back(configParFloat["plantWaterUseEfficiency" + array_pos]);
-      parameter.plantMinimalSoilWaterForGPPReduction.push_back(configParFloat["plantMinimalSoilWaterForGPPReduction" + array_pos]);
-      parameter.plantMaximalSoilWaterForGPPReduction.push_back(configParFloat["plantMaximalSoilWaterForGPPReduction" + array_pos]);
+      parameter.plantMinimalSoilWaterForGppReduction.push_back(configParFloat["plantMinimalSoilWaterForGppReduction" + array_pos]);
+      parameter.plantMaximalSoilWaterForGppReduction.push_back(configParFloat["plantMaximalSoilWaterForGppReduction" + array_pos]);
    }
 }
 
-/* open and read species parameter file */
-void INPUT::openAndReadSpeciesFile(std::string path, UTILS utils, PARAMETER &parameter)
+/* open and read plant traits parameter file */
+void INPUT::openAndReadPlantTraitsFile(std::string path, UTILS utils, PARAMETER &parameter)
 {
    char separator = '\\';
    utils.strings.clear();
    utils.splitString(path, separator);
    for (int it = 0; it < utils.strings.size() - 3; it++)
    {
-      speciesDirectory = speciesDirectory + utils.strings.at(it) + "\\";
+      plantTraitsDirectory = plantTraitsDirectory + utils.strings.at(it) + "\\";
    }
-   speciesDirectory = speciesDirectory + "parameters\\" + parameter.speciesFile;
-   const char *filename = speciesDirectory.c_str();
+   plantTraitsDirectory = plantTraitsDirectory + "parameters\\" + parameter.plantTraitsFile;
+   const char *filename = plantTraitsDirectory.c_str();
 
-   for (auto par : parameter.speciesParameterNames) /* parameterNames are listed in the class definition of PARAMETER (parameter.h)*/
+   for (auto par : parameter.plantTraitsParameterNames) /* parameterNames are listed in the class definition of PARAMETER (parameter.h)*/
    {
       /* open file and search for name in all lines */
       searchParameterInInputFile(par, filename, utils);
@@ -587,7 +588,7 @@ void INPUT::openAndReadSpeciesFile(std::string path, UTILS utils, PARAMETER &par
    }
 
    /* transfer the mapped values of all parameter names to their variables in class PARAMETER */
-   transferSpeciesParameterValueToModelParameter(parameter);
+   transferPlantTraitsParameterValueToModelParameter(parameter);
 }
 
 /* read-in weather variables from input file */
@@ -605,6 +606,7 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
 
    // @Thomas: From template (eLTER data call)
    // Date	Precipitation[mmd-1]	Temperature[degC]	PPFD[mmolm-2s-1]	PET[mmd-1]
+   // QTB: yes, but we also have "Daylength[h]" in the weather files, and this will change again once we add daytime temperature...
    weather.weatherDates.clear();
    weather.precipitation.clear();
    weather.airTemperature.clear();
@@ -645,9 +647,11 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
                weather.potEvapoTranspiration.push_back(atof(value));
 
                // TODO: add calculation of day length
+               // QTB: should always be in the weather files, we calculate it in Python, so not needed here
                weather.dayLength.push_back(weather.calculateAstronomicDayLength());
 
                // TODO: add calculation of PET if not given as value in the weather file
+               // QTB: should always be in the weather files, so not needed here
                if (weather.potEvapoTranspiration.at(m - 2) == -9999)
                {
                   weather.dayLength.push_back(weather.calculatePotentialEvapoTranspiration());
@@ -702,7 +706,7 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
 
    management.sowingDate.clear();
    management.amountOfSownSeeds.clear(); // 2D vector
-   for (int pft = 0; pft < parameter.numberOfSpecies; pft++)
+   for (int pft = 0; pft < parameter.pftCount; pft++)
    {
       management.amountOfSownSeeds.push_back(std::vector<int>()); // add rows according to the number of pfts from configuration file
    }
@@ -728,7 +732,7 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
             utils.strings.clear();
             utils.splitString(line, separator);
 
-            if (utils.strings.size() == (4 + parameter.numberOfSpecies))
+            if (utils.strings.size() == (4 + parameter.pftCount))
             {
 
                valueDate = utils.strings.at(0);
@@ -737,7 +741,7 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
                valueActionIrrigation = atof(utils.strings.at(3).c_str());
                valueActionSowingActivated = 0;
                valueActionSowing.clear();
-               for (int pft = 0; pft < parameter.numberOfSpecies; pft++)
+               for (int pft = 0; pft < parameter.pftCount; pft++)
                {
                   valueActionSowingActivated += atof(utils.strings.at(4 + pft).c_str());
                   valueActionSowing.push_back(atof(utils.strings.at(4 + pft).c_str()));
@@ -754,8 +758,9 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
                      int month = std::stoi(utils.strings.at(1).c_str());
                      int year = std::stoi(utils.strings.at(0).c_str());
 
-                     int mowDay = utils.calculateJulianDayFromDate(day, month, year) - parameter.referenceJulianDayStart + 1;
-                     if (mowDay > 0 && mowDay < (parameter.referenceJulianDayEnd - parameter.referenceJulianDayStart + 1))
+                     int mowDay = utils.calculateDayCountFromDate(day, month, year, parameter.referenceJulianDayStart);
+
+                     if (mowDay > 0 && mowDay < parameter.simulationTimeInDays)
                      {
                         management.mowingDate.push_back(mowDay);
                         management.mowingHeight.push_back(valueActionMowing);
@@ -782,8 +787,8 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
                      int month = std::stoi(utils.strings.at(1).c_str());
                      int year = std::stoi(utils.strings.at(0).c_str());
 
-                     int fertDay = utils.calculateJulianDayFromDate(day, month, year) - parameter.referenceJulianDayStart + 1;
-                     if (fertDay > 0 && fertDay < (parameter.referenceJulianDayEnd - parameter.referenceJulianDayStart + 1))
+                     int fertDay = utils.calculateDayCountFromDate(day, month, year, parameter.referenceJulianDayStart);
+                     if (fertDay > 0 && fertDay < parameter.simulationTimeInDays)
                      {
                         management.fertilizationDate.push_back(fertDay);
                         management.fertilizerAmount.push_back(valueActionFertilization);
@@ -810,8 +815,8 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
                      int month = std::stoi(utils.strings.at(1).c_str());
                      int year = std::stoi(utils.strings.at(0).c_str());
 
-                     int irrigDay = utils.calculateJulianDayFromDate(day, month, year) - parameter.referenceJulianDayStart + 1;
-                     if (irrigDay > 0 && irrigDay < (parameter.referenceJulianDayEnd - parameter.referenceJulianDayStart + 1))
+                     int irrigDay = utils.calculateDayCountFromDate(day, month, year, parameter.referenceJulianDayStart);
+                     if (irrigDay > 0 && irrigDay < parameter.simulationTimeInDays)
                      {
                         management.irrigationDate.push_back(irrigDay);
                         management.irrigationAmount.push_back(valueActionIrrigation);
@@ -836,11 +841,11 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
                   int month = std::stoi(utils.strings.at(1).c_str());
                   int year = std::stoi(utils.strings.at(0).c_str());
 
-                  int sowDay = utils.calculateJulianDayFromDate(day, month, year) - parameter.referenceJulianDayStart + 1;
-                  if (sowDay > 0 && sowDay < (parameter.referenceJulianDayEnd - parameter.referenceJulianDayStart + 1))
+                  int sowDay = utils.calculateDayCountFromDate(day, month, year, parameter.referenceJulianDayStart);
+                  if (sowDay > 0 && sowDay < parameter.simulationTimeInDays)
                   {
                      management.sowingDate.push_back(sowDay);
-                     for (int pft = 0; pft < parameter.numberOfSpecies; pft++)
+                     for (int pft = 0; pft < parameter.pftCount; pft++)
                      {
                         management.amountOfSownSeeds[pft].push_back((int)valueActionSowing[pft]);
                      }

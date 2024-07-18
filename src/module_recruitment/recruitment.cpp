@@ -15,10 +15,10 @@ void RECRUITMENT::doPlantRecruitment(PARAMETER parameter, ALLOMETRY allometry, C
 /* plant recruitment via seed influx from an outside area */
 void RECRUITMENT::createSeedlingsByExternalInflux(PARAMETER parameter, ALLOMETRY allometry, COMMUNITY &community)
 {
-   /* process is only done when activated and current day reached seed influx start (species file parameter) */
+   /* process is only done when activated and current day reached seed influx start (plant traits file parameter) */
    if (parameter.externalSeedInfluxActivated && parameter.day >= parameter.dayOfExternalSeedInfluxStart)
    {
-      for (int pft = 0; pft < parameter.numberOfSpecies; pft++)
+      for (int pft = 0; pft < parameter.pftCount; pft++)
       {
          /* new plant cohorts are stored at the end of the community vector */
          community.allPlants.emplace_back(std::make_shared<PLANT>(parameter, allometry, pft, seedlingHeight, parameter.externalSeedInfluxNumber[pft]));
@@ -37,7 +37,7 @@ void RECRUITMENT::createSeedlingsBySowing(PARAMETER parameter, ALLOMETRY allomet
          /* if the current day is exactly a sowing day */
          if (parameter.day == management.sowingDate[sowingDayIndex])
          {
-            for (int pft = 0; pft < parameter.numberOfSpecies; pft++)
+            for (int pft = 0; pft < parameter.pftCount; pft++)
             {
                community.allPlants.emplace_back(std::make_shared<PLANT>(parameter, allometry, pft, seedlingHeight, management.amountOfSownSeeds[pft][sowingDayIndex]));
             }
@@ -51,7 +51,7 @@ void RECRUITMENT::createSeedlingsByPlantReproduction(PARAMETER parameter, ALLOME
 {
    int pft, numberOfSeeds;
 
-   /* process is only done if activated (species parameter file) */
+   /* process is only done if activated (plant traits parameter file) */
    if (parameter.plantSeedProductionActivated)
    {
       for (int plantIndex = 0; plantIndex < community.allPlants.size(); plantIndex++)
