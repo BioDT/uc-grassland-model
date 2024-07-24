@@ -604,15 +604,15 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
    weatherDirectory = weatherDirectory + "scenarios\\weather\\" + parameter.weatherFile;
    const char *filename = weatherDirectory.c_str();
 
-   // @Thomas: From template (eLTER data call)
-   // Date	Precipitation[mmd-1]	Temperature[degC]	PPFD[mmolm-2s-1]	PET[mmd-1]
-   // QTB: yes, but we also have "Daylength[h]" in the weather files, and this will change again once we add daytime temperature...
+   // TODO: adapt parser to new weather file / columns
+   // Date	Precipitation[mmd-1]	Temperature[degC]	DaytimeTemperature [degC] PPFD[mmolm-2s-1]	DayLength[h]   PET[mmd-1]
    weather.weatherDates.clear();
    weather.precipitation.clear();
    weather.airTemperature.clear();
+   // TODO: add vector weather.dayTimeAirTemperature
    weather.photosyntheticPhotonFluxDensity.clear();
-   weather.potEvapoTranspiration.clear();
    weather.dayLength.clear();
+   weather.potEvapoTranspiration.clear();
 
    std::string line;  // current line text in parser
    int m = 0;         // current line number in parser
@@ -640,18 +640,20 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
                value = utils.strings.at(2).c_str();
                weather.airTemperature.push_back(atof(value));
 
+               // TODO: add column on daytime temperature
+
                value = utils.strings.at(3).c_str();
                weather.photosyntheticPhotonFluxDensity.push_back(atof(value));
+
+               // TODO: add column on daylength
 
                value = utils.strings.at(4).c_str();
                weather.potEvapoTranspiration.push_back(atof(value));
 
-               // TODO: add calculation of day length
-               // QTB: should always be in the weather files, we calculate it in Python, so not needed here
+               // TODO: remove this function
                weather.dayLength.push_back(weather.calculateAstronomicDayLength());
 
-               // TODO: add calculation of PET if not given as value in the weather file
-               // QTB: should always be in the weather files, so not needed here
+               // TODO: remove this function
                if (weather.potEvapoTranspiration.at(m - 2) == -9999)
                {
                   weather.dayLength.push_back(weather.calculatePotentialEvapoTranspiration());
@@ -954,8 +956,6 @@ void INPUT::openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parame
                {
                   utils.handleError("Error (soil input): pwp, fc and porosity are not in reasonable order of values (pwp < fc < porosity). Please check the soil file.");
                }
-
-               // TODO: if values are missing, pedotransfer functions could be directly included here (declared and defined in module_soil) and written to the soil file. including note in stderr.txt
             }
             else
             {

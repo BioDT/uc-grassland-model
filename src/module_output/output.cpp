@@ -20,11 +20,10 @@ void OUTPUT::createAndOpenOutputFiles(PARAMETER parameter, UTILS utils)
    {
       utils.strings.clear();
       utils.splitString(parameter.plantTraitsFile, '/');
-      std::string endingLocation = std::to_string(parameter.latitude) + "_" + std::to_string(parameter.longitude);
-      std::string endingYears = "_" + std::to_string(parameter.firstYear) + "_" + std::to_string(parameter.lastYear) + "_";
+      std::string endingLocation = "lat" + std::to_string(parameter.latitude) + "_lon" + std::to_string(parameter.longitude);
+      std::string endingYears = "__" + std::to_string(parameter.firstYear) + "-01-01_" + std::to_string(parameter.lastYear) + "-12-31";
       std::string endingParameter = utils.strings.at(1);
-      std::string fileEnding = endingLocation + endingYears + endingParameter;
-      std::string filename = outputDirectory + "output_" + fileEnding;
+      std::string filename = outputDirectory + endingLocation + endingYears + "__output__" + endingParameter;
       outputFile.open(filename);
       if (!outputFile.is_open())
       {

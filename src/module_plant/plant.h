@@ -20,10 +20,9 @@ public:
 
       shootBiomassGreen = allo.biomassFromHeightWidthForm(height, width, param.plantShootCorrectionFactor[pft]);
       shootBiomassBrown = 0.0;
-      // QTB: slightly modified here, using calculations to be robust in case of changes
       shootBiomass = shootBiomassGreen + shootBiomassBrown;
-      shootBiomassFractionGreen = shootBiomassGreen / shootBiomass; // 1.0
-      shootBiomassFractionBrown = shootBiomassBrown / shootBiomass; // 0.0
+      shootBiomassFractionGreen = shootBiomassGreen / shootBiomass; // initially: 1.0
+      shootBiomassFractionBrown = shootBiomassBrown / shootBiomass; // initially: 0.0
       shootBiomassAboveClippingHeight = 0.0;
       rootBiomass = shootBiomass / param.plantShootRootRatio[pft];
       recruitmentBiomass = 0.0;

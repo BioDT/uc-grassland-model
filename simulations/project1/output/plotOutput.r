@@ -1,5 +1,5 @@
 setwd("C:/Users/taubert/Desktop/grassDT-model-GitHub/uc-grassland-model/simulations/project1/output/")
-data = read.delim("output_51.340199_12.360103_2013_2022_parameters_generic_v1.txt",skip=1, header=T,dec=".",sep="\t")
+data = read.delim("lat51.340199_lon12.360103__2013-01-01_2022-12-31__output__plant_traits__generic_v1.txt",skip=1, header=T,dec=".",sep="\t")
 
 specComp = array(0,c(0,4))
 for (i in unique(data[,1])) {

@@ -14,9 +14,13 @@ void COMMUNITY::checkPlantsAreAliveInCommunity(UTILS utils)
       /* go through all plant cohorts in the community vector and save indices of dying cohorts */
       for (int plantIndex = 0; plantIndex < allPlants.size(); plantIndex++)
       {
-         if (allPlants[plantIndex]->count <= 0) // QTB: = 0 sufficient? can < 0 happen, should it be an error then?
+         if (allPlants[plantIndex]->count == 0)
          {
             idsOfDeadPlantCohorts.push_back(plantIndex);
+         }
+         else if (allPlants[plantIndex]->count < 0)
+         {
+            utils.handleError("Error (allPlants vector): there is an invalid negative amount of plants within a cohort.");
          }
       }
 
