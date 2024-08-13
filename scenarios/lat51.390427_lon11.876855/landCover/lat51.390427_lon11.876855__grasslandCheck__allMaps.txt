@@ -1,0 +1,10 @@
+lat	lon	map_key	category	is_grass
+51.390427	11.876855	HRL_Grassland	grassland	True
+51.390427	11.876855	EUR_Pflugmacher	grassland	True
+51.390427	11.876855	GER_Preidl	Grassland	True
+51.390427	11.876855	GER_Schwieder_2017	Fallow land	True
+51.390427	11.876855	GER_Schwieder_2018	Cultivated grassland	True
+51.390427	11.876855	GER_Schwieder_2019	Cultivated grassland	True
+51.390427	11.876855	GER_Schwieder_2020	Winter barley	False
+51.390427	11.876855	GER_Schwieder_2021	Winter rye	False
+51.390427	11.876855	GER_Lange_2017	non-grassland	False
