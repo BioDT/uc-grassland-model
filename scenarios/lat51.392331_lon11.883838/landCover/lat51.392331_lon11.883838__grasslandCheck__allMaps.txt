@@ -1,10 +1,10 @@
-lat	lon	map_key	category	is_grass
-51.392331	11.883838	HRL_Grassland	non-grassland	False
-51.392331	11.883838	EUR_Pflugmacher	artificial land	False
-51.392331	11.883838	GER_Preidl	Grassland	True
-51.392331	11.883838	GER_Schwieder_2017	Unknown Category	False
-51.392331	11.883838	GER_Schwieder_2018	Unknown Category	False
-51.392331	11.883838	GER_Schwieder_2019	Unknown Category	False
-51.392331	11.883838	GER_Schwieder_2020	Unknown Category	False
-51.392331	11.883838	GER_Schwieder_2021	Unknown Category	False
-51.392331	11.883838	GER_Lange_2017	non-grassland	False
+lat	lon	map_year	map_key	is_grass	category001
+51.392331	11.883838	2015	EUR_Pflugmacher	False	artificial land
+51.392331	11.883838	2015	GER_Lange_2017	False	non-grassland
+51.392331	11.883838	2016	GER_Preidl	True	Grassland
+51.392331	11.883838	2017	GER_Schwieder_2017	False	Unknown Category
+51.392331	11.883838	2018	HRL_Grassland	False	non-grassland
+51.392331	11.883838	2018	GER_Schwieder_2018	False	Unknown Category
+51.392331	11.883838	2019	GER_Schwieder_2019	False	Unknown Category
+51.392331	11.883838	2020	GER_Schwieder_2020	False	Unknown Category
+51.392331	11.883838	2021	GER_Schwieder_2021	False	Unknown Category

@@ -1,11 +1,11 @@
-lat	lon	deims_id	found	name	map_key	category	is_grass	category001
-51.3919	11.8787	102ae489-04e3-481d-97df-45905837dc1a	True	TERENO - Bad Lauchstaedt	HRL_Grassland	non-grassland	False	
-51.3919	11.8787	102ae489-04e3-481d-97df-45905837dc1a	True	TERENO - Bad Lauchstaedt	EUR_Pflugmacher	grassland	True	
-51.3919	11.8787	102ae489-04e3-481d-97df-45905837dc1a	True	TERENO - Bad Lauchstaedt	GER_Preidl	Grassland	True	
-51.3919	11.8787	102ae489-04e3-481d-97df-45905837dc1a	True	TERENO - Bad Lauchstaedt	GER_Schwieder_2017	Fallow land	True	
-51.3919	11.8787	102ae489-04e3-481d-97df-45905837dc1a	True	TERENO - Bad Lauchstaedt	GER_Schwieder_2018	Cultivated grassland	True	
-51.3919	11.8787	102ae489-04e3-481d-97df-45905837dc1a	True	TERENO - Bad Lauchstaedt	GER_Schwieder_2019	Winter rye	False	
-51.3919	11.8787	102ae489-04e3-481d-97df-45905837dc1a	True	TERENO - Bad Lauchstaedt	GER_Schwieder_2020	Winter rye	False	
-51.3919	11.8787	102ae489-04e3-481d-97df-45905837dc1a	True	TERENO - Bad Lauchstaedt	GER_Schwieder_2021	Permanent grassland	True	
-51.3919	11.8787	102ae489-04e3-481d-97df-45905837dc1a	True	TERENO - Bad Lauchstaedt	GER_Lange_2017	non-grassland	False	
-51.3919	11.8787	102ae489-04e3-481d-97df-45905837dc1a	True	TERENO - Bad Lauchstaedt	eunisHabitat		False	Regularly or recently cultivated agricultural, horticultural and domestic habitats (I)
+lat	lon	deims_id	found	name	map_year	map_key	is_grass	category001
+51.3919	11.8787	102ae489-04e3-481d-97df-45905837dc1a	True	TERENO - Bad Lauchstaedt	2012	eunisHabitat	False	Regularly or recently cultivated agricultural, horticultural and domestic habitats (I)
+51.3919	11.8787	102ae489-04e3-481d-97df-45905837dc1a	True	TERENO - Bad Lauchstaedt	2015	EUR_Pflugmacher	True	grassland
+51.3919	11.8787	102ae489-04e3-481d-97df-45905837dc1a	True	TERENO - Bad Lauchstaedt	2015	GER_Lange_2017	False	non-grassland
+51.3919	11.8787	102ae489-04e3-481d-97df-45905837dc1a	True	TERENO - Bad Lauchstaedt	2016	GER_Preidl	True	Grassland
+51.3919	11.8787	102ae489-04e3-481d-97df-45905837dc1a	True	TERENO - Bad Lauchstaedt	2017	GER_Schwieder_2017	True	Fallow land
+51.3919	11.8787	102ae489-04e3-481d-97df-45905837dc1a	True	TERENO - Bad Lauchstaedt	2018	HRL_Grassland	False	non-grassland
+51.3919	11.8787	102ae489-04e3-481d-97df-45905837dc1a	True	TERENO - Bad Lauchstaedt	2018	GER_Schwieder_2018	True	Cultivated grassland
+51.3919	11.8787	102ae489-04e3-481d-97df-45905837dc1a	True	TERENO - Bad Lauchstaedt	2019	GER_Schwieder_2019	False	Winter rye
+51.3919	11.8787	102ae489-04e3-481d-97df-45905837dc1a	True	TERENO - Bad Lauchstaedt	2020	GER_Schwieder_2020	False	Winter rye
+51.3919	11.8787	102ae489-04e3-481d-97df-45905837dc1a	True	TERENO - Bad Lauchstaedt	2021	GER_Schwieder_2021	True	Permanent grassland

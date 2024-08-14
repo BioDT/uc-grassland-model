@@ -1,10 +1,10 @@
-lat	lon	map_key	category	is_grass
-51.390427	11.876855	HRL_Grassland	grassland	True
-51.390427	11.876855	EUR_Pflugmacher	grassland	True
-51.390427	11.876855	GER_Preidl	Grassland	True
-51.390427	11.876855	GER_Schwieder_2017	Fallow land	True
-51.390427	11.876855	GER_Schwieder_2018	Cultivated grassland	True
-51.390427	11.876855	GER_Schwieder_2019	Cultivated grassland	True
-51.390427	11.876855	GER_Schwieder_2020	Winter barley	False
-51.390427	11.876855	GER_Schwieder_2021	Winter rye	False
-51.390427	11.876855	GER_Lange_2017	non-grassland	False
+lat	lon	map_year	map_key	is_grass	category001
+51.390427	11.876855	2015	EUR_Pflugmacher	True	grassland
+51.390427	11.876855	2015	GER_Lange_2017	False	non-grassland
+51.390427	11.876855	2016	GER_Preidl	True	Grassland
+51.390427	11.876855	2017	GER_Schwieder_2017	True	Fallow land
+51.390427	11.876855	2018	HRL_Grassland	True	grassland
+51.390427	11.876855	2018	GER_Schwieder_2018	True	Cultivated grassland
+51.390427	11.876855	2019	GER_Schwieder_2019	True	Cultivated grassland
+51.390427	11.876855	2020	GER_Schwieder_2020	False	Winter barley
+51.390427	11.876855	2021	GER_Schwieder_2021	False	Winter rye
