@@ -1,10 +1,10 @@
-lat	lon	map_year	map_key	is_grass	category001
-51.392331	11.883838	2015	EUR_Pflugmacher	False	artificial land
-51.392331	11.883838	2015	GER_Lange_2017	False	non-grassland
-51.392331	11.883838	2016	GER_Preidl	True	Grassland
-51.392331	11.883838	2017	GER_Schwieder_2017	False	Unknown Category
-51.392331	11.883838	2018	HRL_Grassland	False	non-grassland
-51.392331	11.883838	2018	GER_Schwieder_2018	False	Unknown Category
-51.392331	11.883838	2019	GER_Schwieder_2019	False	Unknown Category
-51.392331	11.883838	2020	GER_Schwieder_2020	False	Unknown Category
-51.392331	11.883838	2021	GER_Schwieder_2021	False	Unknown Category
+lat	lon	map_year	map_key	map_source	map_query_time_stamp	is_grass	category001
+51.392331	11.883838	2015	EUR_Pflugmacher	http://134.94.199.14/grasslands-pdt/landCoverMaps/europe_landcover_2015_RSE-Full3.tif	2024-08-16T09:25:00.595200+00:00	False	artificial land
+51.392331	11.883838	2015	GER_Lange_2017	https://data.mendeley.com/public-files/datasets/m9rrv26dvf/files/d871429a-b2a6-4592-b3e5-4650462a9ac3/file_downloaded	2024-08-16T09:25:03.558305+00:00	False	non-grassland
+51.392331	11.883838	2016	GER_Preidl	http://134.94.199.14/grasslands-pdt/landCoverMaps/preidl-etal-RSE-2020_land-cover-classification-germany-2016.tif	2024-08-16T09:25:00.714210+00:00	True	Grassland
+51.392331	11.883838	2017	GER_Schwieder_2017	https://zenodo.org/records/10640528/files/CTM_GER_2017_rst_v202_COG.tif	2024-08-16T09:25:01.259705+00:00	False	Unknown Category
+51.392331	11.883838	2018	EUR_hrl_grassland	https://image.discomap.eea.europa.eu/arcgis/rest/services/GioLandPublic/HRL_Grassland_2018/ImageServer	2024-08-16T09:25:00.181927+00:00	False	non-grassland
+51.392331	11.883838	2018	GER_Schwieder_2018	https://zenodo.org/records/10640528/files/CTM_GER_2018_rst_v202_COG.tif	2024-08-16T09:25:01.594635+00:00	False	Unknown Category
+51.392331	11.883838	2019	GER_Schwieder_2019	https://zenodo.org/records/10640528/files/CTM_GER_2019_rst_v202_COG.tif	2024-08-16T09:25:01.953589+00:00	False	Unknown Category
+51.392331	11.883838	2020	GER_Schwieder_2020	https://zenodo.org/records/10640528/files/CTM_GER_2020_rst_v202_COG.tif	2024-08-16T09:25:02.305839+00:00	False	Unknown Category
+51.392331	11.883838	2021	GER_Schwieder_2021	https://zenodo.org/records/10640528/files/CTM_GER_2021_rst_v202_COG.tif	2024-08-16T09:25:02.759044+00:00	False	Unknown Category
