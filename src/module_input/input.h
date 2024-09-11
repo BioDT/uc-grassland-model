@@ -9,6 +9,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <limits>
 
 class INPUT
 {
@@ -20,6 +21,11 @@ public:
    std::string weatherDirectory;
    std::string manageDirectory;
    std::string soilDirectory;
+
+   bool plantTraitsFileOpened;
+   bool weatherFileOpened;
+   bool managementFileOpened;
+   bool soilFileOpened;
 
    /* vectors to store information of parsed lines for parameters */
    std::vector<std::string> lineValues;        // stored parameter text lines

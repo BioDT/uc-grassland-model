@@ -12,7 +12,6 @@ public:
    ~PARAMETER();
 
    // **** parameters used for the simulation but not listed in the input files **** //
-   int numberOfDaysToSimulate;
    int day;
    int referenceJulianDayStart;
    int referenceJulianDayEnd;
@@ -27,8 +26,8 @@ public:
         "randomNumberGeneratorSeed"};
 
    std::string deimsID;
-   float latitude;
-   float longitude;
+   std::string latitude;
+   std::string longitude;
    int lastYear;
    int firstYear;
    std::string weatherFile;

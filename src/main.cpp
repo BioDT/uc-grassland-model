@@ -49,13 +49,15 @@ int main(int argc, char *argv[])
 
    /* Read data from input files (weather, soil, management, plant traits parameters) */
    input.getInputData(path, utils, parameter, weather, soil, management);
-   output.printSimulationSettingsToConsole(parameter);
 
    /* Prepare simulation output files */
    output.prepareModelOutput(path, utils, parameter);
 
    /* Initialization of variables and initial conditions for the simulation */
    init.initModelSimulation(parameter, community);
+
+   /* Provide a summary printed to std.out or console */
+   output.printSimulationSettingsToConsole(parameter, input);
 
    /* Running each day of the model simulation */
    step.runModelSimulation(utils, parameter, allometry, community, recruitment, mortality, growth, management, output);

@@ -8,13 +8,13 @@ deimsID	102ae489-04e3-481d-97df-45905837dc1a
 \details:write NaN if not available
 
 latitude	51.391900
-\datatype:float
+\datatype:string
 \unit:coordinate
 \description:latitude of the local site which is simulated
 \details:six digits of precision
 
 longitude	11.878700
-\datatype:float
+\datatype:string
 \unit:coordinate
 \description:longitude of the local site which is simulated
 \details:six digits of precision
@@ -61,12 +61,12 @@ outputFile	true
 \datatype:boolean
 \description:Select if the output file is written to the created output folder
 
-outputWritingDatesFile	lat51.391900_lon11.878700__2013-01-01_2022-12-31__outputWritingDates.txt
+outputWritingDatesFile	NaN
 \datatype:string
 \description:File name of selected dates at which simulation results should be written
 \details:if no file is given (NaN), output is written every day of the simulation time
 
-randomNumberGeneratorSeed	0
+randomNumberGeneratorSeed	1
 \datatype:integer
 \description:Initializer for the random number generator
 \details:if set to NaN, the seed will be drawn from machine time and stored to the outputfile  
