@@ -1,7 +1,7 @@
 #include "init.h"
 
-INIT::INIT(){};
-INIT::~INIT(){};
+INIT::INIT() {};
+INIT::~INIT() {};
 
 /* main function to initialize state variables of the simulation start */
 void INIT::initModelSimulation(PARAMETER &parameter, COMMUNITY &community)
@@ -19,31 +19,17 @@ void INIT::initModelSimulation(PARAMETER &parameter, COMMUNITY &community)
 /* initialization of state variables of time */
 void INIT::initTimeVariables(PARAMETER &parameter)
 {
-   parameter.day = 1;                    // start with the first day
-   parameter.numberOfDaysToSimulate = 0; // calculate number of days to simulate considering leap years
-   for (int year = parameter.firstYear; year <= parameter.lastYear; year++)
-   {
-      if (year % 4)
-      {
-         parameter.numberOfDaysToSimulate += 366;
-      }
-      else
-      {
-         parameter.numberOfDaysToSimulate += 365;
-      }
-   }
+   parameter.day = 1; // start with the first day
 }
 
 /* initialization of random number generator seed */
 void INIT::initRandomNumberGeneratorSeed(PARAMETER &parameter, COMMUNITY &community)
 {
-   if (parameter.randomNumberGeneratorSeed == -9999)
+   if (parameter.randomNumberGeneratorSeed == std::numeric_limits<int>::min())
    {
       std::random_device rd; // seed generator
       parameter.randomNumberGeneratorSeed = rd();
-      // written to stdout.txt (printSimulationSettingsToConsole)
    }
-
    community.randomNumberIndex = parameter.randomNumberGeneratorSeed;
 }
 
