@@ -70,8 +70,19 @@ int main(int argc, char *argv[])
 
    /* Printing information on console output window */
    std::time_t runTimeDifferenceSeconds = (stopRunTime - startRunTime);
-   std::time_t runTimeDifferenceMinutes = (stopRunTime - startRunTime) / (time_t)60.0;
-   std::time_t runTimeDifferenceHours = (stopRunTime - startRunTime) / (time_t)(60.0 * 60.0);
+   std::time_t runTimeDifferenceMinutes = 0;
+   std::time_t runTimeDifferenceHours = 0;
+
+   if (runTimeDifferenceSeconds > 60.0)
+   {
+      runTimeDifferenceMinutes = (stopRunTime - startRunTime) / (time_t)60.0;
+      runTimeDifferenceSeconds = (stopRunTime - startRunTime) % (time_t)60.0;
+      if (runTimeDifferenceMinutes > 60.0)
+      {
+         runTimeDifferenceHours = (stopRunTime - startRunTime) / (time_t)(60.0 * 60.0);
+         runTimeDifferenceMinutes = (stopRunTime - startRunTime) % (time_t)(60.0 * 60.0);
+      }
+   }
 
    std::cout << "********* Successful simulation run ********" << std::endl;
    std::cout << std::endl;

@@ -66,7 +66,7 @@ outputWritingDatesFile	NaN
 \description:File name of selected dates at which simulation results should be written
 \details:if no file is given (NaN), output is written every day of the simulation time
 
-randomNumberGeneratorSeed	1
+randomNumberGeneratorSeed	NaN
 \datatype:integer
 \description:Initializer for the random number generator
 \details:if set to NaN, the seed will be drawn from machine time and stored to the outputfile  

@@ -322,13 +322,17 @@ void INPUT::convertAndCheckAndSetParameterValue(UTILS utils, std::string keyword
 
          if (keyword != "deimsID" && keyword != "latitude" && keyword != "longitude")
          {
-            std::string fileEnding = "";
-            fileEnding = utils.getFileEnding(keywordLineValues.at(0));
-            if (fileEnding != "txt")
+            if (!(keyword == "outputWritingDatesFile" && keywordLineValues.at(0) == "NaN"))
             {
-               if (!(keyword == "outputWritingDatesFile" && keywordLineValues.at(0) == "NaN"))
+               std::string fileEnding = "";
+               fileEnding = utils.getFileEnding(keywordLineValues.at(0));
+               if (fileEnding != "txt")
                {
                   configParString[keyword] = keywordLineValues.at(0) + ".txt";
+               }
+               else
+               {
+                  configParString[keyword] = keywordLineValues.at(0);
                }
             }
             else
@@ -625,11 +629,10 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
    const char *value; // placeholder for extracted value from file
 
    weatherFileOpened = false;
+
    std::ifstream file(filename);
-   std::cout << filename << std::endl;
    if (file.is_open())
    {
-      std::cout << "open" << std::endl;
       weatherFileOpened = true;
       while (std::getline(file, line))
       {
@@ -1036,7 +1039,7 @@ void INPUT::openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parame
       file.close();
 
       double contentSum = soil.sandContent + soil.siltContent + soil.clayContent;
-      if ((contentSum < 1.0) || (contentSum > 1.0))
+      if ((contentSum < (1.0 - tolerance)) || (contentSum > (1.0 + tolerance)))
       {
          utils.handleError("Error (soil input): sand, silt and clay content do not sum up to one. Please check the soil file.");
       }

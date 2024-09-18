@@ -4,12 +4,14 @@
 #include "../module_soil/soil.h"
 #include "../module_management/management.h"
 #include "../utils/utils.h"
+#include "../module_init/constants.h"
 #include <iostream>
 #include <map>
 #include <fstream>
 #include <string>
 #include <vector>
 #include <limits>
+#include <filesystem>
 
 class INPUT
 {

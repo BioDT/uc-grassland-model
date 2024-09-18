@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.0)
 project(
     grassDT-model
     VERSION 1.0
-    DESCRIPTION "GRASSMIND model component of the Digital Twin pipeline for grassland biodiversity")
+    DESCRIPTION "Model component of the Digital Twin pipeline for grassland biodiversity")
 
 #Copy header files from src to include directory
 #default DESTINATION is the created build folder
