@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.0)
 
 project(
-    grassDT-model
+    grassDTmodel
     VERSION 1.0
     DESCRIPTION "Model component of the Digital Twin pipeline for grassland biodiversity")
 
@@ -65,7 +65,7 @@ set(HEADERS
 )
 
 #Create executable target
-add_executable(grassmind ${SOURCES} ${HEADERS})
+add_executable(grassDTmodel ${SOURCES} ${HEADERS})
 
 #Set include directories for the target
-target_include_directories(grassmind PUBLIC include)
+target_include_directories(grassDTmodel PUBLIC include)
