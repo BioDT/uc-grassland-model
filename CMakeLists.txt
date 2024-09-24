@@ -64,6 +64,8 @@ set(HEADERS
     include/module_recruitment/recruitment.h
 )
 
+set(CMAKE_BUILD_TYPE Release)
+
 #Create executable target
 add_executable(grassDTmodel ${SOURCES} ${HEADERS})
 

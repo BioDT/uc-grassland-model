@@ -58,6 +58,12 @@ void UTILS::handleError(std::string errorString)
    }
 }
 
+/* Handle warnings & information written to stdcerr */
+void UTILS::handleWarning(std::string warnString)
+{
+   std::cerr << warnString << std::endl;
+}
+
 /* Get the file-ending after dot */
 std::string UTILS::getFileEnding(std::string file)
 {

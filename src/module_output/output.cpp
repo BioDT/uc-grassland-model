@@ -51,26 +51,9 @@ void OUTPUT::writeSimulationResultsToOutputFiles(PARAMETER parameter, UTILS util
 {
    if (outputFile.is_open())
    {
-      if (!outputWritingDatesFileOpened)
-      {
-         // overwrite vector 'outputWritingDates' with sequence of all days during simulation period
-         outputWritingDates.clear();
-         for (int i = 1; i <= parameter.simulationTimeInDays; i++)
-         {
-            outputWritingDates.push_back(i);
-         }
-      }
-
-      for (auto day : outputWritingDates)
-      {
-         if (parameter.day == day)
-         {
-            for (int pft = 0; pft < parameter.pftCount; pft++)
-            {
-               outputFile << parameter.day << "\t" << pft << "\t" << community.pftComposition[pft] << std::endl;
-            }
-         }
-      }
+      outputFile << buffer.str();
+      buffer.str("");
+      buffer.clear();
    }
    else
    {
@@ -143,7 +126,7 @@ void OUTPUT::openAndReadOutputWritingDates(std::string path, UTILS utils, PARAME
    }
    else
    {
-      utils.handleError("No OutputWritingDates file has been opened. Simulation results will then be written at a daily resolution.");
+      utils.handleWarning("No OutputWritingDates file has been opened. Simulation results will then be written at a daily resolution.");
    }
 }
 

@@ -17,6 +17,7 @@ public:
    std::string outputDirectory;
    std::ofstream outputFile;
    std::string fileDirectory; // directory of outputWritingDates file
+   std::stringstream buffer;  // temporary storage buffer
 
    std::vector<int> outputWritingDates;
    bool outputWritingDatesFileOpened;

@@ -152,7 +152,7 @@ void INPUT::extractLinesOfCorrectFormat(UTILS utils, std::string keyword, std::v
       {
          if (lineValues.size() > 1) /* case: there are more than one line in the input file where the parameter is mentioned */
          {
-            utils.handleError("The parameter " + keyword + " is mentioned several times. Please check the input file!");
+            utils.handleWarning("The parameter " + keyword + " is mentioned several times. Please check the input file!");
          }
          else /* case: there is only one line in the input file where the parameter is mentioned and its the false format */
          {
@@ -832,7 +832,7 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
                      }
                      else
                      {
-                        utils.handleError("Mowing date " + valueDate + " is outside the simulation period and not used in this simulation.");
+                        utils.handleWarning("Mowing date " + valueDate + " is outside the simulation period and not used in this simulation.");
                      }
                   }
                   else
@@ -860,7 +860,7 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
                      }
                      else
                      {
-                        utils.handleError("Fertilization date " + valueDate + " is outside the simulation period and not used in this simulation.");
+                        utils.handleWarning("Fertilization date " + valueDate + " is outside the simulation period and not used in this simulation.");
                      }
                   }
                   else
@@ -888,7 +888,7 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
                      }
                      else
                      {
-                        utils.handleError("Irrigation date " + valueDate + " is outside the simulation period and not used in this simulation.");
+                        utils.handleWarning("Irrigation date " + valueDate + " is outside the simulation period and not used in this simulation.");
                      }
                   }
                   else
@@ -917,7 +917,7 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
                   }
                   else
                   {
-                     utils.handleError("Sowing date " + valueDate + " is outside the simulation period and not used in this simulation.");
+                     utils.handleWarning("Sowing date " + valueDate + " is outside the simulation period and not used in this simulation.");
                   }
                }
             }

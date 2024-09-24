@@ -1,0 +1,26 @@
+{
+   // Use IntelliSense to learn about possible attributes.
+   // Hover to view descriptions of existing attributes.
+   // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+   "version": "0.2.0",
+   "configurations": [
+      {
+         "name": "Launch C++ Program (Visual Studio Debugger)",
+         "type": "cppvsdbg",
+         "request": "launch",
+         "program": "${workspaceFolder}\\build\\Debug\\grassDTmodel.exe",
+         "args": [
+            "${workspaceFolder}\\simulations\\project1\\lat51.391900_lon11.878700__2013-01-01_2022-12-31__configuration__generic_v1.txt"
+         ],
+         "logging": {
+            "moduleLoad": false,
+            "trace": true
+         },
+         "visualizerFile": "${workspaceFolder}/my.natvis",
+         "stopAtEntry": false,
+         "cwd": "${workspaceFolder}",
+         "environment": [],
+         "externalConsole": true
+      }
+   ]
+}

@@ -62,6 +62,9 @@ int main(int argc, char *argv[])
    /* Running each day of the model simulation */
    step.runModelSimulation(utils, parameter, allometry, community, recruitment, mortality, growth, management, output);
 
+   /* Writing of daily output of simulation results */
+   output.writeSimulationResultsToOutputFiles(parameter, utils, community);
+
    /* Closing of output files */
    output.closeOutputFiles(utils);
 
@@ -69,24 +72,19 @@ int main(int argc, char *argv[])
    std::time_t stopRunTime = std::time(nullptr);
 
    /* Printing information on console output window */
-   std::time_t runTimeDifferenceSeconds = (stopRunTime - startRunTime);
-   std::time_t runTimeDifferenceMinutes = 0;
-   std::time_t runTimeDifferenceHours = 0;
+   std::time_t runTimeRemainSeconds = 0;
+   std::time_t runTimeSeconds = 0;
+   std::time_t runTimeMinutes = 0;
+   std::time_t runTimeHours = 0;
 
-   if (runTimeDifferenceSeconds > 60.0)
-   {
-      runTimeDifferenceMinutes = (stopRunTime - startRunTime) / (time_t)60.0;
-      runTimeDifferenceSeconds = (stopRunTime - startRunTime) % (time_t)60.0;
-      if (runTimeDifferenceMinutes > 60.0)
-      {
-         runTimeDifferenceHours = (stopRunTime - startRunTime) / (time_t)(60.0 * 60.0);
-         runTimeDifferenceMinutes = (stopRunTime - startRunTime) % (time_t)(60.0 * 60.0);
-      }
-   }
+   runTimeHours = (stopRunTime - startRunTime) / (time_t)(60.0 * 60.0);
+   runTimeRemainSeconds = (stopRunTime - startRunTime) % (time_t)(60.0 * 60.0);
+   runTimeMinutes = runTimeRemainSeconds / (time_t)60.0;
+   runTimeSeconds = runTimeRemainSeconds % (time_t)60.0;
 
    std::cout << "********* Successful simulation run ********" << std::endl;
    std::cout << std::endl;
-   std::cout << "Computational runtime: " << runTimeDifferenceSeconds << " seconds" << "(" << runTimeDifferenceHours << "h " << runTimeDifferenceMinutes << "m)" << std::endl;
+   std::cout << "Computational runtime: " << runTimeHours << "h " << runTimeMinutes << "m " << runTimeSeconds << "s " << std::endl;
    std::cout << std::endl;
    std::cout << "********************************************" << std::endl;
 

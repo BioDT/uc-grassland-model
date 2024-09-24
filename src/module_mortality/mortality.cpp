@@ -1,7 +1,7 @@
 #include "mortality.h"
 
-MORTALITY::MORTALITY(){};
-MORTALITY::~MORTALITY(){};
+MORTALITY::MORTALITY() {};
+MORTALITY::~MORTALITY() {};
 
 /* main mortality function */
 void MORTALITY::doPlantMortality(PARAMETER parameter, COMMUNITY &community, UTILS utils)

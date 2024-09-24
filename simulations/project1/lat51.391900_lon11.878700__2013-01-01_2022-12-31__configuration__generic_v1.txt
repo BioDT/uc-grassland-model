@@ -10,13 +10,13 @@ deimsID	102ae489-04e3-481d-97df-45905837dc1a
 latitude	51.391900
 \datatype:string
 \unit:coordinate
-\description:latitude of the local site which is simulated
+\description:geographical width of the local site which is simulated
 \details:six digits of precision
 
 longitude	11.878700
 \datatype:string
 \unit:coordinate
-\description:longitude of the local site which is simulated
+\description:geographical length of the local site which is simulated
 \details:six digits of precision
 
 # =============================================================================
