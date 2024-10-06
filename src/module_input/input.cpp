@@ -1,7 +1,7 @@
 #include "input.h"
 
-INPUT::INPUT(){};
-INPUT::~INPUT(){};
+INPUT::INPUT() {};
+INPUT::~INPUT() {};
 
 std::map<std::string, int> INPUT::configParInt;
 std::map<std::string, float> INPUT::configParFloat;
@@ -152,7 +152,7 @@ void INPUT::extractLinesOfCorrectFormat(UTILS utils, std::string keyword, std::v
       {
          if (lineValues.size() > 1) /* case: there are more than one line in the input file where the parameter is mentioned */
          {
-            utils.handleError("The parameter " + keyword + " is mentioned several times. Please check the input file!");
+            utils.handleWarning("The parameter " + keyword + " is mentioned several times. Please check the input file!");
          }
          else /* case: there is only one line in the input file where the parameter is mentioned and its the false format */
          {
@@ -216,8 +216,9 @@ void INPUT::convertAndCheckAndSetParameterValue(UTILS utils, std::string keyword
    {
       try
       {
-         int value = std::stoi(keywordLineValues.at(0));
-         if (value < 0)
+
+         int value = utils.parseIntegerOrNaN(keywordLineValues.at(0));
+         if (value < 0 && keyword != "randomNumberGeneratorSeed")
          {
             throw std::out_of_range("Value of parameter " + keyword + " is outside the valid range! Value is not allowed to be negative!");
          }
@@ -319,13 +320,20 @@ void INPUT::convertAndCheckAndSetParameterValue(UTILS utils, std::string keyword
             throw std::out_of_range("Value of parameter " + keyword + " is an invalid string! Please add an existing filename.");
          }
 
-         if (keyword != "deimsID")
+         if (keyword != "deimsID" && keyword != "latitude" && keyword != "longitude")
          {
-            std::string fileEnding = "";
-            fileEnding = utils.getFileEnding(keywordLineValues.at(0));
-            if (fileEnding != "txt")
+            if (!(keyword == "outputWritingDatesFile" && keywordLineValues.at(0) == "NaN"))
             {
-               configParString[keyword] = keywordLineValues.at(0) + ".txt";
+               std::string fileEnding = "";
+               fileEnding = utils.getFileEnding(keywordLineValues.at(0));
+               if (fileEnding != "txt")
+               {
+                  configParString[keyword] = keywordLineValues.at(0) + ".txt";
+               }
+               else
+               {
+                  configParString[keyword] = keywordLineValues.at(0);
+               }
             }
             else
             {
@@ -488,17 +496,15 @@ void INPUT::convertAndCheckAndSetParameterValue(UTILS utils, std::string keyword
 void INPUT::transferConfigParameterValueToModelParameter(PARAMETER &parameter, UTILS utils)
 {
    parameter.deimsID = configParString["deimsID"];
-   parameter.latitude = configParFloat["latitude"];
-   parameter.longitude = configParFloat["longitude"];
+   parameter.latitude = configParString["latitude"];
+   parameter.longitude = configParString["longitude"];
    parameter.weatherFile = configParString["weatherFile"];
    parameter.soilFile = configParString["soilFile"];
    parameter.managementFile = configParString["managementFile"];
    parameter.plantTraitsFile = configParString["plantTraitsFile"];
-   parameter.outputFile = configParBool["outputFile"];
    parameter.outputWritingDatesFile = configParString["outputWritingDatesFile"];
    // parameter.clippingHeightForBiomassCalibration = configParFloat["clippingHeightForBiomassCalibration"];
    parameter.randomNumberGeneratorSeed = configParInt["randomNumberGeneratorSeed"];
-
    parameter.firstYear = configParInt["firstYear"];
    parameter.lastYear = configParInt["lastYear"];
    // calculate reference julian days (1 Jan of param.firstYear and 31 Dec of param.lastYear)
@@ -601,11 +607,15 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
    {
       weatherDirectory = weatherDirectory + utils.strings.at(it) + "\\";
    }
-   weatherDirectory = weatherDirectory + "scenarios\\weather\\" + parameter.weatherFile;
+   std::string location = utils.strings.at(utils.strings.size() - 1);
+   separator = '_';
+   utils.strings.clear();
+   utils.splitString(location, separator);
+   location = utils.strings.at(0) + "_" + utils.strings.at(1);
+
+   weatherDirectory = weatherDirectory + "scenarios\\" + location + "\\weather\\" + parameter.weatherFile;
    const char *filename = weatherDirectory.c_str();
 
-   // TODO: adapt parser to new weather file / columns
-   // Date	Precipitation[mmd-1]	Temperature[degC]	DaytimeTemperature [degC] PPFD[mmolm-2s-1]	DayLength[h]   PET[mmd-1]
    weather.weatherDates.clear();
    weather.precipitation.clear();
    weather.airTemperature.clear();
@@ -618,9 +628,12 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
    int m = 0;         // current line number in parser
    const char *value; // placeholder for extracted value from file
 
+   weatherFileOpened = false;
+
    std::ifstream file(filename);
    if (file.is_open())
    {
+      weatherFileOpened = true;
       while (std::getline(file, line))
       {
          m++;
@@ -677,10 +690,15 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
       }
 
       // check if there are no missing days inbetween
-      if ((m - 1) < parameter.numberOfDaysToSimulate)
+      if ((m - 1) < parameter.simulationTimeInDays)
       {
          utils.handleError("Error (weather input): there are not enough data given in the weather file for the simulation period as specified in the configuration file.");
       }
+   }
+   else
+   {
+      std::cout << "not open" << std::endl;
+      utils.handleError("Error (weather input): The weather file cannot be opened. Please check the name in the configuration file.");
    }
 }
 
@@ -694,7 +712,13 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
    {
       manageDirectory = manageDirectory + utils.strings.at(it) + "\\";
    }
-   manageDirectory = manageDirectory + "scenarios\\management\\" + parameter.managementFile;
+   std::string location = utils.strings.at(utils.strings.size() - 1);
+   separator = '_';
+   utils.strings.clear();
+   utils.splitString(location, separator);
+   location = utils.strings.at(0) + "_" + utils.strings.at(1);
+
+   manageDirectory = manageDirectory + "scenarios\\" + location + "\\management\\" + parameter.managementFile;
    const char *filename = manageDirectory.c_str();
 
    management.mowingDate.clear();
@@ -716,15 +740,17 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
    std::string line;                      // current line text in parser
    int m = 0;                             // current line number in parser
    std::string valueDate;                 // placeholder for extracted value from file (date of a specific managent action)
-   double valueActionMowing;              // placeholder for extracted value from file (management action)
-   double valueActionFertilization;       // placeholder for extracted value from file (management action)
-   double valueActionIrrigation;          // placeholder for extracted value from file (management action)
-   double valueActionSowingActivated;     // placeholder for extracted value from file (management action)
+   double valueActionMowing = NAN;        // placeholder for extracted value from file (management action)
+   double valueActionFertilization = NAN; // placeholder for extracted value from file (management action)
+   double valueActionIrrigation = NAN;    // placeholder for extracted value from file (management action)
+   double valueActionSowingActivated = 0; // placeholder for extracted value from file (management action)
    std::vector<double> valueActionSowing; // placeholder for extracted value from file (management action)
 
+   managementFileOpened = false;
    std::ifstream file(filename);
    if (file.is_open())
    {
+      managementFileOpened = true;
       while (std::getline(file, line))
       {
          m++;
@@ -738,19 +764,56 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
             {
 
                valueDate = utils.strings.at(0);
-               valueActionMowing = atof(utils.strings.at(1).c_str());
-               valueActionFertilization = atof(utils.strings.at(2).c_str());
-               valueActionIrrigation = atof(utils.strings.at(3).c_str());
+               try
+               {
+                  valueActionMowing = utils.parseDoubleOrNaN(utils.strings.at(1).c_str());
+               }
+               catch (const std::invalid_argument &e)
+               {
+                  std::cerr << e.what() << std::endl;
+               }
+               try
+               {
+                  valueActionFertilization = utils.parseDoubleOrNaN(utils.strings.at(2).c_str());
+               }
+               catch (const std::invalid_argument &e)
+               {
+                  std::cerr << e.what() << std::endl;
+               }
+               try
+               {
+                  valueActionIrrigation = utils.parseDoubleOrNaN(utils.strings.at(3).c_str());
+               }
+               catch (const std::invalid_argument &e)
+               {
+                  std::cerr << e.what() << std::endl;
+               }
+
                valueActionSowingActivated = 0;
                valueActionSowing.clear();
                for (int pft = 0; pft < parameter.pftCount; pft++)
                {
-                  valueActionSowingActivated += atof(utils.strings.at(4 + pft).c_str());
-                  valueActionSowing.push_back(atof(utils.strings.at(4 + pft).c_str()));
+                  try
+                  {
+                     double sowPFT = utils.parseDoubleOrNaN(utils.strings.at(4 + pft).c_str());
+                     if (!std::isnan(sowPFT)) /* if at least one PFT is sown, valueActionSowingActivated = 1*/
+                     {
+                        valueActionSowingActivated = 1;
+                        valueActionSowing.push_back(atof(utils.strings.at(4 + pft).c_str()));
+                     }
+                     else /* the PFT is not sown at this day */
+                     {
+                        valueActionSowing.push_back(0);
+                     }
+                  }
+                  catch (const std::invalid_argument &e)
+                  {
+                     std::cerr << e.what() << std::endl;
+                  }
                }
 
                // mowing events
-               if (valueActionMowing > 0)
+               if (!std::isnan(valueActionMowing))
                {
                   utils.strings.clear();
                   utils.splitString(valueDate, '-');
@@ -769,7 +832,7 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
                      }
                      else
                      {
-                        utils.handleError("Mowing date is not valid within the simulation period.");
+                        utils.handleWarning("Mowing date " + valueDate + " is outside the simulation period and not used in this simulation.");
                      }
                   }
                   else
@@ -779,7 +842,7 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
                }
 
                // fertilization events
-               if (valueActionFertilization > 0)
+               if (!std::isnan(valueActionFertilization))
                {
                   utils.strings.clear();
                   utils.splitString(valueDate, '-');
@@ -797,7 +860,7 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
                      }
                      else
                      {
-                        utils.handleError("Fertilization date is not valid within the simulation period.");
+                        utils.handleWarning("Fertilization date " + valueDate + " is outside the simulation period and not used in this simulation.");
                      }
                   }
                   else
@@ -807,7 +870,7 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
                }
 
                // irrigation events
-               if (valueActionIrrigation > 0)
+               if (!std::isnan(valueActionIrrigation))
                {
                   utils.strings.clear();
                   utils.splitString(valueDate, '-');
@@ -825,7 +888,7 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
                      }
                      else
                      {
-                        utils.handleError("Irrigation date is not valid within the simulation period.");
+                        utils.handleWarning("Irrigation date " + valueDate + " is outside the simulation period and not used in this simulation.");
                      }
                   }
                   else
@@ -854,7 +917,7 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
                   }
                   else
                   {
-                     utils.handleError("Sowing date is not valid within the simulation period.");
+                     utils.handleWarning("Sowing date " + valueDate + " is outside the simulation period and not used in this simulation.");
                   }
                }
             }
@@ -865,6 +928,10 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
          }
       }
       file.close();
+   }
+   else
+   {
+      utils.handleError("Error (management input): The management file cannot be opened. Please check the name in the configuration file.");
    }
 }
 
@@ -878,7 +945,13 @@ void INPUT::openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parame
    {
       soilDirectory = soilDirectory + utils.strings.at(it) + "\\";
    }
-   soilDirectory = soilDirectory + "scenarios\\soil\\" + parameter.soilFile;
+   std::string location = utils.strings.at(utils.strings.size() - 1);
+   separator = '_';
+   utils.strings.clear();
+   utils.splitString(location, separator);
+   location = utils.strings.at(0) + "_" + utils.strings.at(1);
+
+   soilDirectory = soilDirectory + "scenarios\\" + location + "\\soil\\" + parameter.soilFile;
    const char *filename = soilDirectory.c_str();
 
    soil.siltContent = -1;
@@ -966,7 +1039,7 @@ void INPUT::openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parame
       file.close();
 
       double contentSum = soil.sandContent + soil.siltContent + soil.clayContent;
-      if ((contentSum < 1.0) || (contentSum > 1.0))
+      if ((contentSum < (1.0 - tolerance)) || (contentSum > (1.0 + tolerance)))
       {
          utils.handleError("Error (soil input): sand, silt and clay content do not sum up to one. Please check the soil file.");
       }
@@ -984,5 +1057,9 @@ void INPUT::openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parame
 
       // TODO (when soil dynamics added): check if added for groundwater storage layer???
       // par.nitrogenSoilPerLayer.push_back(atof(linevalue) * 1E-06);
+   }
+   else
+   {
+      utils.handleError("Error (soil input): The soil file cannot be opened. Please check the name in the configuration file.");
    }
 }

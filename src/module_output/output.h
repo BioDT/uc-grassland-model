@@ -1,6 +1,7 @@
 #pragma once
 #include "../module_parameter/parameter.h"
 #include "../module_plant/community.h"
+#include "../module_input/input.h"
 #include "../utils/utils.h"
 #include <iostream>
 #include <vector>
@@ -16,13 +17,15 @@ public:
    std::string outputDirectory;
    std::ofstream outputFile;
    std::string fileDirectory; // directory of outputWritingDates file
+   std::stringstream buffer;  // temporary storage buffer
 
    std::vector<int> outputWritingDates;
+   bool outputWritingDatesFileOpened;
 
    void prepareModelOutput(std::string path, UTILS utils, PARAMETER &parameter);
    void createOutputFolder(std::string path, UTILS utils);
    void openAndReadOutputWritingDates(std::string path, UTILS utils, PARAMETER &parameter);
-   void printSimulationSettingsToConsole(PARAMETER parameter);
+   void printSimulationSettingsToConsole(PARAMETER parameter, INPUT input);
 
    void createAndOpenOutputFiles(PARAMETER parameter, UTILS utils);
    void writeHeaderInOutputFiles(PARAMETER parameter, UTILS utils);

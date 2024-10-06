@@ -19,4 +19,5 @@ public:
 
    void runModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT recruitment, MORTALITY mortality, GROWTH growth, MANAGEMENT management, OUTPUT &output);
    void doDayStepOfModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT recruitment, MORTALITY mortality, GROWTH growth, MANAGEMENT management);
+   void saveSimulationResultsToBuffer(PARAMETER parameter, COMMUNITY community, OUTPUT &output);
 };

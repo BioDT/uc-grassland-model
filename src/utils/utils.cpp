@@ -1,10 +1,7 @@
-#include <iostream>
-#include <direct.h>
-#include <locale>
 #include "utils.h"
 
-UTILS::UTILS(){};
-UTILS::~UTILS(){};
+UTILS::UTILS() {};
+UTILS::~UTILS() {};
 
 /* Split a string str based on the given separator and save substrings in vector strings */
 void UTILS::splitString(std::string str, char separator)
@@ -61,6 +58,12 @@ void UTILS::handleError(std::string errorString)
    }
 }
 
+/* Handle warnings & information written to stdcerr */
+void UTILS::handleWarning(std::string warnString)
+{
+   std::cerr << warnString << std::endl;
+}
+
 /* Get the file-ending after dot */
 std::string UTILS::getFileEnding(std::string file)
 {
@@ -101,4 +104,56 @@ int UTILS::calculateDayCountFromDate(int day, int month, int year, int startDay)
 {
    int dayCount = calculateJulianDayFromDate(day, month, year) - startDay + 1;
    return dayCount;
+}
+
+/* check if a parameter value is a double number or NaN */
+double UTILS::parseDoubleOrNaN(const std::string &str)
+{
+   std::stringstream ss(str);
+   double value;
+
+   // convert the string into a number
+   if (ss >> value)
+   {
+      return value;
+   }
+   else
+   {
+      // check if the string is "NaN"
+      if (str == "NaN" || str == "nan" || str == "NAN")
+      {
+         return std::numeric_limits<double>::quiet_NaN();
+      }
+      else
+      {
+         // string is no number and not NaN
+         throw std::invalid_argument("Invalid input: " + str);
+      }
+   }
+}
+
+/* check if a parameter value is an integer number or NaN */
+int UTILS::parseIntegerOrNaN(const std::string &str)
+{
+   std::stringstream ss(str);
+   int value;
+
+   // convert the string into a number
+   if (ss >> value)
+   {
+      return value;
+   }
+   else
+   {
+      // check if the string is "NaN"
+      if (str == "NaN" || str == "nan" || str == "NAN")
+      {
+         return std::numeric_limits<int>::min();
+      }
+      else
+      {
+         // string is no number and not NaN
+         throw std::invalid_argument("Invalid input: " + str);
+      }
+   }
 }

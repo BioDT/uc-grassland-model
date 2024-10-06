@@ -2,9 +2,9 @@
 cmake_minimum_required(VERSION 3.0)
 
 project(
-    grassDT-model
+    grassDTmodel
     VERSION 1.0
-    DESCRIPTION "GRASSMIND model component of the Digital Twin pipeline for grassland biodiversity")
+    DESCRIPTION "Model component of the Digital Twin pipeline for grassland biodiversity")
 
 #Copy header files from src to include directory
 #default DESTINATION is the created build folder
@@ -64,8 +64,10 @@ set(HEADERS
     include/module_recruitment/recruitment.h
 )
 
+set(CMAKE_BUILD_TYPE Release)
+
 #Create executable target
-add_executable(grassmind ${SOURCES} ${HEADERS})
+add_executable(grassDTmodel ${SOURCES} ${HEADERS})
 
 #Set include directories for the target
-target_include_directories(grassmind PUBLIC include)
+target_include_directories(grassDTmodel PUBLIC include)
