@@ -1,6 +1,6 @@
-management_data_source	time_stamp
-http://134.94.199.14/grasslands-pdt/landUseMaps/GER_Schwieder/GLU_GER_2017_SUM_DOY_COG.tif	2024-08-16T09:25:14.597898+00:00
-http://134.94.199.14/grasslands-pdt/landUseMaps/GER_Schwieder/GLU_GER_2018_SUM_DOY_COG.tif	2024-08-16T09:25:14.774622+00:00
-http://134.94.199.14/grasslands-pdt/landUseMaps/GER_Schwieder/GLU_GER_2019_SUM_DOY_COG.tif	2024-08-16T09:25:14.953391+00:00
-http://134.94.199.14/grasslands-pdt/landUseMaps/GER_Schwieder/GLU_GER_2020_SUM_DOY_COG.tif	2024-08-16T09:25:15.140620+00:00
-http://134.94.199.14/grasslands-pdt/landUseMaps/GER_Schwieder/GLU_GER_2021_SUM_DOY_COG.tif	2024-08-16T09:25:15.326824+00:00
+data_source	time_stamp
+https://zenodo.org/records/10609590/files/GLU_GER_2017_SUM_DOY_COG.tif	2024-10-09T17:31:25+00:00
+https://zenodo.org/records/10609590/files/GLU_GER_2018_SUM_DOY_COG.tif	2024-10-09T17:31:26+00:00
+https://zenodo.org/records/10609590/files/GLU_GER_2019_SUM_DOY_COG.tif	2024-10-09T17:31:26+00:00
+https://zenodo.org/records/10609590/files/GLU_GER_2020_SUM_DOY_COG.tif	2024-10-09T17:31:26+00:00
+https://zenodo.org/records/10609590/files/GLU_GER_2021_SUM_DOY_COG.tif	2024-10-09T17:31:26+00:00
