@@ -5,6 +5,13 @@
 #include <vector>
 #include <fstream>
 
+/**
+ * @brief Represents the parameters for the simulation.
+ *
+ * The `PARAMETER` class encapsulates various parameters that control the
+ * simulation, including simulation settings, configuration
+ * parameters, and plant traits.
+ */
 class PARAMETER
 {
 public:
@@ -12,13 +19,13 @@ public:
    ~PARAMETER();
 
    // **** parameters used for the simulation but not listed in the input files **** //
-   int day;
-   int referenceJulianDayStart;
-   int referenceJulianDayEnd;
-   int simulationTimeInDays;
+   int day;                     /// Current simulation day.
+   int referenceJulianDayStart; /// Start of the reference Julian day for simulation.
+   int referenceJulianDayEnd;   /// End of the reference Julian day for simulation.
+   int simulationTimeInDays;    /// Total time of the simulation in days.
 
    // **** parameters of the configuration file **** //
-   // vector needed to have names as string-keywords for searching parameters in configuration-file
+   /// Names of configuration parameters.
    std::vector<std::string> configParameterNames =
        {"deimsID", "latitude", "longitude", "lastYear", "firstYear",
         "weatherFile", "soilFile", "managementFile", "plantTraitsFile",
@@ -37,7 +44,7 @@ public:
    bool outputFile;
    std::string outputWritingDatesFile;
    // float clippingHeightForBiomassCalibration;
-   int randomNumberGeneratorSeed;
+   unsigned int randomNumberGeneratorSeed;
 
    // **** parameters of the plant traits file **** //
    // vector needed to have names as string-keywords for searching parameters in plant traits file
@@ -46,9 +53,9 @@ public:
         "plantRootDepthParamIntercept", "plantRootDepthParamExponent", "plantSpecificLeafArea", "plantShootOverlapFactors",
         "crowdingMortalityActivated", "brownBiomassFractionFalling", "rootLifeSpan", "leafLifeSpan", "plantLifeSpan", "plantMortalityRates",
         "seedlingMortalityRates", "seedGerminationTimes", "seedGerminationRates",
-        "plantSeedProductionActivated", "seedMasses", "maturityAges", "externalSeedInfluxActivated", "externalSeedInfluxNumber", "dayOfExternalSeedInfluxStart",
+        "plantSeedProductionActivated", "seedMasses", "maturityAges", "maturityHeights", "externalSeedInfluxActivated", "externalSeedInfluxNumber", "dayOfExternalSeedInfluxStart",
         "maximumGrossLeafPhotosynthesisRate", "initialSlopeOfLightResponseCurve", "lightExtinctionCoefficients", "growthRespirationFraction",
-        "maintenanceRespirationRate", "plantNppAllocationGrowth", "plantCNRatioGreen", "plantCNRatioBrown", "nitrogenFixationAbility",
+        "maintenanceRespirationRate", "plantNppAllocationGrowth", "plantCNRatioGreenLeaves", "plantCNRatioBrownLeaves", "plantCNRatioRoots", "plantCNRatioSeeds", "nitrogenFixationAbility",
         "plantCostRhizobiaSymbiosis", "plantWaterUseEfficiency", "plantMinimalSoilWaterForGppReduction", "plantMaximalSoilWaterForGppReduction",
         "plantResponseToTemperatureQ10Base", "plantResponseToTemperatureQ10Reference"};
 
@@ -73,6 +80,7 @@ public:
    bool plantSeedProductionActivated;
    std::vector<double> seedMasses;
    std::vector<double> maturityAges;
+   std::vector<double> maturityHeights;
    bool externalSeedInfluxActivated;
    std::vector<int> externalSeedInfluxNumber;
    int dayOfExternalSeedInfluxStart; // DATE transferred to day
@@ -82,8 +90,10 @@ public:
    double growthRespirationFraction;
    double maintenanceRespirationRate;
    std::vector<double> plantNppAllocationGrowth;
-   std::vector<double> plantCNRatioGreen;
-   std::vector<double> plantCNRatioBrown;
+   std::vector<double> plantCNRatioGreenLeaves;
+   std::vector<double> plantCNRatioBrownLeaves;
+   std::vector<double> plantCNRatioRoots;
+   std::vector<double> plantCNRatioSeeds;
    std::vector<bool> nitrogenFixationAbility;
    double plantCostRhizobiaSymbiosis;
    std::vector<double> plantWaterUseEfficiency;

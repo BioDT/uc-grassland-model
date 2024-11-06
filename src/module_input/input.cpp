@@ -551,13 +551,16 @@ void INPUT::transferPlantTraitsParameterValueToModelParameter(PARAMETER &paramet
       parameter.seedGerminationRates.push_back(configParFloat["seedGerminationRates" + array_pos]);
       parameter.seedMasses.push_back(configParFloat["seedMasses" + array_pos]);
       parameter.maturityAges.push_back(configParFloat["maturityAges" + array_pos]);
+      parameter.maturityHeights.push_back(configParFloat["maturityHeights" + array_pos]);
       parameter.externalSeedInfluxNumber.push_back(configParInt["externalSeedInfluxNumber" + array_pos]);
       parameter.maximumGrossLeafPhotosynthesisRate.push_back(configParFloat["maximumGrossLeafPhotosynthesisRate" + array_pos]);
       parameter.initialSlopeOfLightResponseCurve.push_back(configParFloat["initialSlopeOfLightResponseCurve" + array_pos]);
       parameter.lightExtinctionCoefficients.push_back(configParFloat["lightExtinctionCoefficients" + array_pos]);
       parameter.plantNppAllocationGrowth.push_back(configParFloat["plantNppAllocationGrowth" + array_pos]);
-      parameter.plantCNRatioGreen.push_back(configParFloat["plantCNRatioGreen" + array_pos]);
-      parameter.plantCNRatioBrown.push_back(configParFloat["plantCNRatioBrown" + array_pos]);
+      parameter.plantCNRatioGreenLeaves.push_back(configParFloat["plantCNRatioGreenLeaves" + array_pos]);
+      parameter.plantCNRatioBrownLeaves.push_back(configParFloat["plantCNRatioBrownLeaves" + array_pos]);
+      parameter.plantCNRatioRoots.push_back(configParFloat["plantCNRatioRoots" + array_pos]);
+      parameter.plantCNRatioSeeds.push_back(configParFloat["plantCNRatioSeeds" + array_pos]);
       parameter.nitrogenFixationAbility.push_back(configParBool["nitrogenFixationAbility" + array_pos]);
       parameter.plantWaterUseEfficiency.push_back(configParFloat["plantWaterUseEfficiency" + array_pos]);
       parameter.plantMinimalSoilWaterForGppReduction.push_back(configParFloat["plantMinimalSoilWaterForGppReduction" + array_pos]);
@@ -618,8 +621,8 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
 
    weather.weatherDates.clear();
    weather.precipitation.clear();
-   weather.airTemperature.clear();
-   // TODO: add vector weather.dayTimeAirTemperature
+   weather.fullDayAirTemperature.clear();
+   weather.dayTimeAirTemperature.clear();
    weather.photosyntheticPhotonFluxDensity.clear();
    weather.dayLength.clear();
    weather.potEvapoTranspiration.clear();
@@ -643,7 +646,7 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
             utils.strings.clear();
             utils.splitString(line, separator);
 
-            if (utils.strings.size() == 5)
+            if (utils.strings.size() == 7)
             {
                weather.weatherDates.push_back(utils.strings.at(0));
 
@@ -651,26 +654,19 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
                weather.precipitation.push_back(atof(value));
 
                value = utils.strings.at(2).c_str();
-               weather.airTemperature.push_back(atof(value));
-
-               // TODO: add column on daytime temperature
+               weather.fullDayAirTemperature.push_back(atof(value));
 
                value = utils.strings.at(3).c_str();
-               weather.photosyntheticPhotonFluxDensity.push_back(atof(value));
-
-               // TODO: add column on daylength
+               weather.dayTimeAirTemperature.push_back(atof(value));
 
                value = utils.strings.at(4).c_str();
+               weather.photosyntheticPhotonFluxDensity.push_back(atof(value));
+
+               value = utils.strings.at(5).c_str();
+               weather.dayLength.push_back(atof(value));
+
+               value = utils.strings.at(6).c_str();
                weather.potEvapoTranspiration.push_back(atof(value));
-
-               // TODO: remove this function
-               weather.dayLength.push_back(weather.calculateAstronomicDayLength());
-
-               // TODO: remove this function
-               if (weather.potEvapoTranspiration.at(m - 2) == -9999)
-               {
-                  weather.dayLength.push_back(weather.calculatePotentialEvapoTranspiration());
-               }
             }
             else
             {
@@ -684,6 +680,9 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
       std::string startDate = std::to_string(parameter.firstYear) + "-01-01";
       std::string endDate = std::to_string(parameter.lastYear) + "-12-31";
 
+      // TODO: it should be possible to simulate a time period within the weather time series
+      //  compare starting date (should be equal or larger than weather time series start)
+      //  and compare end date (should be equal or smaller than weather time series end)
       if (weather.weatherDates.at(0) != startDate || weather.weatherDates.at(weather.weatherDates.size() - 1) != endDate)
       {
          utils.handleError("Error (weather input): the first and last dates in the weather file do not match the simulation period as specified in the configuration file.");
@@ -745,6 +744,7 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
    double valueActionIrrigation = NAN;    // placeholder for extracted value from file (management action)
    double valueActionSowingActivated = 0; // placeholder for extracted value from file (management action)
    std::vector<double> valueActionSowing; // placeholder for extracted value from file (management action)
+   std::string valueInformation;
 
    managementFileOpened = false;
    std::ifstream file(filename);
@@ -760,7 +760,7 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
             utils.strings.clear();
             utils.splitString(line, separator);
 
-            if (utils.strings.size() == (4 + parameter.pftCount))
+            if (utils.strings.size() == (4 + parameter.pftCount + 1))
             {
 
                valueDate = utils.strings.at(0);
@@ -810,6 +810,15 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
                   {
                      std::cerr << e.what() << std::endl;
                   }
+               }
+
+               try
+               {
+                  valueInformation = utils.strings.at(4 + parameter.pftCount);
+               }
+               catch (const std::invalid_argument &e)
+               {
+                  std::cerr << e.what() << std::endl;
                }
 
                // mowing events

@@ -8,19 +8,28 @@
 #include <fstream>
 #include <direct.h>
 
+/**
+ * @brief Handles output operations for the simulation.
+ *
+ * The `OUTPUT` class manages the generation and storage of simulation output
+ * data, including creating output files, writing simulation results, and
+ * managing output directories.
+ */
 class OUTPUT
 {
 public:
    OUTPUT();
    ~OUTPUT();
 
-   std::string outputDirectory;
-   std::ofstream outputFile;
-   std::string fileDirectory; // directory of outputWritingDates file
-   std::stringstream buffer;  // temporary storage buffer
+   std::string outputDirectory;         /// Directory where output files will be stored.
+   std::ofstream outputFile;            /// Output file stream for writing data.
+   std::string fileDirectory;           /// Directory of the outputWritingDates file.
+   std::stringstream bufferCommunity;   /// Temporary storage buffer for output data at community / PFT level.
+   std::stringstream bufferPlant;       /// Temporary storage buffer for output data at plant / cohort level.
+   std::stringstream bufferEnvironment; /// Temporary storage buffer for output data at ecosystem level (environmental conditions).
 
-   std::vector<int> outputWritingDates;
-   bool outputWritingDatesFileOpened;
+   std::vector<int> outputWritingDates; /// Dates for writing output data.
+   bool outputWritingDatesFileOpened;   /// Flag indicating if the output writing dates file is opened.
 
    void prepareModelOutput(std::string path, UTILS utils, PARAMETER &parameter);
    void createOutputFolder(std::string path, UTILS utils);
@@ -28,7 +37,7 @@ public:
    void printSimulationSettingsToConsole(PARAMETER parameter, INPUT input);
 
    void createAndOpenOutputFiles(PARAMETER parameter, UTILS utils);
-   void writeHeaderInOutputFiles(PARAMETER parameter, UTILS utils);
-   void writeSimulationResultsToOutputFiles(PARAMETER parameter, UTILS utils, COMMUNITY community);
+   void writeHeaderInOutputFiles(UTILS utils);
+   void writeSimulationResultsToOutputFiles(UTILS utils);
    void closeOutputFiles(UTILS utils);
 };

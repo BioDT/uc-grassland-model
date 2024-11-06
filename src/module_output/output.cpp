@@ -3,28 +3,65 @@
 OUTPUT::OUTPUT() {};
 OUTPUT::~OUTPUT() {};
 
-/* Creates result folder, output file and its header */
+/**
+ * @brief Creates the result folder, output file, and its header.
+ *
+ * This method prepares the model output by performing the following steps:
+ * - Creates a folder where the result files will be written if it does not already exist.
+ * - Creates and opens the output files for writing.
+ * - Writes the header information in the output files.
+ * - Opens and reads the output writing dates from a specified file.
+ *
+ * @param path The base path for the output files. This is the directory where
+ *             the result folder will be created and where output files will be saved.
+ * @param utils Utility functions for file handling and directory management.
+ * @param parameter Reference to the PARAMETER object containing simulation settings
+ *                  and configurations required for output file creation and writing.
+ */
 void OUTPUT::prepareModelOutput(std::string path, UTILS utils, PARAMETER &parameter)
 {
-   /* create a folder where result files are written (if not already existing) */
    createOutputFolder(path, utils);
    createAndOpenOutputFiles(parameter, utils);
-   writeHeaderInOutputFiles(parameter, utils);
+   writeHeaderInOutputFiles(utils);
    openAndReadOutputWritingDates(path, utils, parameter);
 }
 
-/* Creates the output file */
+/**
+ * @brief Creates and opens the output file for writing simulation results.
+ *
+ * This method constructs a filename based on parameters such as latitude,
+ * longitude, simulation years, and a random number generator seed. It uses
+ * these parameters to generate a unique filename for the output file, then
+ * attempts to open this file for writing. If the file cannot be opened,
+ * an error is logged and handled appropriately.
+ *
+ * The generated filename format is as follows:
+ *
+ * - Base output directory: `outputDirectory`
+ * - Ending location: derived from latitude and longitude.
+ * - Ending years: formatted as `__firstYear-01-01_lastYear-12-31`.
+ * - Random seed: formatted as `__randomNumberGeneratorSeed`.
+ * - Parameter ending: derived from the `plantTraitsFile`.
+ *
+ * @param parameter Reference to the PARAMETER object that contains simulation
+ *                  configurations, including geographical coordinates and
+ *                  simulation years.
+ * @param utils Utility functions for string manipulation and error handling.
+ *
+ * @throws std::ios_base::failure If the output file cannot be opened.
+ */
 void OUTPUT::createAndOpenOutputFiles(PARAMETER parameter, UTILS utils)
 {
    utils.strings.clear();
    utils.splitString(parameter.plantTraitsFile, '/');
    std::string endingLocation = "lat" + parameter.latitude + "_lon" + parameter.longitude;
    std::string endingYears = "__" + std::to_string(parameter.firstYear) + "-01-01_" + std::to_string(parameter.lastYear) + "-12-31";
+   std::string endingRandomSeed = "__" + std::to_string(parameter.randomNumberGeneratorSeed);
    std::string plantTraitsFile = utils.strings.at(1);
    utils.strings.clear();
    utils.splitString(plantTraitsFile, '_');
    std::string endingParameter = utils.strings.at(utils.strings.size() - 2) + "_" + utils.strings.at(utils.strings.size() - 1);
-   std::string filename = outputDirectory + endingLocation + endingYears + "__output__" + endingParameter;
+   std::string filename = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__output__" + endingParameter;
    outputFile.open(filename);
    if (!outputFile.is_open())
    {
@@ -32,8 +69,26 @@ void OUTPUT::createAndOpenOutputFiles(PARAMETER parameter, UTILS utils)
    }
 };
 
-/* Writes the header in the output file */
-void OUTPUT::writeHeaderInOutputFiles(PARAMETER parameter, UTILS utils)
+/**
+ * @brief Writes the header to the output file.
+ *
+ * This method writes the header line to the output file, which includes
+ * column titles for the data that will be recorded during the simulation.
+ * The header includes the following columns:
+ *
+ * - Date
+ * - PFT (Plant Functional Type)
+ * - Fraction
+ * - Number of Plants
+ *
+ * The method checks if the output file is open before attempting to write.
+ * If the file is not open, an error is logged and handled appropriately.
+ *
+ * @param utils Utility functions for error handling and other utilities.
+ *
+ * @throws std::ios_base::failure If the output file is not open.
+ */
+void OUTPUT::writeHeaderInOutputFiles(UTILS utils)
 {
    if (!outputFile.is_open())
    {
@@ -41,19 +96,29 @@ void OUTPUT::writeHeaderInOutputFiles(PARAMETER parameter, UTILS utils)
    }
    else
    {
-      outputFile << "Simulation results on grassland dynamics (at population and community level)." << std::endl;
-      outputFile << "Time\tPFT\tFraction" << std::endl;
+      outputFile << "Date\tDayCount\tPFT\tFraction\tNumberPlants" << std::endl;
    }
 }
 
-/* writes daily simulation resulst (state variables of the community) to the output file */
-void OUTPUT::writeSimulationResultsToOutputFiles(PARAMETER parameter, UTILS utils, COMMUNITY community)
+/**
+ * @brief Writes daily simulation results to the output file.
+ *
+ * This method writes the daily simulation results, which include state
+ * variables of the community, to the output file. The results are stored
+ * in a temporary buffer and are written to the file if the file is open.
+ * After writing, the buffer is cleared to prepare for the next set of results.
+ *
+ * @param utils Utility functions for error handling and other utilities.
+ *
+ * @throws std::ios_base::failure If the output file is not open.
+ */
+void OUTPUT::writeSimulationResultsToOutputFiles(UTILS utils)
 {
    if (outputFile.is_open())
    {
-      outputFile << buffer.str();
-      buffer.str("");
-      buffer.clear();
+      outputFile << bufferCommunity.str();
+      bufferCommunity.str("");
+      bufferCommunity.clear();
    }
    else
    {
@@ -61,7 +126,18 @@ void OUTPUT::writeSimulationResultsToOutputFiles(PARAMETER parameter, UTILS util
    }
 }
 
-/* Closes the output file */
+/**
+ * @brief Closes the output file.
+ *
+ * This method closes the output file if it is currently open. If the
+ * output file is not open, it triggers an error handling function to
+ * notify the user of the issue.
+ *
+ * @param utils Utility functions for error handling and other utilities.
+ *
+ * @throws std::ios_base::failure If the output file is not open when
+ *                                  attempting to close it.
+ */
 void OUTPUT::closeOutputFiles(UTILS utils)
 {
    if (outputFile.is_open())
@@ -74,7 +150,22 @@ void OUTPUT::closeOutputFiles(UTILS utils)
    }
 }
 
-/* Creates a folder for the output file */
+/**
+ * @brief Creates a folder for the output files.
+ *
+ * This method constructs an output directory path from the provided path
+ * and creates a new directory named "output" within that path. The
+ * method uses a utility function to split the input path into components
+ * based on the directory separator. If the directory already exists,
+ * the method does nothing.
+ *
+ * @param path The base path where the output folder will be created.
+ * @param utils Utility functions for string manipulation and other tasks.
+ *
+ * @note This method uses the _mkdir function to create the directory.
+ *       Ensure that the application has permission to create directories
+ *       in the specified location.
+ */
 void OUTPUT::createOutputFolder(std::string path, UTILS utils)
 {
    char separator = '\\';
@@ -87,7 +178,24 @@ void OUTPUT::createOutputFolder(std::string path, UTILS utils)
    _mkdir(outputDirectory.c_str());
 }
 
-/* Read-in output writing dates from file */
+/**
+ * @brief Reads output writing dates from a file.
+ *
+ * This method constructs the full path to the output writing dates file
+ * using the specified path and the filename from the parameters. It opens
+ * the file and reads the dates from it, storing them in the outputWritingDates
+ * vector. The first line of the file is considered a header and is skipped.
+ * If the file cannot be opened, a warning is issued and daily resolution
+ * will be used for writing simulation results.
+ *
+ * @param path The base path where the output writing dates file is located.
+ * @param utils Utility functions for string manipulation and calculations.
+ * @param parameter Reference to the PARAMETER object containing configuration details.
+ *
+ * @note The output writing dates file must be formatted correctly, with dates
+ *       specified in the format "YYYY-MM-DD". If the file is empty or cannot
+ *       be opened, daily simulation results will be written by default.
+ */
 void OUTPUT::openAndReadOutputWritingDates(std::string path, UTILS utils, PARAMETER &parameter)
 {
    char separator = '\\';
@@ -130,7 +238,22 @@ void OUTPUT::openAndReadOutputWritingDates(std::string path, UTILS utils, PARAME
    }
 }
 
-/* print important settings of the simulation to the console (stdout.txt) */
+/**
+ * @brief Prints important settings of the simulation to the console (stdout.txt).
+ *
+ * This method outputs key configuration parameters of the simulation, including
+ * site identification, geographical information, the first and last year of the
+ * simulation, and the names of the input files. It also reports whether the input
+ * files were successfully opened. Additionally, it details how and when the simulation
+ * output will be written, including the random number generator seed.
+ *
+ * @param parameter Reference to the PARAMETER object containing simulation settings.
+ * @param input Reference to the INPUT object containing status information about input files.
+ *
+ * @note If any input files fail to open, a corresponding message will be printed to
+ *       the console. The method also indicates whether output writing dates are set to
+ *       daily or at specified dates from the output writing dates file.
+ */
 void OUTPUT::printSimulationSettingsToConsole(PARAMETER parameter, INPUT input)
 {
 

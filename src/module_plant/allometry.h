@@ -2,6 +2,13 @@
 #include "../module_init/constants.h"
 #include <math.h>
 
+/**
+ * @brief Represents allometric relationships for plants.
+ *
+ * The `ALLOMETRY` class provides methods to calculate various plant metrics
+ * based on allometric equations. These methods allow for conversions between
+ * biomass, height, width, and other related geometric plant state variables.
+ */
 class ALLOMETRY
 {
 public:

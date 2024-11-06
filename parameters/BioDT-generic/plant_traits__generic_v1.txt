@@ -20,7 +20,7 @@ externalSeedInfluxActivated	1
 \datatype:boolean
 \description:de-/activation of global seed influx from outside the area
 
-dayOfExternalSeedInfluxStart	2013-09-01
+dayOfExternalSeedInfluxStart	2013-01-01
 \datatype:date
 \description:date when external seed influx starts 
 
@@ -37,12 +37,17 @@ plantSeedProductionActivated	0
 \datatype:boolean
 \description:de-/activation of seed production by mature plants at the area
 
-maturityAges	215	33	32
+maturityAges	100	100	100
 \datatype:float-array
 \unit:d
 \description:minimum age of plants to be mature (and for starting to produce seeds)
 
-seedMasses	0.00138	0.00088	0.00108
+maturityHeights	15	15	15
+\datatype:float-array
+\unit:cm
+\description:minimum height of plants to be mature (and for starting to produce seeds)
+
+seedMasses	0.001	0.001	0.001
 \datatype:float-array
 \unit:g(odm)
 \description:seed biomass (organic dry matter)
@@ -51,17 +56,17 @@ seedMasses	0.00138	0.00088	0.00108
 # 		Establishment of seedlings
 #  ==========================================================
 
-seedGerminationRates	0.66	0.75	0.7
+seedGerminationRates	0.4	0.5	0.6
 \datatype:float-array
 \unit:d-1
 \description:germination rate of seeds
 
-seedGerminationTimes	18	18	18
+seedGerminationTimes	14	14	14
 \datatype:integer-array
 \unit:d
 \description:days to emergence of seeds since influx, production or sowing
 
-seedlingMortalityRates	0.025	0.188	0.033
+seedlingMortalityRates	0.02	0.02	0.02
 \datatype:float-array
 \unit:d-1
 \description:mortality rate of seedlings
@@ -94,7 +99,7 @@ brownBiomassFractionFalling	0.1
 \unit:d-1
 \description:fraction of brown biomass that falls to litter surface pool (full N and C)
 
-crowdingMortalityActivated	1
+crowdingMortalityActivated	0
 \datatype:boolean
 \description:de-/activation self-thinning in crowded stand
 
@@ -187,15 +192,25 @@ plantResponseToTemperatureQ10Reference	25.0
 # 		Nitrogen demand and fixation
 # =============================================================================
 
-plantCNRatioGreen	25.9	25.9	25.1
+plantCNRatioGreenLeaves	25.9	25.9	25.1
 \datatype:float-array
 \unit:g(C) g(N)-1
 \description:ratio of carbon (C) and nitrogen (N) in green leaves
 
-plantCNRatioBrown	35.0	35.0	48.84
+plantCNRatioBrownLeaves	35.0	35.0	48.84
 \datatype:float-array
 \unit:g(C) g(N)-1
 \description:ratio of carbon (C) and nitrogen (N) in brown leaves and roots
+
+plantCNRatioRoots	25.9	25.9	25.1
+\datatype:float-array
+\unit:g(C) g(N)-1
+\description:ratio of carbon (C) and nitrogen (N) in root branches
+
+plantCNRatioSeeds	35.0	35.0	48.84
+\datatype:float-array
+\unit:g(C) g(N)-1
+\description:ratio of carbon (C) and nitrogen (N) in seeds
 
 nitrogenFixationAbility	0	0	1
 \datatype:boolean-array

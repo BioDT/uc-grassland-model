@@ -1,5 +1,6 @@
 #version 3.11 or later of CMake needed
 cmake_minimum_required(VERSION 3.0)
+set(CMAKE_CXX_STANDARD 17)
 
 project(
     grassDTmodel
@@ -24,6 +25,7 @@ file(COPY src/module_step/step.h DESTINATION include/module_step)
 file(COPY src/module_growth/growth.h DESTINATION include/module_growth)
 file(COPY src/module_mortality/mortality.h DESTINATION include/module_mortality)
 file(COPY src/module_recruitment/recruitment.h DESTINATION include/module_recruitment)
+file(COPY src/module_interaction/interaction.h DESTINATION include/module_interaction)
 
 #Define source files
 set(SOURCES
@@ -43,6 +45,7 @@ set(SOURCES
     src/module_growth/growth.cpp
     src/module_mortality/mortality.cpp
     src/module_recruitment/recruitment.cpp
+    src/module_interaction/interaction.cpp
 )
 
 #Define header files
@@ -62,9 +65,8 @@ set(HEADERS
     include/module_growth/growth.h
     include/module_mortality/mortality.h
     include/module_recruitment/recruitment.h
+    include/module_interaction/interaction.h
 )
-
-set(CMAKE_BUILD_TYPE Release)
 
 #Create executable target
 add_executable(grassDTmodel ${SOURCES} ${HEADERS})
