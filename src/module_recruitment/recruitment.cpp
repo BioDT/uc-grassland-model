@@ -149,27 +149,33 @@ void RECRUITMENT::getIncomingSeedsByPlantReproduction(PARAMETER parameter, COMMU
 {
    int pft, numberOfSeeds;
 
-   if (parameter.plantSeedProductionActivated)
+   for (int cohortIndex = 0; cohortIndex < community.totalNumberOfCohortsInCommunity; cohortIndex++)
    {
-      for (int plantIndex = 0; plantIndex < community.totalNumberOfCohortsInCommunity; plantIndex++)
+      /* new plant cohorts are stored at the end of the community vector */
+      pft = community.allPlants[cohortIndex]->pft;
+
+      /* if plants have reached maturity, their recruitment biomass pool is used for seed production (based on PFT-specific seed mass) */
+      // TODO: could this be simplified by using nppAllocationToReproduction?
+      if (community.allPlants[cohortIndex]->height >= parameter.maturityHeights[pft])
       {
-         /* new plant cohorts are stored at the end of the community vector */
-         pft = community.allPlants[plantIndex]->pft;
-
-         /* if plants have reached maturity, their recruitment biomass pool is used for seed production (based on PFT-specific seed mass) */
-         // TODO: could this be simplified by using nppAllocationToReproduction?
-         if (community.allPlants[plantIndex]->height >= parameter.maturityHeights[pft - 1])
+         if (community.allPlants[cohortIndex]->recruitmentBiomass > 0)
          {
-            if (community.allPlants[plantIndex]->recruitmentBiomass > 0)
+            numberOfSeeds = (int)floor((community.allPlants[cohortIndex]->recruitmentBiomass / parameter.seedMasses[pft]) + 0.5);
+            if (parameter.seedsFromMaturePlantsActivated)
             {
-               numberOfSeeds = (int)floor((community.allPlants[plantIndex]->recruitmentBiomass / parameter.seedMasses[pft - 1]) + 0.5);
                incomingSeeds[pft] += numberOfSeeds;
-               community.allPlants[plantIndex]->recruitmentBiomass = 0;
-
-               // TODO: update C and N fluxes
-               //  patch->nitrogenContentReproduction += plant->nitrogenContentReproduction;
-               //  plant->nitrogenContentReproduction = 0;
+               outgoingSeeds[pft] += 0;
             }
+            else
+            {
+               incomingSeeds[pft] += 0;
+               outgoingSeeds[pft] += numberOfSeeds;
+            }
+            community.allPlants[cohortIndex]->recruitmentBiomass = 0;
+
+            // TODO: update C and N fluxes
+            //  nitrogenContentReproduction += plant->nitrogenContentReproduction;
+            //  nitrogenContentReproduction = 0;
          }
       }
    }
@@ -260,17 +266,16 @@ void RECRUITMENT::calculateSeedGerminationToSeedlings(UTILS utils, PARAMETER par
             // update seed pool after germination
             updateSeedPool(pft, cohortindex);
 
-            // TODO: think about how / whether to include competition for space here?
-            // create plant entry in community vector 'allPlants' for the successfully germinated seeds
-            // if ((ATSum[seedlingCrownCellIndex] < 1.0))
-            //{
-            /*if (parameter.crowdingMortalityActivated): TODO: maybe exchange by thinning rule?
+            // TODO: keep competition for space here or remove?
+            /* if ((ATSum[seedlingCrownCellIndex] < 1.0))
             {
-               correctSeedsForSpace;
-            }*/
+               if (parameter.crowdingMortalityActivated)
+               {
+                  correctSeedsForSpace;
+               }*/
 
-            addGerminatedSeedlingsToCommunity(parameter, community, allometry, pft);
-            //}
+            addGerminatedSeedlingsToCommunity(utils, parameter, community, allometry, pft);
+            // }
          }
       }
    }
@@ -302,7 +307,7 @@ void RECRUITMENT::calculateSeedGerminationToSeedlings(UTILS utils, PARAMETER par
  */
 void RECRUITMENT::calculateNumberOfGerminatingSeeds(UTILS utils, PARAMETER parameter, COMMUNITY &community, int pft, int cohortindex)
 {
-   // TODO: add impact of heat, soil water and nitrogen to classical germination rate
+   // TODO: add impact of temperature, soil water and radiation to intrinsic germination rate
    int integerPartOfCalculatedNumberOfSeeds;
    double calculatedNumberOfSeeds;
    calculatedNumberOfSeeds = seedPool[pft].at(cohortindex) * parameter.seedGerminationRates[pft];
@@ -424,14 +429,10 @@ void RECRUITMENT::updateSeedPool(int pft, int cohortindex)
  * @param successfullGerminatedSeeds An integer representing the number of
  *                                    successfully germinated seedlings to be added.
  */
-void RECRUITMENT::addGerminatedSeedlingsToCommunity(PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry, int pft)
+void RECRUITMENT::addGerminatedSeedlingsToCommunity(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry, int pft)
 {
    if (successfullGerminatedSeeds.at(pft) > 0)
    {
-      community.allPlants.emplace_back(std::make_shared<PLANT>(parameter, allometry, pft, seedlingHeight, successfullGerminatedSeeds.at(pft)));
-
-      // TODO: only relevant for calculating Cflux
-      // biomass = TreeToGrass(plant)->biomassShoot;
-      // ingrowth_month += biomass * successfullGerminatedSeeds;
+      community.allPlants.emplace_back(std::make_shared<PLANT>(utils, parameter, allometry, pft, successfullGerminatedSeeds.at(pft)));
    }
 }

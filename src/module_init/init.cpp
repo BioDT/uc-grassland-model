@@ -70,10 +70,12 @@ void INIT::initAndResetProcessVariables(PARAMETER parameter, RECRUITMENT &recrui
    /// Process-related variables
    // 1. Recruitment
    recruitment.incomingSeeds.clear();
+   recruitment.outgoingSeeds.clear();
    recruitment.successfullGerminatedSeeds.clear();
    for (int pft = 0; pft < parameter.pftCount; pft++)
    {
       recruitment.incomingSeeds.push_back(0);
+      recruitment.outgoingSeeds.push_back(0);
       recruitment.successfullGerminatedSeeds.push_back(0);
    }
 
@@ -89,15 +91,47 @@ void INIT::initAndResetProcessVariables(PARAMETER parameter, RECRUITMENT &recrui
 
    /// Output-related variables
    community.totalNumberOfPlantsInCommunity = 0;
+   community.leafAreaIndexOfPlantsInCommunity = 0;
+   community.greenYield = 0.0;
+   community.brownYield = 0.0;
+   community.yield = 0.0;
 
    community.numberOfPlantsPerPFT.clear();
    community.pftComposition.clear();
+   community.coveredAreaOfPlantsPerPFT.clear();
+   community.shootBiomassOfPlantsPerPFT.clear();
+   community.brownShootBiomassOfPlantsPerPFT.clear();
+   community.greenShootBiomassOfPlantsPerPFT.clear();
+   community.clippedShootBiomassOfPlantsPerPFT.clear();
+   community.rootBiomassOfPlantsPerPFT.clear();
+   community.recruitmentBiomassOfPlantsPerPFT.clear();
+   community.exudationBiomassOfPlantsPerPFT.clear();
+   community.gppOfPlantsPerPFT.clear();
+   community.nppOfPlantsPerPFT.clear();
+   community.respirationOfPlantsPerPFT.clear();
+   community.greenBiomassYield.clear();
+   community.brownBiomassYield.clear();
+   community.biomassYield.clear();
+
    for (int pft = 0; pft < parameter.pftCount; pft++)
    {
       community.pftComposition.push_back(0);
       community.numberOfPlantsPerPFT.push_back(0);
+
+      community.coveredAreaOfPlantsPerPFT.push_back(0);
+      community.shootBiomassOfPlantsPerPFT.push_back(0);
+      community.brownShootBiomassOfPlantsPerPFT.push_back(0);
+      community.greenShootBiomassOfPlantsPerPFT.push_back(0);
+      community.clippedShootBiomassOfPlantsPerPFT.push_back(0);
+      community.rootBiomassOfPlantsPerPFT.push_back(0);
+      community.recruitmentBiomassOfPlantsPerPFT.push_back(0);
+      community.exudationBiomassOfPlantsPerPFT.push_back(0);
+      community.gppOfPlantsPerPFT.push_back(0);
+      community.nppOfPlantsPerPFT.push_back(0);
+      community.respirationOfPlantsPerPFT.push_back(0);
+
+      community.greenBiomassYield.push_back(0);
+      community.brownBiomassYield.push_back(0);
+      community.biomassYield.push_back(0);
    }
-   /*    for (int pft = 0; pft < par->pftCount; pft++)
-         patch.Biomass_calibGrp[pft] = 0;
-   */
 }

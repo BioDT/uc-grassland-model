@@ -1,6 +1,7 @@
 #pragma once
 #include "../module_plant/community.h"
 #include "../module_parameter/parameter.h"
+#include "../module_growth/growth.h"
 #include "../utils/utils.h"
 #include <random>
 
@@ -19,8 +20,13 @@ public:
    MORTALITY();
    ~MORTALITY();
 
-   void doPlantMortality(PARAMETER parameter, COMMUNITY &community, UTILS utils);
-   void doSenescenceAndLitterFall();
+   void doPlantMortality(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry, GROWTH growth, INTERACTION interaction, SOIL soil);
+   void doSenescenceAndLitterFall(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry, GROWTH growth, INTERACTION interaction, SOIL soil, int cohortIndex, int pft);
+   double doLeafSenescence(COMMUNITY &community, PARAMETER parameter, GROWTH growth, INTERACTION interaction, int cohortIndex, int pft);
+   void doLeafLitterFall(UTILS utils, COMMUNITY &community, ALLOMETRY allometry, PARAMETER parameter, SOIL soil, int cohortIndex, int pft);
+   void updatePlantSize(UTILS utils, COMMUNITY &community, ALLOMETRY allometry, PARAMETER parameter, int fractionLeavesFalling, int cohortIndex, int pft);
+   void doNitrogenRelocation(UTILS utils, COMMUNITY &community, PARAMETER parameter);
+   void doRootSenescenceAndLitterFall(COMMUNITY &community, PARAMETER parameter, SOIL soil, int cohortIndex, int pft);
    void doThinning();
    void doBasicMortality(PARAMETER parameter, UTILS utils, COMMUNITY &community, int cohortIndex, int pft);
    double getPlantMortalityProbability(PARAMETER parameter, COMMUNITY community, int cohortIndex, int pft);

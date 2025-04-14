@@ -21,12 +21,15 @@ public:
    OUTPUT();
    ~OUTPUT();
 
-   std::string outputDirectory;         /// Directory where output files will be stored.
-   std::ofstream outputFile;            /// Output file stream for writing data.
-   std::string fileDirectory;           /// Directory of the outputWritingDates file.
-   std::stringstream bufferCommunity;   /// Temporary storage buffer for output data at community / PFT level.
-   std::stringstream bufferPlant;       /// Temporary storage buffer for output data at plant / cohort level.
-   std::stringstream bufferEnvironment; /// Temporary storage buffer for output data at ecosystem level (environmental conditions).
+   std::string outputDirectory;           /// Directory where output files will be stored.
+   std::string fileDirectory;             /// Directory of the outputWritingDates file.
+   std::ofstream outputCommunity;         /// Output file stream for writing data.
+   std::ofstream outputPFTPopulation;     /// Output file stream for writing data.
+   std::ofstream outputPlant;             /// Output file stream for writing data.
+   std::stringstream bufferCommunity;     /// Temporary storage buffer for output data at community level.
+   std::stringstream bufferPFTPopulation; /// Temporary storage buffer for output data at PFT level.
+   std::stringstream bufferPlant;         /// Temporary storage buffer for output data at cohort level.
+   std::stringstream bufferEnvironment;   /// Temporary storage buffer for output data at ecosystem level (environmental conditions).
 
    std::vector<int> outputWritingDates; /// Dates for writing output data.
    bool outputWritingDatesFileOpened;   /// Flag indicating if the output writing dates file is opened.

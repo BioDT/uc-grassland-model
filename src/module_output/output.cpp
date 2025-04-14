@@ -56,16 +56,33 @@ void OUTPUT::createAndOpenOutputFiles(PARAMETER parameter, UTILS utils)
    utils.splitString(parameter.plantTraitsFile, '/');
    std::string endingLocation = "lat" + parameter.latitude + "_lon" + parameter.longitude;
    std::string endingYears = "__" + std::to_string(parameter.firstYear) + "-01-01_" + std::to_string(parameter.lastYear) + "-12-31";
-   std::string endingRandomSeed = "__" + std::to_string(parameter.randomNumberGeneratorSeed);
+   std::string runNumber = (parameter.randomNumberGeneratorSeed < 10) ? ("00" + std::to_string(parameter.randomNumberGeneratorSeed)) : ((parameter.randomNumberGeneratorSeed < 100) ? ("0" + std::to_string(parameter.randomNumberGeneratorSeed)) : (std::to_string(parameter.randomNumberGeneratorSeed)));
+   std::string endingRandomSeed = "__run" + runNumber;
    std::string plantTraitsFile = utils.strings.at(1);
    utils.strings.clear();
    utils.splitString(plantTraitsFile, '_');
    std::string endingParameter = utils.strings.at(utils.strings.size() - 2) + "_" + utils.strings.at(utils.strings.size() - 1);
-   std::string filename = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__output__" + endingParameter;
-   outputFile.open(filename);
-   if (!outputFile.is_open())
+
+   std::string filenameCommunity = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputCommunity__" + endingParameter;
+   std::string filenamePFTPopulation = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputPFT__" + endingParameter;
+   std::string filenamePlant = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputPlant__" + endingParameter;
+
+   outputCommunity.open(filenameCommunity);
+   if (!outputCommunity.is_open())
    {
-      utils.handleError("Error writing to the output file.");
+      utils.handleError("Error writing to the community output file.");
+   }
+
+   outputPFTPopulation.open(filenamePFTPopulation);
+   if (!outputPFTPopulation.is_open())
+   {
+      utils.handleError("Error writing to the PFT population output file.");
+   }
+
+   outputPlant.open(filenamePlant);
+   if (!outputPlant.is_open())
+   {
+      utils.handleError("Error writing to the plant / cohorte output file.");
    }
 };
 
@@ -90,13 +107,44 @@ void OUTPUT::createAndOpenOutputFiles(PARAMETER parameter, UTILS utils)
  */
 void OUTPUT::writeHeaderInOutputFiles(UTILS utils)
 {
-   if (!outputFile.is_open())
+
+   if (!outputCommunity.is_open())
    {
-      utils.handleError("Error writing to the output file.");
+      utils.handleError("Error writing to the community output file.");
    }
    else
    {
-      outputFile << "Date\tDayCount\tPFT\tFraction\tNumberPlants" << std::endl;
+      outputCommunity << "Date\tDayCount\tNumberPlants\tLeafAreaIndex";
+      outputCommunity << std::endl;
+   }
+
+   if (!outputPFTPopulation.is_open())
+   {
+      utils.handleError("Error writing to the PFT population output file.");
+   }
+   else
+   {
+      outputPFTPopulation << "Date\tDayCount\tPFT\tFraction\tNumberPlants\t";
+      outputPFTPopulation << "CoveredArea\tShootBiomass\tGreenShootBiomass\tBrownShootBiomass\t";
+      outputPFTPopulation << "ClippedShootBiomass\tRootBiomass\tRecruitmentBiomass\tExudationBiomass\t";
+      outputPFTPopulation << "GPP\tNPP\tRespiration";
+      outputPFTPopulation << std::endl;
+   }
+
+   if (!outputPlant.is_open())
+   {
+      utils.handleError("Error writing to the plant / cohorte output file.");
+   }
+   else
+   {
+      outputPlant << "Date\tDayCount\tPFT\tAge\tNumberPlants\tHeight\tWidth\tLAI\t";
+      outputPlant << "CoveredArea\tRootDepth\tNumberSoilLayers\t";
+      outputPlant << "ShootBiomass\tGreenShootBiomass\tBrownShootBiomass\t";
+      outputPlant << "ClippedShootBiomass\tRootBiomass\tRecruitmentBiomass\tExudationBiomass\t";
+      outputPlant << "GPP\tNPP\tRespiration\t";
+      outputPlant << "Radiation\tShadingIndicator\tLimitingFactorWater\tLimitingFactorNitrogen\t";
+      outputPlant << "AllocationShoot\tAllocationRoot\tAllocationRecruitment\tAllocationExudation";
+      outputPlant << std::endl;
    }
 }
 
@@ -114,15 +162,37 @@ void OUTPUT::writeHeaderInOutputFiles(UTILS utils)
  */
 void OUTPUT::writeSimulationResultsToOutputFiles(UTILS utils)
 {
-   if (outputFile.is_open())
+   if (outputCommunity.is_open())
    {
-      outputFile << bufferCommunity.str();
+      outputCommunity << bufferCommunity.str();
       bufferCommunity.str("");
       bufferCommunity.clear();
    }
    else
    {
-      utils.handleError("The output file is not open for writing.");
+      utils.handleError("The output file of community variables is not open for writing.");
+   }
+
+   if (outputPFTPopulation.is_open())
+   {
+      outputPFTPopulation << bufferPFTPopulation.str();
+      bufferPFTPopulation.str("");
+      bufferPFTPopulation.clear();
+   }
+   else
+   {
+      utils.handleError("The output file of PFT population variables is not open for writing.");
+   }
+
+   if (outputPlant.is_open())
+   {
+      outputPlant << bufferPlant.str();
+      bufferPlant.str("");
+      bufferPlant.clear();
+   }
+   else
+   {
+      utils.handleError("The output file of single plant variables / cohorts is not open for writing.");
    }
 }
 
@@ -140,13 +210,31 @@ void OUTPUT::writeSimulationResultsToOutputFiles(UTILS utils)
  */
 void OUTPUT::closeOutputFiles(UTILS utils)
 {
-   if (outputFile.is_open())
+   if (outputCommunity.is_open())
    {
-      outputFile.close();
+      outputCommunity.close();
    }
    else
    {
-      utils.handleError("The output file is not open.");
+      utils.handleError("The output file of community variables is not open.");
+   }
+
+   if (outputPFTPopulation.is_open())
+   {
+      outputPFTPopulation.close();
+   }
+   else
+   {
+      utils.handleError("The output file of PFT population variables is not open.");
+   }
+
+   if (outputPlant.is_open())
+   {
+      outputPlant.close();
+   }
+   else
+   {
+      utils.handleError("The output file of single plant variables / cohorts is not open.");
    }
 }
 

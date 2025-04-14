@@ -25,13 +25,13 @@ void COMMUNITY::checkPlantsAreAliveInCommunity(UTILS utils)
    if (allPlants.size() > 0)
    {
       /* go through all plant cohorts in the community vector and save indices of dying cohorts */
-      for (int plantIndex = 0; plantIndex < allPlants.size(); plantIndex++)
+      for (int cohortIndex = 0; cohortIndex < allPlants.size(); cohortIndex++)
       {
-         if (allPlants[plantIndex]->amount == 0)
+         if (allPlants[cohortIndex]->amount == 0)
          {
-            idsOfDeadPlantCohorts.push_back(plantIndex);
+            idsOfDeadPlantCohorts.push_back(cohortIndex);
          }
-         else if (allPlants[plantIndex]->amount < 0)
+         else if (allPlants[cohortIndex]->amount < 0)
          {
             utils.handleError("Error (allPlants vector): there is an invalid negative amount of plants within a cohort.");
          }
@@ -71,18 +71,34 @@ void COMMUNITY::updateCommunityStateVariablesForOutput(PARAMETER parameter)
 {
    if (allPlants.size() > 0)
    {
-      for (int plantIndex = 0; plantIndex < allPlants.size(); plantIndex++)
+      for (int cohortindex = 0; cohortindex < allPlants.size(); cohortindex++)
       {
          // PFT-specific calculations
-         pftComposition[allPlants[plantIndex]->pft] += allPlants[plantIndex]->amount;
-         numberOfPlantsPerPFT[allPlants[plantIndex]->pft] += allPlants[plantIndex]->amount;
+         pftComposition[allPlants[cohortindex]->pft] += allPlants[cohortindex]->amount;
+         numberOfPlantsPerPFT[allPlants[cohortindex]->pft] += allPlants[cohortindex]->amount;
+         coveredAreaOfPlantsPerPFT[allPlants[cohortindex]->pft] += allPlants[cohortindex]->coveredArea * allPlants[cohortindex]->amount;
+         shootBiomassOfPlantsPerPFT[allPlants[cohortindex]->pft] += allPlants[cohortindex]->shootBiomass * allPlants[cohortindex]->amount;
+         greenShootBiomassOfPlantsPerPFT[allPlants[cohortindex]->pft] += allPlants[cohortindex]->shootBiomassGreenLeaves * allPlants[cohortindex]->amount;
+         brownShootBiomassOfPlantsPerPFT[allPlants[cohortindex]->pft] += allPlants[cohortindex]->shootBiomassBrownLeaves * allPlants[cohortindex]->amount;
 
-         /*patch.Biomass_calib += plant.biomassAboveClipHeight * plant.N;
-         patch.Biomass_calibGrp[plant.pft] += plant.biomassAboveClipHeight * plant.N;
-         */
+         if (allPlants.at(cohortindex)->height > parameter.clippingHeightOfBiomassMeasurement)
+         {
+            allPlants.at(cohortindex)->shootBiomassAboveClippingHeight =
+                ((allPlants.at(cohortindex)->height - parameter.clippingHeightOfBiomassMeasurement) / allPlants.at(cohortindex)->height) * allPlants.at(cohortindex)->shootBiomass;
+            clippedShootBiomassOfPlantsPerPFT[allPlants[cohortindex]->pft] += allPlants[cohortindex]->shootBiomassAboveClippingHeight * allPlants[cohortindex]->amount;
+         }
+
+         rootBiomassOfPlantsPerPFT[allPlants[cohortindex]->pft] += allPlants[cohortindex]->rootBiomass * allPlants[cohortindex]->amount;
+         recruitmentBiomassOfPlantsPerPFT[allPlants[cohortindex]->pft] += allPlants[cohortindex]->recruitmentBiomass * allPlants[cohortindex]->amount;
+         exudationBiomassOfPlantsPerPFT[allPlants[cohortindex]->pft] += allPlants[cohortindex]->exudationBiomass * allPlants[cohortindex]->amount;
+
+         gppOfPlantsPerPFT[allPlants[cohortindex]->pft] += allPlants[cohortindex]->gpp * allPlants[cohortindex]->amount;
+         nppOfPlantsPerPFT[allPlants[cohortindex]->pft] += allPlants[cohortindex]->npp * allPlants[cohortindex]->amount;
+         respirationOfPlantsPerPFT[allPlants[cohortindex]->pft] += allPlants[cohortindex]->totalRespiration * allPlants[cohortindex]->amount;
 
          // Community-wide calculations
-         totalNumberOfPlantsInCommunity += allPlants[plantIndex]->amount;
+         totalNumberOfPlantsInCommunity += allPlants[cohortindex]->amount;
+         leafAreaIndexOfPlantsInCommunity += allPlants[cohortindex]->lai * allPlants[cohortindex]->coveredArea * allPlants[cohortindex]->amount;
       }
 
       // Normalizations

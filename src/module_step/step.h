@@ -8,6 +8,7 @@
 #include "../module_recruitment/recruitment.h"
 #include "../module_mortality/mortality.h"
 #include "../module_growth/growth.h"
+#include "../module_management/management.h"
 #include "../module_output/output.h"
 #include "../utils/utils.h"
 #include <random>

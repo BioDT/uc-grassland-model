@@ -11,9 +11,13 @@ ALLOMETRY::~ALLOMETRY() {};
  * @param sla The specific leaf area (in square cm per g).
  * @return The calculated Leaf Area Index (LAI).
  */
-double ALLOMETRY::laiFromBiomassAreaSla(double biomass, double area, double sla)
+double ALLOMETRY::laiFromShootBiomassAreaSla(UTILS utils, double shootBiomass, double area, double sla)
 {
-   return biomass * sla / area;
+   if (area <= 0.0)
+   {
+      utils.handleError("Error (allometry): division by zero (coveredArea) in function 'laiFromShootBiomassAreaSla'.");
+   }
+   return (shootBiomass * sla / area);
 }
 
 /**
@@ -24,7 +28,7 @@ double ALLOMETRY::laiFromBiomassAreaSla(double biomass, double area, double sla)
  */
 double ALLOMETRY::areaFromWidth(double width)
 {
-   return PI / 4.0 * width * width;
+   return ((PI / 4.0) * width * width);
 }
 
 /**
@@ -38,9 +42,13 @@ double ALLOMETRY::areaFromWidth(double width)
  * @param form The shoot form factor, which represents how much biomass is contained in the cylindric shape of the plant (g per cubic cm).
  * @return The calculated height of the plant (in cm).
  */
-double ALLOMETRY::heightFromBiomassWidthForm(double biomass, double width, double form)
+double ALLOMETRY::heightFromShootBiomassWidthShootCorrection(UTILS utils, double shootBiomass, double width, double shootCorrectionFactor)
 {
-   return biomass / areaFromWidth(width) / form;
+   if (width <= 0.0 || shootCorrectionFactor <= 0.0)
+   {
+      utils.handleError("Error (allometry): division by zero (width or shootCorrectionFactor) in function 'heightFromShootBiomassWidthCorrectionFactor'.");
+   }
+   return ((shootBiomass / areaFromWidth(width)) / shootCorrectionFactor);
 }
 
 /**
@@ -53,9 +61,9 @@ double ALLOMETRY::heightFromBiomassWidthForm(double biomass, double width, doubl
  * @param hwr The height-width ratio of the plant (in cm per cm).
  * @return The calculated height of the plant (in cm).
  */
-double ALLOMETRY::heightFromWidthHwr(double width, double hwr)
+double ALLOMETRY::heightFromWidthByRatio(double width, double heightWidthRatio)
 {
-   return width * hwr;
+   return (width * heightWidthRatio);
 }
 
 /**
@@ -68,9 +76,13 @@ double ALLOMETRY::heightFromWidthHwr(double width, double hwr)
  * @param hwr The height-width ratio of the plant (in cm per cm).
  * @return The calculated width of the plant (in cm).
  */
-double ALLOMETRY::widthFromHeightHwr(double height, double hwr)
+double ALLOMETRY::widthFromHeightByRatio(UTILS utils, double height, double heightWidthRatio)
 {
-   return height / hwr;
+   if (heightWidthRatio <= 0.0)
+   {
+      utils.handleError("Error (allometry): division by zero (heightWidthRatio) in function 'widthFromHeightByRatio'.");
+   }
+   return (height / heightWidthRatio);
 }
 
 /**
@@ -84,9 +96,13 @@ double ALLOMETRY::widthFromHeightHwr(double height, double hwr)
  * @param form The shoot form factor of the plant (in g per cubic cm).
  * @return The calculated height of the plant (in cm).
  */
-double ALLOMETRY::heightFromBiomassHwrForm(double biomass, double hwr, double form)
+double ALLOMETRY::heightFromShootBiomassByRatioAndShootCorrection(UTILS utils, double shootBiomass, double heightWidthRatio, double shootCorrectionFactor)
 {
-   return pow(biomass * 4.0 / PI * (hwr * hwr) / form, 1.0 / 3.0);
+   if (shootCorrectionFactor <= 0.0)
+   {
+      utils.handleError("Error (allometry): division by zero (shootCorrectionFactor) in function 'heightFromShootBiomassByRatioAndShootCorrection'.");
+   }
+   return std::pow(shootBiomass * (4.0 / PI) * (heightWidthRatio * heightWidthRatio) / shootCorrectionFactor, 1.0 / 3.0);
 }
 
 /**
@@ -100,9 +116,17 @@ double ALLOMETRY::heightFromBiomassHwrForm(double biomass, double hwr, double fo
  * @param form The shoot form factor of the plant (in g per cubic cm).
  * @return The calculated width of the plant (in g).
  */
-double ALLOMETRY::widthFromBiomassHwrForm(double biomass, double hwr, double form)
+double ALLOMETRY::widthFromShootBiomassByRatioAndShootCorrection(UTILS utils, double shootBiomass, double heightWidthRatio, double shootCorrectionFactor)
 {
-   return pow(biomass * 4.0 / PI / hwr / form, 1.0 / 3.0);
+   if (heightWidthRatio <= 0.0 || shootCorrectionFactor <= 0.0)
+   {
+      utils.handleError("Error (allometry): division by zero (heightWidthRatio or shootCorrectionFactor) in function 'widthFromShootBiomassByRatioAndShootCorrection'.");
+   }
+
+   double calcPart1 = ((shootBiomass * (4.0 / PI)) / heightWidthRatio);
+   double calcPart2 = calcPart1 / shootCorrectionFactor;
+   double calcPart3 = std::pow(calcPart2, 1.0 / 3.0);
+   return (calcPart3);
 }
 
 /**
@@ -116,7 +140,39 @@ double ALLOMETRY::widthFromBiomassHwrForm(double biomass, double hwr, double for
  * @param form The shoot form factor of the plant (in g per cubic cm).
  * @return The calculated shoot biomass of the plant (in g).
  */
-double ALLOMETRY::biomassFromHeightWidthForm(double height, double width, double form)
+double ALLOMETRY::shootBiomassFromHeightWidthShootCorrection(double height, double width, double shootCorrectionFactor)
 {
-   return areaFromWidth(width) * height * form;
+   return areaFromWidth(width) * height * shootCorrectionFactor;
+}
+
+double ALLOMETRY::heightFromPlantBiomassShootCorrectionAndByRatios(UTILS utils, double plantBiomass, double heightWidthRatio, double shootCorrectionFactor, double shootRootRatio)
+{
+
+   if (shootRootRatio <= 0.0 || shootCorrectionFactor <= 0.0)
+   {
+      utils.handleError("Error (allometry): division by zero (heightWidthRatio or shootCorrectionFactor) in function 'heightFromPlantBiomassShootCorrectionAndByRatios'.");
+   }
+   double calcPart1 = (4.0 / PI) * plantBiomass * std::pow(heightWidthRatio, 2.0) * (1.0 / shootCorrectionFactor) * (1.0 / (1.0 + (1.0 / shootRootRatio)));
+   double calcPart2 = pow(calcPart1, 1.0 / 3.0);
+   return (calcPart2);
+}
+
+double ALLOMETRY::rootBiomassFromShootBiomass(UTILS utils, double shootBiomass, double shootRootRatio)
+{
+   if (shootRootRatio <= 0.0)
+   {
+      utils.handleError("Error (allometry): division by zero (shootRootRatio) in function 'rootBiomassFromShootBiomass'.");
+   }
+   return (shootBiomass / shootRootRatio);
+}
+
+double ALLOMETRY::rootDepthFromRootBiomassParametersRatioAndShootCorrection(UTILS utils, double rootBiomass, double parameterIntercept, double parameterExponent, double shootRootRatio, double shootCorrectionFactor)
+{
+   if (shootCorrectionFactor <= 0.0)
+   {
+      utils.handleError("Error (allometry): division by zero (shootCorrectionFactor) in function 'rootDepthFromRootBiomassParametersRatioAndShootCorrection'.");
+   }
+   double calcPart1 = std::pow((shootRootRatio / shootCorrectionFactor), parameterExponent);
+   double calcPart2 = std::pow(rootBiomass, parameterExponent);
+   return (parameterIntercept * calcPart1 * calcPart2);
 }

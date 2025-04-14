@@ -54,8 +54,29 @@ public:
     * allowing for PFT-specific assessments.
     */
    std::vector<double> numberOfPlantsPerPFT;
+   std::vector<double> coveredAreaOfPlantsPerPFT;
+   std::vector<double> shootBiomassOfPlantsPerPFT;
+   std::vector<double> greenShootBiomassOfPlantsPerPFT;
+   std::vector<double> brownShootBiomassOfPlantsPerPFT;
+   std::vector<double> clippedShootBiomassOfPlantsPerPFT;
+   std::vector<double> rootBiomassOfPlantsPerPFT;
+   std::vector<double> recruitmentBiomassOfPlantsPerPFT;
+   std::vector<double> exudationBiomassOfPlantsPerPFT;
+
+   std::vector<double> gppOfPlantsPerPFT;
+   std::vector<double> nppOfPlantsPerPFT;
+   std::vector<double> respirationOfPlantsPerPFT;
+
+   std::vector<double> greenBiomassYield;
+   std::vector<double> brownBiomassYield;
+   std::vector<double> biomassYield;
+   double greenYield;
+   double brownYield;
+   double yield;
+
    double maximumHeightOfAllPlants; // cm
    int totalNumberOfCohortsInCommunity;
+   double leafAreaIndexOfPlantsInCommunity; // cm per cm
 
    void checkPlantsAreAliveInCommunity(UTILS utils);
    void updateCommunityStateVariablesForOutput(PARAMETER parameter);

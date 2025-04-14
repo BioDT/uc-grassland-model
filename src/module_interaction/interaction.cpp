@@ -17,7 +17,7 @@ void INTERACTION::calculateLightAttenuationAndAvailabilityForPlants(UTILS utils,
    /// based on Beer-Lambert law of light transmission and extinction
    calculateLightAvailabilityForPlants(utils, community, parameter, fullSunLight);
 
-   // TODO: maybe modify calculateCrowdingConditions();
+   // TODO: decide if to remove calculateCrowdingConditions();
 }
 
 void INTERACTION::calculateNumberOfHeightLayersFromLargestPlant(UTILS utils, COMMUNITY &community)
@@ -30,7 +30,7 @@ void INTERACTION::calculateNumberOfHeightLayersFromLargestPlant(UTILS utils, COM
          community.maximumHeightOfAllPlants = community.allPlants[cohortindex]->height;
       }
    }
-   /// predefined maximum height layer = 300 (see module_init/constants.h)
+   /// predefined maximum height layer (see module_init/constants.h)
    if (community.maximumHeightOfAllPlants > maximumHeightLayer)
    {
       utils.handleError("Maximum plant height is exceeding the constant parameter maximumHeightLayer. The parameter should be set up in module_init/constants.h!");
@@ -129,14 +129,13 @@ void INTERACTION::calculateLightAvailabilityForPlants(UTILS utils, COMMUNITY &co
       }
    }
 
-   // TODO: not knowing if we really need this for grasslands
+   // TODO: calculate light at soil surface for germination?
    // fractionOfLightAtFloor = getRadiationAtLowerBoundaryOfHeightLayer(LAIwithLightExtinction.at(0), 1);
 }
 
 void INTERACTION::getOvertoppingCumulativeLeafAreaIndexOfPlant(COMMUNITY &community, int cohortindex, int layerindex)
 {
    community.allPlants.at(cohortindex)->cumulativeOvertoppingCommunityLAI = LAIwithLightExtinction.at(layerindex);
-   //  / Light_Comp_Factor -> rename to plantInteractionWeightingFactors?
 }
 
 void INTERACTION::calculateAvailableLightReachingAPlant(PARAMETER parameter, COMMUNITY &community, int cohortindex, double fullSunLight)

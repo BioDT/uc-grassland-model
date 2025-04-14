@@ -1,5 +1,6 @@
 #pragma once
 #include "../module_init/constants.h"
+#include "../utils/utils.h"
 #include <math.h>
 
 /**
@@ -15,12 +16,15 @@ public:
    ALLOMETRY();
    ~ALLOMETRY();
 
-   double laiFromBiomassAreaSla(double biomass, double area, double sla);
+   double laiFromShootBiomassAreaSla(UTILS utils, double shootBiomass, double area, double sla);
    double areaFromWidth(double width);
-   double heightFromBiomassWidthForm(double biomass, double width, double form);
-   double heightFromWidthHwr(double width, double hwr);
-   double widthFromHeightHwr(double height, double hwr);
-   double heightFromBiomassHwrForm(double biomass, double hwr, double form);
-   double widthFromBiomassHwrForm(double biomass, double hwr, double form);
-   double biomassFromHeightWidthForm(double height, double width, double form);
+   double heightFromShootBiomassWidthShootCorrection(UTILS utils, double shootBiomass, double width, double shootCorrectionFactor);
+   double heightFromWidthByRatio(double width, double heightWidthRatio);
+   double widthFromHeightByRatio(UTILS utils, double height, double heightWidthRatio);
+   double heightFromShootBiomassByRatioAndShootCorrection(UTILS utils, double shootBiomass, double heightWidthRatio, double shootCorrectionFactor);
+   double widthFromShootBiomassByRatioAndShootCorrection(UTILS utils, double shootBiomass, double heightWidthRatio, double shootCorrectionFactor);
+   double shootBiomassFromHeightWidthShootCorrection(double height, double width, double shootCorrectionFactor);
+   double heightFromPlantBiomassShootCorrectionAndByRatios(UTILS utils, double plantBiomass, double heightWidthRatio, double shootCorrectionFactor, double shootRootRatio);
+   double rootBiomassFromShootBiomass(UTILS utils, double shootBiomass, double shootRootRatio);
+   double rootDepthFromRootBiomassParametersRatioAndShootCorrection(UTILS utils, double rootBiomass, double parameterIntercept, double parameterExponent, double shootRootRatio, double shootCorrectionFactor);
 };

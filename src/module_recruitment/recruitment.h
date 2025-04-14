@@ -23,6 +23,7 @@ public:
 
    /// Vector storing the number of incoming seeds.
    std::vector<int> incomingSeeds;
+   std::vector<int> outgoingSeeds;
 
    /// 2D vector representing the seed pool, categorized by plant functional types (PFTs).
    std::vector<std::vector<int>> seedPool;
@@ -42,5 +43,5 @@ public:
    void calculateNumberOfGerminatingSeeds(UTILS utils, PARAMETER parameter, COMMUNITY &community, int pft, int cohortindex);
    void transferFailedToGerminateSeedsToLitterPool(UTILS utils, PARAMETER parameter, SOIL &soil, int pft, int cohortindex);
    void updateSeedPool(int pft, int cohortindex);
-   void addGerminatedSeedlingsToCommunity(PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry, int pft);
+   void addGerminatedSeedlingsToCommunity(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry, int pft);
 };

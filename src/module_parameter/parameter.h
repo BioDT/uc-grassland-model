@@ -29,7 +29,7 @@ public:
    std::vector<std::string> configParameterNames =
        {"deimsID", "latitude", "longitude", "lastYear", "firstYear",
         "weatherFile", "soilFile", "managementFile", "plantTraitsFile",
-        "outputFile", "outputWritingDatesFile", /*"clippingHeightForBiomassCalibration",*/
+        "outputFile", "outputWritingDatesFile", "clippingHeightOfBiomassMeasurement",
         "randomNumberGeneratorSeed"};
 
    std::string deimsID;
@@ -43,7 +43,7 @@ public:
    std::string plantTraitsFile;
    bool outputFile;
    std::string outputWritingDatesFile;
-   // float clippingHeightForBiomassCalibration;
+   double clippingHeightOfBiomassMeasurement;
    unsigned int randomNumberGeneratorSeed;
 
    // **** parameters of the plant traits file **** //
@@ -51,11 +51,11 @@ public:
    std::vector<std::string> plantTraitsParameterNames =
        {"pftCount", "maximumPlantHeight", "plantHeightToWidthRatio", "plantShootCorrectionFactor", "plantShootRootRatio",
         "plantRootDepthParamIntercept", "plantRootDepthParamExponent", "plantSpecificLeafArea", "plantShootOverlapFactors",
-        "crowdingMortalityActivated", "brownBiomassFractionFalling", "rootLifeSpan", "leafLifeSpan", "plantLifeSpan", "plantMortalityRates",
-        "seedlingMortalityRates", "seedGerminationTimes", "seedGerminationRates",
-        "plantSeedProductionActivated", "seedMasses", "maturityAges", "maturityHeights", "externalSeedInfluxActivated", "externalSeedInfluxNumber", "dayOfExternalSeedInfluxStart",
+        "crowdingMortalityActivated", "brownBiomassFractionFalling", "rootLifeSpan", "leafLifeSpan", "plantLifeSpan", "plantMortalityProbability",
+        "seedlingMortalityProbability", "seedGerminationTimes", "seedGerminationRates",
+        "seedsFromMaturePlantsActivated", "seedMasses", "maturityAges", "maturityHeights", "externalSeedInfluxActivated", "externalSeedInfluxNumber", "dayOfExternalSeedInfluxStart",
         "maximumGrossLeafPhotosynthesisRate", "initialSlopeOfLightResponseCurve", "lightExtinctionCoefficients", "growthRespirationFraction",
-        "maintenanceRespirationRate", "plantNppAllocationGrowth", "plantCNRatioGreenLeaves", "plantCNRatioBrownLeaves", "plantCNRatioRoots", "plantCNRatioSeeds", "nitrogenFixationAbility",
+        "maintenanceRespirationRate", "plantNppAllocationGrowth", "plantNppAllocationExudation", "useStaticShootRootAllocationRates", "plantCNRatioGreenLeaves", "plantCNRatioBrownLeaves", "plantCNRatioRoots", "plantCNRatioSeeds", "plantCNRatioExudates", "nitrogenFixationAbility",
         "plantCostRhizobiaSymbiosis", "plantWaterUseEfficiency", "plantMinimalSoilWaterForGppReduction", "plantMaximalSoilWaterForGppReduction",
         "plantResponseToTemperatureQ10Base", "plantResponseToTemperatureQ10Reference"};
 
@@ -73,11 +73,11 @@ public:
    std::vector<double> rootLifeSpan;
    std::vector<double> leafLifeSpan;
    std::vector<std::string> plantLifeSpan;
-   std::vector<double> plantMortalityRates;
-   std::vector<double> seedlingMortalityRates;
+   std::vector<double> plantMortalityProbability;
+   std::vector<double> seedlingMortalityProbability;
    std::vector<int> seedGerminationTimes;
    std::vector<double> seedGerminationRates;
-   bool plantSeedProductionActivated;
+   bool seedsFromMaturePlantsActivated;
    std::vector<double> seedMasses;
    std::vector<double> maturityAges;
    std::vector<double> maturityHeights;
@@ -90,10 +90,13 @@ public:
    double growthRespirationFraction;
    double maintenanceRespirationRate;
    std::vector<double> plantNppAllocationGrowth;
+   std::vector<double> plantNppAllocationExudation;
+   bool useStaticShootRootAllocationRates;
    std::vector<double> plantCNRatioGreenLeaves;
    std::vector<double> plantCNRatioBrownLeaves;
    std::vector<double> plantCNRatioRoots;
    std::vector<double> plantCNRatioSeeds;
+   std::vector<double> plantCNRatioExudates;
    std::vector<bool> nitrogenFixationAbility;
    double plantCostRhizobiaSymbiosis;
    std::vector<double> plantWaterUseEfficiency;

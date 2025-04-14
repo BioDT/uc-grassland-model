@@ -16,7 +16,7 @@ pftCount	3
 #  Seed influx from surrounding area
 #  ==========================================================
 
-externalSeedInfluxActivated	1
+externalSeedInfluxActivated	0
 \datatype:boolean
 \description:de-/activation of global seed influx from outside the area
 
@@ -33,30 +33,20 @@ externalSeedInfluxNumber	1	1	1
 # 		Seed influx from plants at the area
 #  ==========================================================
 
-plantSeedProductionActivated	0
+seedsFromMaturePlantsActivated	0
 \datatype:boolean
 \description:de-/activation of seed production by mature plants at the area
-
-maturityAges	100	100	100
-\datatype:float-array
-\unit:d
-\description:minimum age of plants to be mature (and for starting to produce seeds)
 
 maturityHeights	15	15	15
 \datatype:float-array
 \unit:cm
 \description:minimum height of plants to be mature (and for starting to produce seeds)
 
-seedMasses	0.001	0.001	0.001
-\datatype:float-array
-\unit:g(odm)
-\description:seed biomass (organic dry matter)
-
 #  ==========================================================
 # 		Establishment of seedlings
 #  ==========================================================
 
-seedGerminationRates	0.4	0.5	0.6
+seedGerminationRates	1.0	1.0	1.0
 \datatype:float-array
 \unit:d-1
 \description:germination rate of seeds
@@ -66,19 +56,29 @@ seedGerminationTimes	14	14	14
 \unit:d
 \description:days to emergence of seeds since influx, production or sowing
 
-seedlingMortalityRates	0.02	0.02	0.02
+seedMasses	0.001	0.001	0.001
 \datatype:float-array
-\unit:d-1
-\description:mortality rate of seedlings
+\unit:g(odm)
+\description:seed biomass (organic dry matter)
 
 # =============================================================================
 # 		Plant mortality    
 # =============================================================================
 
-plantMortalityRates	0.02	0.02	0.02
+plantMortalityProbability	0.00	0.00	0.00
 \datatype:float-array
 \unit:d-1
-\description:mortality rate of mature plants
+\description:mortality probability of mature plants
+
+seedlingMortalityProbability	0.00	0.00	0.00
+\datatype:float-array
+\unit:d-1
+\description:mortality probability of seedlings
+
+maturityAges	100	100	100
+\datatype:float-array
+\unit:d
+\description:minimum age of plants to be mature (and for starting to produce seeds)
 
 plantLifeSpan	perennial	perennial	perennial
 \datatype:string-array
@@ -94,7 +94,7 @@ rootLifeSpan	709	241	504
 \unit:d
 \description:root life span
 
-brownBiomassFractionFalling	0.1
+brownBiomassFractionFalling	0.001
 \datatype:float
 \unit:d-1
 \description:fraction of brown biomass that falls to litter surface pool (full N and C)
@@ -166,7 +166,7 @@ growthRespirationFraction	0.2
 \datatype:float
 \description:fraction of GPP attributed to growth respiration
 
-maintenanceRespirationRate	0.2
+maintenanceRespirationRate	0.02
 \datatype:float
 \unit:d-1
 \description:maintenance respiration rate (proportional to plant biomass)
@@ -174,6 +174,14 @@ maintenanceRespirationRate	0.2
 plantNppAllocationGrowth	0.7907	0.4417	0.9916
 \datatype:float-array
 \description:NPP allocation of a plant to shoot and root growth
+
+plantNppAllocationExudation	0.1	0.1	0.1
+\datatype:float-array
+\description:NPP allocation of a plant to exudates
+
+useStaticShootRootAllocationRates	1
+\datatype:boolean
+\description:calculation of allocation rates to shoot, root and reproduction based on only shoot-root ratio (value 1) or shoot-root ratio and daily GPP (value 0)
 
 # =============================================================================
 #		Temperature responses for plant growth
@@ -211,6 +219,11 @@ plantCNRatioSeeds	35.0	35.0	48.84
 \datatype:float-array
 \unit:g(C) g(N)-1
 \description:ratio of carbon (C) and nitrogen (N) in seeds
+
+plantCNRatioExudates	15.0	15.0	15.0
+\datatype:float-array
+\unit:g(C) g(N)-1
+\description:ratio of carbon (C) and nitrogen (N) in exudates
 
 nitrogenFixationAbility	0	0	1
 \datatype:boolean-array

@@ -18,19 +18,19 @@ MORTALITY::~MORTALITY() {};
  *       vector. It performs checks to ensure that plant cohorts in the vector still have
  *       a minimum of one plant after applying the mortality processes.
  */
-void MORTALITY::doPlantMortality(PARAMETER parameter, COMMUNITY &community, UTILS utils)
+void MORTALITY::doPlantMortality(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry, GROWTH growth, INTERACTION interaction, SOIL soil)
 {
    for (int cohortIndex = 0; cohortIndex < community.totalNumberOfCohortsInCommunity; cohortIndex++)
    {
       int pft = community.allPlants[cohortIndex]->pft;
 
       // 1. Leaf and root senescence and litter fall
-      // TODO: add crowding and senescence / litter fall
-      doSenescenceAndLitterFall();
+      doSenescenceAndLitterFall(utils, parameter, community, allometry, growth, interaction, soil, cohortIndex, pft);
 
       // 2. Crowding mortality
-      community.randomNumberIndex++;
-      doThinning();
+      // community.randomNumberIndex++;
+      // TODO: decide weather to keep or remove crowding
+      // doThinning();
 
       // 3. Basic mortality
       community.randomNumberIndex++;
@@ -45,8 +45,120 @@ void MORTALITY::doPlantMortality(PARAMETER parameter, COMMUNITY &community, UTIL
 }
 
 /* Leaf and root senescence and litter fall */
-void MORTALITY::doSenescenceAndLitterFall()
+void MORTALITY::doSenescenceAndLitterFall(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry, GROWTH growth, INTERACTION interaction, SOIL soil, int cohortIndex, int pft)
 {
+   /// Leaf senescence
+   double browningLeafBiomass = doLeafSenescence(community, parameter, growth, interaction, cohortIndex, pft);
+   double carbonContentBrowningLeaves = browningLeafBiomass * carbonContentOdm;
+   // doNitrogenRelocation(utils, community, parameter,carbonContentBrowningLeaves);
+
+   // Litter fall of senescent leaves & transfer to surface litter pool
+   doLeafLitterFall(utils, community, allometry, parameter, soil, cohortIndex, pft);
+
+   // Root senescence
+   doRootSenescenceAndLitterFall(community, parameter, soil, cohortIndex, pft);
+}
+
+double MORTALITY::doLeafSenescence(COMMUNITY &community, PARAMETER parameter, GROWTH growth, INTERACTION interaction, int cohortIndex, int pft)
+{
+   // TODO: search for appropriate temperature and soil moisture functions (or others) for leaf aging
+   // For now: same functions as for GPP is used (just for testing)
+   double effectOfDayTimeTemperature = growth.calculateEffectOfAirTemperatureOnGPP(interaction.dayTimeAirTemperature);
+   double browningLeafBiomass = effectOfDayTimeTemperature * (community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves / parameter.leafLifeSpan[pft]); // * (1.0 - community.allPlants.at(cohortIndex)->limitingFactorGppWater);
+   community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves += browningLeafBiomass;
+   community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves -= browningLeafBiomass;
+
+   return (browningLeafBiomass);
+}
+
+void MORTALITY::doLeafLitterFall(UTILS utils, COMMUNITY &community, ALLOMETRY allometry, PARAMETER parameter, SOIL soil, int cohortIndex, int pft)
+{
+   if (community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves > 0.0)
+   {
+      double fractionLeavesFalling = parameter.brownBiomassFractionFalling;
+      (parameter.day % 365 == 0) ? (fractionLeavesFalling = 1) : (fractionLeavesFalling = fractionLeavesFalling);
+      // TODO: add running date parallel to day to account for leap years, so that we do not have to use modulo 365 hard coded
+
+      if (fractionLeavesFalling > 0)
+      {
+         double fallingLeafBiomass = fractionLeavesFalling * community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves;
+         community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves -= fallingLeafBiomass;
+         community.allPlants.at(cohortIndex)->shootBiomass = community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves + community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves;
+
+         //  double carbonContentFallingBiomass = fallingLeafBiomass * carbonContentOdm;
+         //  double nitrogenContentFallingBiomass = carbonContentFallingBiomass / parameter.plantCNRatioBrownLeaves[pft];
+         //  community.allPlants.at(cohortIndex)->nitrogenContentShoot -= nitrogenContentFallingBiomass;
+         soil.transferDyingPlantPartsToLitterPools(parameter, community.allPlants.at(cohortIndex)->amount, fallingLeafBiomass, 1, pft);
+
+         updatePlantSize(utils, community, allometry, parameter, fractionLeavesFalling, cohortIndex, pft);
+      }
+   }
+}
+
+void MORTALITY::updatePlantSize(UTILS utils, COMMUNITY &community, ALLOMETRY allometry, PARAMETER parameter, int fractionLeavesFalling, int cohortIndex, int pft)
+{
+   // calculation of width & coveredArea only if fractionFalling < 1
+   // width shall not be updated when all brown biomass falls off at once, but only height
+   if (fractionLeavesFalling == 1)
+   {
+      community.allPlants.at(cohortIndex)->height = allometry.heightFromShootBiomassWidthShootCorrection(utils, community.allPlants.at(cohortIndex)->shootBiomass, community.allPlants.at(cohortIndex)->width,
+                                                                                                         parameter.plantShootCorrectionFactor[pft]);
+   }
+   else
+   {
+      community.allPlants.at(cohortIndex)->width = allometry.widthFromShootBiomassByRatioAndShootCorrection(utils, community.allPlants.at(cohortIndex)->shootBiomass, parameter.plantHeightToWidthRatio[pft],
+                                                                                                            parameter.plantShootCorrectionFactor[pft]);
+
+      community.allPlants.at(cohortIndex)->height = allometry.heightFromWidthByRatio(community.allPlants.at(cohortIndex)->width, parameter.plantHeightToWidthRatio[pft]);
+      community.allPlants.at(cohortIndex)->coveredArea = allometry.areaFromWidth(community.allPlants.at(cohortIndex)->width);
+   }
+
+   community.allPlants.at(cohortIndex)->laiGreen =
+       allometry.laiFromShootBiomassAreaSla(utils, community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves, community.allPlants.at(cohortIndex)->coveredArea, parameter.plantSpecificLeafArea[pft]);
+   community.allPlants.at(cohortIndex)->laiBrown =
+       allometry.laiFromShootBiomassAreaSla(utils, community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves, community.allPlants.at(cohortIndex)->coveredArea, parameter.plantSpecificLeafArea[pft]);
+   community.allPlants.at(cohortIndex)->lai = community.allPlants.at(cohortIndex)->laiBrown + community.allPlants.at(cohortIndex)->laiGreen;
+}
+
+void MORTALITY::doRootSenescenceAndLitterFall(COMMUNITY &community, PARAMETER parameter, SOIL soil, int cohortIndex, int pft)
+{
+   double dyingRootBiomass = community.allPlants.at(cohortIndex)->rootBiomass * (1.0 / parameter.rootLifeSpan[pft]);
+   // double carbonContentDyingRootBiomass = dyingRootBiomass * carbonContentOdm;
+   // double nitrogenContentDyingRootBiomass = carbonContentDyingRootBiomass / parameter.plantCNRatioRoots[pft];
+
+   soil.transferDyingPlantPartsToLitterPools(parameter, community.allPlants.at(cohortIndex)->amount, dyingRootBiomass, 2, pft);
+
+   /* TODO: add landtrans code of Matthes
+   if (par.externalLandtransSoilModel == 1)
+   {
+      calcDyingRootPerLayerForLandtrans(community.allPlants.at(cohortIndex)->amount, dyingRootBiomass, nitrogenContentDyingRootBiomass, community.allPlants.at(cohortIndex)->numberOfSoilLayersRooting);
+   }*/
+
+   community.allPlants.at(cohortIndex)->rootBiomass -= dyingRootBiomass;
+   // community.allPlants.at(cohortIndex)->nitrogenContentRoot -= nitrogenContentDyingRootBiomass;
+}
+
+void MORTALITY::doNitrogenRelocation(UTILS utils, COMMUNITY &community, PARAMETER parameter)
+{
+
+   // double startNitrogenContentBrowning = carbonContentBrowning / parameter.cnRatioGreenLeaves[pft];
+   // double endNitrogenContentBrowning = carbonContentBrowning / parameter.cnRatioBrownLeaves[pft];
+   /*double relocatedNitrogen = startNitrogenContentBrowning - endNitrogenContentBrowning;
+   plant->nitrogenSurplus += relocatedNitrogen;
+   plant->nitrogenContentShoot -= relocatedNitrogen;
+
+   double multiplier = 1000;
+   nitrogenBalance = plant->nitrogenContentShoot -
+                     plant->biomassGreen * ODM_TO_C / par.cnRatioGreenLeaves[pft] -
+                     plant->biomassBrown * ODM_TO_C / par.cnRatioBrownLeaves[pft];
+   if (abs(nitrogenBalance) > multiplier * tolerance)
+   {
+      std::cerr << "Wrong nitrogen amount in plant shoot after browning!" << std::endl;
+      std::cerr << "N difference 'shoot' - 'biomass': " << nitrogenBalance << std::endl;
+      std::cerr << "pft: " << pft << std::endl;
+      std::cerr << "timestep: " << parameter.day << std::endl;
+   }
+   */
 }
 
 /* Plant mortality due to thinning of the community */
@@ -113,12 +225,20 @@ void MORTALITY::doBasicMortality(PARAMETER parameter, UTILS utils, COMMUNITY &co
  */
 double MORTALITY::getPlantMortalityProbability(PARAMETER parameter, COMMUNITY community, int cohortIndex, int pft)
 {
-   if (community.allPlants[cohortIndex]->isAdult)
+   // TODO: remove seedling mortality & maturityAges and add environmental conditions to germination rate
+   /// if (community.allPlants[cohortIndex]->age >= parameter.maturityAges[pft])
+   //{
+   if (parameter.plantLifeSpan[pft] == "annual" && community.allPlants[cohortIndex]->age > 365)
    {
-      return (parameter.plantMortalityRates[pft]);
+      return (1.0);
    }
    else
    {
-      return (parameter.seedlingMortalityRates[pft]);
+      return (parameter.plantMortalityProbability[pft]);
    }
+   /*}
+   else
+   {
+      return (parameter.seedlingMortalityProbability[pft]);
+   }*/
 }

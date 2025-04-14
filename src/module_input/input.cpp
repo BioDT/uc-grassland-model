@@ -503,7 +503,7 @@ void INPUT::transferConfigParameterValueToModelParameter(PARAMETER &parameter, U
    parameter.managementFile = configParString["managementFile"];
    parameter.plantTraitsFile = configParString["plantTraitsFile"];
    parameter.outputWritingDatesFile = configParString["outputWritingDatesFile"];
-   // parameter.clippingHeightForBiomassCalibration = configParFloat["clippingHeightForBiomassCalibration"];
+   parameter.clippingHeightOfBiomassMeasurement = configParFloat["clippingHeightOfBiomassMeasurement"];
    parameter.randomNumberGeneratorSeed = configParInt["randomNumberGeneratorSeed"];
    parameter.firstYear = configParInt["firstYear"];
    parameter.lastYear = configParInt["lastYear"];
@@ -522,7 +522,8 @@ void INPUT::transferPlantTraitsParameterValueToModelParameter(PARAMETER &paramet
    parameter.crowdingMortalityActivated = configParBool["crowdingMortalityActivated"];
    parameter.externalSeedInfluxActivated = configParBool["externalSeedInfluxActivated"];
    parameter.dayOfExternalSeedInfluxStart = configParInt["dayOfExternalSeedInfluxStart"];
-   parameter.plantSeedProductionActivated = configParBool["plantSeedProductionActivated"];
+   parameter.seedsFromMaturePlantsActivated = configParBool["seedsFromMaturePlantsActivated"];
+   parameter.useStaticShootRootAllocationRates = configParBool["useStaticShootRootAllocationRates"];
    parameter.brownBiomassFractionFalling = configParFloat["brownBiomassFractionFalling"];
    parameter.plantResponseToTemperatureQ10Base = configParFloat["plantResponseToTemperatureQ10Base"];
    parameter.plantResponseToTemperatureQ10Reference = configParFloat["plantResponseToTemperatureQ10Reference"];
@@ -545,8 +546,8 @@ void INPUT::transferPlantTraitsParameterValueToModelParameter(PARAMETER &paramet
       parameter.rootLifeSpan.push_back(configParInt["rootLifeSpan" + array_pos]);
       parameter.leafLifeSpan.push_back(configParInt["leafLifeSpan" + array_pos]);
       parameter.plantLifeSpan.push_back(configParString["plantLifeSpan" + array_pos]);
-      parameter.plantMortalityRates.push_back(configParFloat["plantMortalityRates" + array_pos]);
-      parameter.seedlingMortalityRates.push_back(configParFloat["seedlingMortalityRates" + array_pos]);
+      parameter.plantMortalityProbability.push_back(configParFloat["plantMortalityProbability" + array_pos]);
+      parameter.seedlingMortalityProbability.push_back(configParFloat["seedlingMortalityProbability" + array_pos]);
       parameter.seedGerminationTimes.push_back(configParInt["seedGerminationTimes" + array_pos]);
       parameter.seedGerminationRates.push_back(configParFloat["seedGerminationRates" + array_pos]);
       parameter.seedMasses.push_back(configParFloat["seedMasses" + array_pos]);
@@ -557,10 +558,12 @@ void INPUT::transferPlantTraitsParameterValueToModelParameter(PARAMETER &paramet
       parameter.initialSlopeOfLightResponseCurve.push_back(configParFloat["initialSlopeOfLightResponseCurve" + array_pos]);
       parameter.lightExtinctionCoefficients.push_back(configParFloat["lightExtinctionCoefficients" + array_pos]);
       parameter.plantNppAllocationGrowth.push_back(configParFloat["plantNppAllocationGrowth" + array_pos]);
+      parameter.plantNppAllocationExudation.push_back(configParFloat["plantNppAllocationExudation" + array_pos]);
       parameter.plantCNRatioGreenLeaves.push_back(configParFloat["plantCNRatioGreenLeaves" + array_pos]);
       parameter.plantCNRatioBrownLeaves.push_back(configParFloat["plantCNRatioBrownLeaves" + array_pos]);
       parameter.plantCNRatioRoots.push_back(configParFloat["plantCNRatioRoots" + array_pos]);
       parameter.plantCNRatioSeeds.push_back(configParFloat["plantCNRatioSeeds" + array_pos]);
+      parameter.plantCNRatioExudates.push_back(configParFloat["plantCNRatioExudates" + array_pos]);
       parameter.nitrogenFixationAbility.push_back(configParBool["nitrogenFixationAbility" + array_pos]);
       parameter.plantWaterUseEfficiency.push_back(configParFloat["plantWaterUseEfficiency" + array_pos]);
       parameter.plantMinimalSoilWaterForGppReduction.push_back(configParFloat["plantMinimalSoilWaterForGppReduction" + array_pos]);
@@ -688,7 +691,7 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
          utils.handleError("Error (weather input): the first and last dates in the weather file do not match the simulation period as specified in the configuration file.");
       }
 
-      // check if there are no missing days inbetween
+      // TODO: check if there are no missing days inbetween (should also be possible if simulationTime is lower than time series length)
       if ((m - 1) < parameter.simulationTimeInDays)
       {
          utils.handleError("Error (weather input): there are not enough data given in the weather file for the simulation period as specified in the configuration file.");
