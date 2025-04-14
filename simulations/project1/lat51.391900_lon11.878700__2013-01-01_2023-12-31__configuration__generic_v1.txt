@@ -53,12 +53,10 @@ outputWritingDatesFile	NaN
 \datatype:string
 \description:File name of selected dates at which simulation results should be written
 \details:if no file is given (NaN), output is written every day of the simulation time
-
 clippingHeightOfBiomassMeasurement 3
 \datatype:float
 \description:height at which vegetation is clipped for biomass measurements in the field
 \details:should be higher than or equal to 3 cm?
-
 randomNumberGeneratorSeed	10
 \datatype:integer
 \description:Initializer for the random number generator

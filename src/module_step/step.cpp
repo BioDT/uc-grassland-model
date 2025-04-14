@@ -179,7 +179,7 @@ void STEP::saveSimulationResultsToBuffer(UTILS utils, PARAMETER parameter, COMMU
    else /* daily results stored in buffer */
    {
       output.bufferCommunity << date << "\t" << parameter.day << "\t";
-      output.bufferCommunity << community.totalNumberOfPlantsInCommunity << "\t" << community.leafAreaIndexOfPlantsInCommunity << "\t";
+      output.bufferCommunity << community.totalNumberOfPlantsInCommunity << "\t" << community.leafAreaIndexOfPlantsInCommunity << std::endl;
 
       for (int pft = 0; pft < parameter.pftCount; pft++)
       {

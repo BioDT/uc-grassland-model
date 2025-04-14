@@ -46,7 +46,7 @@ maturityHeights	15	15	15
 # 		Establishment of seedlings
 #  ==========================================================
 
-seedGerminationRates	1.0	1.0	1.0
+seedGerminationRates	0.4	0.5	0.6
 \datatype:float-array
 \unit:d-1
 \description:germination rate of seeds
@@ -65,12 +65,12 @@ seedMasses	0.001	0.001	0.001
 # 		Plant mortality    
 # =============================================================================
 
-plantMortalityProbability	0.00	0.00	0.00
+plantMortalityProbability	0.02	0.02	0.02
 \datatype:float-array
 \unit:d-1
 \description:mortality probability of mature plants
 
-seedlingMortalityProbability	0.00	0.00	0.00
+seedlingMortalityProbability	0.02	0.02	0.02
 \datatype:float-array
 \unit:d-1
 \description:mortality probability of seedlings
