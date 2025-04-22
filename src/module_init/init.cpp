@@ -71,12 +71,12 @@ void INIT::initAndResetProcessVariables(PARAMETER parameter, RECRUITMENT &recrui
    // 1. Recruitment
    recruitment.incomingSeeds.clear();
    recruitment.outgoingSeeds.clear();
-   recruitment.successfullGerminatedSeeds.clear();
+   recruitment.successfulGerminatedSeeds.clear();
    for (int pft = 0; pft < parameter.pftCount; pft++)
    {
       recruitment.incomingSeeds.push_back(0);
       recruitment.outgoingSeeds.push_back(0);
-      recruitment.successfullGerminatedSeeds.push_back(0);
+      recruitment.successfulGerminatedSeeds.push_back(0);
    }
 
    // 2. Light availability (interaction)

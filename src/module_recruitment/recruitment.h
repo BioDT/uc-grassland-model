@@ -32,7 +32,7 @@ public:
    std::vector<std::vector<int>> seedGerminationTimeCounter;
 
    /// vector that keeps track of successfully germinated seeds at each time step for each PFT
-   std::vector<int> successfullGerminatedSeeds;
+   std::vector<int> successfulGerminatedSeeds;
 
    void doPlantRecruitment(UTILS utils, PARAMETER parameter, ALLOMETRY allometry, COMMUNITY &community, MANAGEMENT management, SOIL &soil);
    void getIncomingSeedsByExternalInflux(PARAMETER parameter);

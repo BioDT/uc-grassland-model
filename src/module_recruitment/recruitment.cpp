@@ -323,19 +323,19 @@ void RECRUITMENT::calculateNumberOfGerminatingSeeds(UTILS utils, PARAMETER param
       randomNumber = dis(gen);
       if (randomNumber <= (calculatedNumberOfSeeds - integerPartOfCalculatedNumberOfSeeds))
       {
-         successfullGerminatedSeeds.at(pft) = integerPartOfCalculatedNumberOfSeeds + 1;
+         successfulGerminatedSeeds.at(pft) = integerPartOfCalculatedNumberOfSeeds + 1;
       }
       else
       {
-         successfullGerminatedSeeds.at(pft) = integerPartOfCalculatedNumberOfSeeds;
+         successfulGerminatedSeeds.at(pft) = integerPartOfCalculatedNumberOfSeeds;
       }
    }
    else
    {
-      successfullGerminatedSeeds.at(pft) = integerPartOfCalculatedNumberOfSeeds;
+      successfulGerminatedSeeds.at(pft) = integerPartOfCalculatedNumberOfSeeds;
    }
 
-   if (successfullGerminatedSeeds.at(pft) < 0)
+   if (successfulGerminatedSeeds.at(pft) < 0)
    {
       utils.handleError("Calculation of germinating seeds return a negative value!");
    }
@@ -361,7 +361,7 @@ void RECRUITMENT::calculateNumberOfGerminatingSeeds(UTILS utils, PARAMETER param
  *                  including seed masses.
  * @param soil A reference to a `SOIL` object that manages the transfer
  *             of organic material to litter pools.
- * @param successfullGerminatedSeeds The number of seeds that successfully
+ * @param successfulGerminatedSeeds The number of seeds that successfully
  *                                    germinated.
  * @param pft An integer representing the index of the plant functional type
  *            for which the seeds are processed.
@@ -376,10 +376,10 @@ void RECRUITMENT::transferFailedToGerminateSeedsToLitterPool(UTILS utils, PARAME
 {
    /* calculate number of failed germinated seeds from seedpool */
    int failedToGerminateSeeds;
-   failedToGerminateSeeds = seedPool[pft].at(cohortindex) - successfullGerminatedSeeds.at(pft);
+   failedToGerminateSeeds = seedPool[pft].at(cohortindex) - successfulGerminatedSeeds.at(pft);
 
    /* check for consistency */
-   if (std::abs((successfullGerminatedSeeds.at(pft) + failedToGerminateSeeds) - seedPool[pft].at(cohortindex)) >= tolerance)
+   if (std::abs((successfulGerminatedSeeds.at(pft) + failedToGerminateSeeds) - seedPool[pft].at(cohortindex)) >= tolerance)
    {
       utils.handleWarning("There is more numerical variation in the rounding of germinated / non-germinated seeds than expected.");
    }
@@ -426,13 +426,13 @@ void RECRUITMENT::updateSeedPool(int pft, int cohortindex)
  *                  to initialize a new seedlings state variables.
  * @param pft An integer representing the index of the plant functional type
  *            for the newly added seedlings.
- * @param successfullGerminatedSeeds An integer representing the number of
+ * @param successfulGerminatedSeeds An integer representing the number of
  *                                    successfully germinated seedlings to be added.
  */
 void RECRUITMENT::addGerminatedSeedlingsToCommunity(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry, int pft)
 {
-   if (successfullGerminatedSeeds.at(pft) > 0)
+   if (successfulGerminatedSeeds.at(pft) > 0)
    {
-      community.allPlants.emplace_back(std::make_shared<PLANT>(utils, parameter, allometry, pft, successfullGerminatedSeeds.at(pft)));
+      community.allPlants.emplace_back(std::make_shared<PLANT>(utils, parameter, allometry, pft, successfulGerminatedSeeds.at(pft)));
    }
 }
