@@ -635,6 +635,10 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
    const char *value; // placeholder for extracted value from file
 
    weatherFileOpened = false;
+   std::string startDate = std::to_string(parameter.firstYear) + "-01-01";
+   std::string endDate = std::to_string(parameter.lastYear) + "-12-31";
+   bool foundStartDate = false;
+   bool foundEndDate = false;
 
    std::ifstream file(filename);
    if (file.is_open())
@@ -652,24 +656,36 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
             if (utils.strings.size() == 7)
             {
                weather.weatherDates.push_back(utils.strings.at(0));
+               if (utils.strings.at(0) == startDate)
+               {
+                  foundStartDate = true;
+               }
 
-               value = utils.strings.at(1).c_str();
-               weather.precipitation.push_back(atof(value));
+               if (foundStartDate && !foundEndDate)
+               {
+                  value = utils.strings.at(1).c_str();
+                  weather.precipitation.push_back(atof(value));
 
-               value = utils.strings.at(2).c_str();
-               weather.fullDayAirTemperature.push_back(atof(value));
+                  value = utils.strings.at(2).c_str();
+                  weather.fullDayAirTemperature.push_back(atof(value));
 
-               value = utils.strings.at(3).c_str();
-               weather.dayTimeAirTemperature.push_back(atof(value));
+                  value = utils.strings.at(3).c_str();
+                  weather.dayTimeAirTemperature.push_back(atof(value));
 
-               value = utils.strings.at(4).c_str();
-               weather.photosyntheticPhotonFluxDensity.push_back(atof(value));
+                  value = utils.strings.at(4).c_str();
+                  weather.photosyntheticPhotonFluxDensity.push_back(atof(value));
 
-               value = utils.strings.at(5).c_str();
-               weather.dayLength.push_back(atof(value));
+                  value = utils.strings.at(5).c_str();
+                  weather.dayLength.push_back(atof(value));
 
-               value = utils.strings.at(6).c_str();
-               weather.potEvapoTranspiration.push_back(atof(value));
+                  value = utils.strings.at(6).c_str();
+                  weather.potEvapoTranspiration.push_back(atof(value));
+               }
+
+               if (utils.strings.at(0) == endDate)
+               {
+                  foundEndDate = true;
+               }
             }
             else
             {
@@ -679,27 +695,20 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
       }
       file.close();
 
-      // check first and last date if it matches the parameters of the configuration file
-      std::string startDate = std::to_string(parameter.firstYear) + "-01-01";
-      std::string endDate = std::to_string(parameter.lastYear) + "-12-31";
-
-      // TODO: it should be possible to simulate a time period within the weather time series
-      //  compare starting date (should be equal or larger than weather time series start)
-      //  and compare end date (should be equal or smaller than weather time series end)
-      if (weather.weatherDates.at(0) != startDate || weather.weatherDates.at(weather.weatherDates.size() - 1) != endDate)
+      // check if first and last date (from parameters of configuration file) are included in the weather time series
+      if (!foundStartDate || !foundEndDate)
       {
-         utils.handleError("Error (weather input): the first and last dates in the weather file do not match the simulation period as specified in the configuration file.");
+         utils.handleError("Error (weather input): the simulation period as specified in the configuration file is not included in the weather file.");
       }
 
       // TODO: check if there are no missing days inbetween (should also be possible if simulationTime is lower than time series length)
-      if ((m - 1) < parameter.simulationTimeInDays)
-      {
-         utils.handleError("Error (weather input): there are not enough data given in the weather file for the simulation period as specified in the configuration file.");
-      }
+      // if ((m - 1) < parameter.simulationTimeInDays)
+      //{
+      //   utils.handleError("Error (weather input): there are not enough data given in the weather file for the simulation period as specified in the configuration file.");
+      //}
    }
    else
    {
-      std::cout << "not open" << std::endl;
       utils.handleError("Error (weather input): The weather file cannot be opened. Please check the name in the configuration file.");
    }
 }
