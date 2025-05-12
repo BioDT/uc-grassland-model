@@ -1,17 +1,17 @@
 import sys
 import os
 
-print(os.getcwd())
-
-#print ('argument list', sys.argv)
 lat = sys.argv[1]
 lon = sys.argv[2]
 first_year = sys.argv[3]
 last_year = sys.argv[4]
 deimsID = sys.argv[5]
 
+##################################
+# configuration file #############
+##################################
+
 filename = "lat" + lat +"_lon" + lon + "__" + first_year + "-01-01_" + last_year + "-12-31__configuration__generic_v1.txt"
-#project_" + lat + "_" + lon + "/
 
 # search for keywords of input data to change
 keywordDeims = "deimsID"
@@ -64,13 +64,13 @@ with open(filename, "r", encoding="utf-8") as configFile:
 with open(filename, "w", encoding="utf-8") as configFile:
     configFile.writelines(singleLines)
 
-
-
 ##################################
+# model run batch file ###########
+##################################
+
 keywordRun = "grassDTmodel.exe"
 newValueRun = "%olddir%\lat" + lat + "_lon" + lon + "__" + first_year + "-01-01_" + last_year + "-12-31__configuration__generic_v1.txt 1> %olddir%\stout.txt 2> %olddir%\sterr.txt"
 
-#project_" + lat + "_" + lon + "/
 # read-in the batch-file
 with open("runSimulation.cmd", "r") as batchFile:
     singleLines = batchFile.readlines()
@@ -81,3 +81,20 @@ with open("runSimulation.cmd", "r") as batchFile:
 with open("runSimulation.cmd", "w") as batchFile:
     batchFile.writelines(singleLines)
 
+
+##################################
+# plant traits file ##############
+##################################
+
+keywordExternalSeed = "dayOfExternalSeedInfluxStart"
+newValueExternalSeed = first_year + "-01-01"
+
+# read-in the parameter-file
+with open("../../parameters/BioDT-generic/plant_traits__generic_v1.txt", "r") as parameterFile:
+    singleLines = parameterFile.readlines()
+    for i, eachLine in enumerate(singleLines):
+        if eachLine.startswith(keywordExternalSeed):
+            singleLines[i] = f"{keywordExternalSeed}\t{newValueExternalSeed}\n"
+            
+with open("../../parameters/BioDT-generic/plant_traits__generic_v1.txt", "w") as parameterFile:
+    parameterFile.writelines(singleLines)

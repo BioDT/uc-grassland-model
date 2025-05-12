@@ -20,7 +20,7 @@ externalSeedInfluxActivated	1
 \datatype:boolean
 \description:de-/activation of global seed influx from outside the area
 
-dayOfExternalSeedInfluxStart	05-01
+dayOfExternalSeedInfluxStart	2013-05-01
 \datatype:date
 \description:date (month-day) when external seed influx starts 
 
