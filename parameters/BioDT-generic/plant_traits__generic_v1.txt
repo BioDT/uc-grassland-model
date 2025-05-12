@@ -16,13 +16,13 @@ pftCount	3
 #  Seed influx from surrounding area
 #  ==========================================================
 
-externalSeedInfluxActivated	0
+externalSeedInfluxActivated	1
 \datatype:boolean
 \description:de-/activation of global seed influx from outside the area
 
-dayOfExternalSeedInfluxStart	2013-01-01
+dayOfExternalSeedInfluxStart	05-01
 \datatype:date
-\description:date when external seed influx starts 
+\description:date (month-day) when external seed influx starts 
 
 externalSeedInfluxNumber	1	1	1
 \datatype:integer-array
@@ -94,7 +94,7 @@ rootLifeSpan	709	241	504
 \unit:d
 \description:root life span
 
-brownBiomassFractionFalling	0.001
+brownBiomassFractionFalling	0.01
 \datatype:float
 \unit:d-1
 \description:fraction of brown biomass that falls to litter surface pool (full N and C)
@@ -229,7 +229,7 @@ nitrogenFixationAbility	0	0	1
 \datatype:boolean-array
 \description:nitrogen fixation ability
 
-plantCostRhizobiaSymbiosis	0.0
+plantCostRhizobiaSymbiosis	0.15
 \datatype:float
 \description:fraction of NPP used for nitrogen fixation (cost for rhizobia symbiosis)
 \details:only relevant for those plants with a nitrogen fixation ability (1)
