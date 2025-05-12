@@ -9,19 +9,19 @@ std::map<std::string, bool> INPUT::configParBool;
 std::map<std::string, std::string> INPUT::configParString;
 
 /* stream all relevant input data */
-void INPUT::getInputData(std::string path, UTILS utils, PARAMETER &parameter, WEATHER &weather, SOIL &soil, MANAGEMENT &management)
+void INPUT::getInputData(std::string configPath, UTILS utils, PARAMETER &parameter, WEATHER &weather, SOIL &soil, MANAGEMENT &management)
 {
-   openAndReadConfigurationFile(path, utils, parameter);
-   openAndReadPlantTraitsFile(path, utils, parameter);
-   openAndReadWeatherFile(path, utils, parameter, weather);
-   openAndReadSoilFile(path, utils, parameter, soil);
-   openAndReadManagementFile(path, utils, parameter, management);
+   openAndReadConfigurationFile(configPath, utils, parameter);
+   openAndReadPlantTraitsFile(configPath, utils, parameter);
+   openAndReadWeatherFile(configPath, utils, parameter, weather);
+   openAndReadSoilFile(configPath, utils, parameter, soil);
+   openAndReadManagementFile(configPath, utils, parameter, management);
 }
 
 /* open and read configuration file */
-void INPUT::openAndReadConfigurationFile(std::string config, UTILS utils, PARAMETER &parameter)
+void INPUT::openAndReadConfigurationFile(std::string configPath, UTILS utils, PARAMETER &parameter)
 {
-   const char *filename = config.c_str();
+   const char *filename = configPath.c_str();
    for (auto par : parameter.configParameterNames) /* parameterNames are listed in the class definition of PARAMETER (parameter.h)*/
    {
       /* open file and search for name in all lines */
@@ -572,11 +572,11 @@ void INPUT::transferPlantTraitsParameterValueToModelParameter(PARAMETER &paramet
 }
 
 /* open and read plant traits parameter file */
-void INPUT::openAndReadPlantTraitsFile(std::string path, UTILS utils, PARAMETER &parameter)
+void INPUT::openAndReadPlantTraitsFile(std::string configPath, UTILS utils, PARAMETER &parameter)
 {
    char separator = '\\';
    utils.strings.clear();
-   utils.splitString(path, separator);
+   utils.splitString(configPath, separator);
    for (int it = 0; it < utils.strings.size() - 3; it++)
    {
       plantTraitsDirectory = plantTraitsDirectory + utils.strings.at(it) + "\\";
@@ -604,11 +604,11 @@ void INPUT::openAndReadPlantTraitsFile(std::string path, UTILS utils, PARAMETER 
 }
 
 /* read-in weather variables from input file */
-void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &parameter, WEATHER &weather)
+void INPUT::openAndReadWeatherFile(std::string configPath, UTILS utils, PARAMETER &parameter, WEATHER &weather)
 {
    char separator = '\\';
    utils.strings.clear();
-   utils.splitString(path, separator);
+   utils.splitString(configPath, separator);
    for (int it = 0; it < utils.strings.size() - 3; it++)
    {
       weatherDirectory = weatherDirectory + utils.strings.at(it) + "\\";
@@ -705,11 +705,11 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
 }
 
 /* read-in management information from input file */
-void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &parameter, MANAGEMENT &management)
+void INPUT::openAndReadManagementFile(std::string configPath, UTILS utils, PARAMETER &parameter, MANAGEMENT &management)
 {
    char separator = '\\';
    utils.strings.clear();
-   utils.splitString(path, separator);
+   utils.splitString(configPath, separator);
    for (int it = 0; it < utils.strings.size() - 3; it++)
    {
       manageDirectory = manageDirectory + utils.strings.at(it) + "\\";
@@ -948,11 +948,11 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
 }
 
 /* Reads-in soil parameters from input file */
-void INPUT::openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parameter, SOIL &soil)
+void INPUT::openAndReadSoilFile(std::string configPath, UTILS utils, PARAMETER &parameter, SOIL &soil)
 {
    char separator = '\\';
    utils.strings.clear();
-   utils.splitString(path, separator);
+   utils.splitString(configPath, separator);
    for (int it = 0; it < utils.strings.size() - 3; it++)
    {
       soilDirectory = soilDirectory + utils.strings.at(it) + "\\";

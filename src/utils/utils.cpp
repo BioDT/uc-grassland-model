@@ -148,9 +148,9 @@ std::string UTILS::getFileEnding(std::string file)
  */
 int UTILS::calculateJulianDayFromDate(int day, int month, int year)
 {
-   int a = (14 - month) / 12;
-   int y = year + 4800 - a;
-   int m = month + 12 * a - 3;
+   int a = (14 - month) / 12;  // Adjustment needed? (1 for January/February, 0 otherwise).
+   int y = year + 4800 - a;    // Year adjusted for the Julian calendar.
+   int m = month + 12 * a - 3; // Month adjusted for the Julian calendar (March = 0, April = 1, ..., February = 11).
 
    int julianDay = day + (153 * m + 2) / 5 + y * 365 + y / 4 - y / 100 + y / 400 - 32045;
    return julianDay;

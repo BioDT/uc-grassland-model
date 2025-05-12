@@ -5,7 +5,7 @@
          "label": "build",
          "command": "build\\Debug\\grassDTmodel.exe",
          "args": [
-            "${workspaceFolder}\\simulations\\project1\\lat51.391900_lon11.878700__2013-01-01_2022-12-31__configuration__generic_v1.txt"
+            "${workspaceFolder}\\simulations\\project1\\lat51.391900_lon11.878700__2013-01-01_2023-12-31__configuration__generic_v1.txt"
          ],
          "group": {
             "kind": "build",
