@@ -44,4 +44,5 @@ public:
    void transferFailedToGerminateSeedsToLitterPool(UTILS utils, PARAMETER parameter, SOIL &soil, int pft, int cohortindex);
    void updateSeedPool(int pft, int cohortindex);
    void addGerminatedSeedlingsToCommunity(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry, int pft);
+   void seedlingCrowdingMortality(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry);
 };

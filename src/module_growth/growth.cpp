@@ -3,13 +3,17 @@
 GROWTH::GROWTH() {};
 GROWTH::~GROWTH() {};
 
-/* main function of plant growth */
-void GROWTH::doPlantGrowth(UTILS utils, PARAMETER parameter, COMMUNITY &community, INTERACTION interaction, ALLOMETRY allometry)
+/**
+ * @brief Main function of plant growth
+ * @cite Concept of plant NPP based on the carbon balance of photosynthesis and respiration
+ *       based on the forest model FORMIND (www.formind.org)
+ */
+void GROWTH::doPlantGrowth(UTILS utils, PARAMETER parameter, COMMUNITY &community, INTERACTION interaction, ALLOMETRY allometry, SOIL &soil)
 {
    /* Plant GPP (gross primary productivity) */
    doPlantPhotosynthesis(parameter, community, interaction);
 
-   /* TODO: Limitation of plant GPP by unfavorable soil water conditions */
+   /* to be added: Limitation of plant GPP by unfavorable soil water conditions */
    // soil.doPlantGPPLimitationBySoilWaterConditions();
 
    /* Plant respiration */
@@ -18,12 +22,12 @@ void GROWTH::doPlantGrowth(UTILS utils, PARAMETER parameter, COMMUNITY &communit
    /* Plant NPP (net primary productivity) */
    calculatePlantNPPFromGPPAndRespiration(community, parameter);
 
-   /* TODO: Limitation of plant NPP by unfavorable soil nitrogen conditions */
+   /* to be added: Limitation of plant NPP by unfavorable soil nitrogen conditions */
    // soil.doPlantNPPLimitationBySoilNitrogenConditions();
 
    /* Plant allocation of NPP and according C and N parts */
    adjustAllocationRates(utils, parameter, community);
-   doPlantNPPAllocation(utils, community);
+   doPlantNPPAllocation(utils, parameter, community, soil);
 
    /* Plant growth in size based on NPP allocation and aging */
    doPlantGrowthInSizeAndAging(utils, parameter, community, allometry);
@@ -46,6 +50,7 @@ void GROWTH::doPlantGrowth(UTILS utils, PARAMETER parameter, COMMUNITY &communit
  *
  * @see calculateGPPOfPlant()
  * @see calculateEffectOfAirTemperatureOnGPP()
+ * @cite Concept of plant photosynthesis is based on the forest model FORMIND (www.formind.org)
  */
 void GROWTH::doPlantPhotosynthesis(PARAMETER parameter, COMMUNITY &community, INTERACTION interaction)
 {
@@ -87,6 +92,7 @@ void GROWTH::doPlantPhotosynthesis(PARAMETER parameter, COMMUNITY &community, IN
  * @return Gross primary productivity (GPP) in grams of organic dry matter (ODM) per day.
  *
  * @see calculateCO2UptakePerSecondAndSquareMeter()
+ * @cite Concept of plant photosynthesis is based on the forest model FORMIND (www.formind.org)
  */
 double GROWTH::calculateGPPOfPlant(PARAMETER parameter, int pft, double plantLAI, double plantCoveredArea, double plantRadiation, double dayLength)
 {
@@ -127,6 +133,7 @@ double GROWTH::calculateGPPOfPlant(PARAMETER parameter, int pft, double plantLAI
  * @param plantLAI        Leaf Area Index of the plant (unitless).
  *
  * @return CO₂ uptake rate in mol CO₂ per second per square meter of leaf area.
+ * @cite Concept of plant CO2 uptake is based on the forest model FORMIND (www.formind.org)
  */
 double GROWTH::calculateCO2UptakePerSecondAndSquareMeter(PARAMETER parameter, int pft, double plantRadiation, double plantLAI)
 {
@@ -157,6 +164,8 @@ double GROWTH::calculateCO2UptakePerSecondAndSquareMeter(PARAMETER parameter, in
  * @param dayTimeAirTemperature  Daytime air temperature in degrees Celsius.
  *
  * @return Reduction factor (0.0 – 1.0) for GPP based on air temperature.
+ * @cite Temperature effects are based on publication:
+ *       Schippers & Kropff 2001, Functional Ecology 15, 155–164
  */
 double GROWTH::calculateEffectOfAirTemperatureOnGPP(double dayTimeAirTemperature)
 {
@@ -235,6 +244,8 @@ void GROWTH::doPlantRespiration(COMMUNITY &community, PARAMETER parameter, INTER
  * @param airTemperature Full-day mean air temperature in degrees Celsius.
  *
  * @return Temperature-dependent reduction factor for maintenance respiration (unitless).
+ * @cite Temperature effect is based on publication:
+ *       Schippers & Kropff 2001, Functional Ecology 15, 155–164
  */
 double GROWTH::calculateEffectOfAirTemperatureOnRespiration(PARAMETER parameter, double airTemperature)
 {
@@ -267,6 +278,8 @@ double GROWTH::calculateEffectOfAirTemperatureOnRespiration(PARAMETER parameter,
  *
  * @note A buffer mechanism (`nppBuffer`) for carrying over negative NPP is included but currently commented out.
  * @see doPlantRespiration(), doPlantPhotosynthesis()
+ * @cite Concept of plant NPP based on the carbon balance of photosynthesis and respiration including buffer is
+ *       based on the forest model FORMIND (www.formind.org)
  */
 void GROWTH::calculatePlantNPPFromGPPAndRespiration(COMMUNITY &community, PARAMETER parameter)
 {
@@ -290,13 +303,13 @@ void GROWTH::calculatePlantNPPFromGPPAndRespiration(COMMUNITY &community, PARAME
 
       community.allPlants.at(cohortindex)->totalRespiration = maintenanceRespiration + growthRespiration;
 
-      double biomassIncrement = plantGPP - community.allPlants.at(cohortindex)->totalRespiration; //+ community.allPlants.at(cohortindex)->nppBuffer;
+      double biomassIncrement = plantGPP - community.allPlants.at(cohortindex)->totalRespiration + community.allPlants.at(cohortindex)->nppBuffer;
 
       // ==== reset buffer for next year ====
-      // community.allPlants.at(cohortindex)->nppBuffer = 0.0; // reset for current year
+      community.allPlants.at(cohortindex)->nppBuffer = 0.0; // reset for current year
       if (biomassIncrement < 0)
       {
-         // community.allPlants.at(cohortindex)->nppBuffer = biomassIncrement;   // add negative NPP to buffer and adjust balance
+         community.allPlants.at(cohortindex)->nppBuffer = biomassIncrement;      // add negative NPP to buffer and adjust balance
          community.allPlants.at(cohortindex)->maintenanceRespiration = plantGPP; // all GPP is used for respiration
          community.allPlants.at(cohortindex)->growthRespiration = 0;
          community.allPlants.at(cohortindex)->totalRespiration = maintenanceRespiration;
@@ -334,7 +347,7 @@ void GROWTH::calculatePlantNPPFromGPPAndRespiration(COMMUNITY &community, PARAME
  * @throws std::runtime_error if the sum of green and brown biomass fractions
  *         does not equal 1, indicating an inconsistency in biomass allocation.
  */
-void GROWTH::doPlantNPPAllocation(UTILS utils, COMMUNITY &community)
+void GROWTH::doPlantNPPAllocation(UTILS utils, PARAMETER parameter, COMMUNITY &community, SOIL &soil)
 {
    for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
    {
@@ -346,29 +359,34 @@ void GROWTH::doPlantNPPAllocation(UTILS utils, COMMUNITY &community)
          /// aboveground shoot allocation
          community.allPlants.at(cohortindex)->shootBiomassGreenLeaves += biomassIncrementForAllocation * community.allPlants.at(cohortindex)->nppAllocationShoot;
          community.allPlants.at(cohortindex)->shootBiomass = community.allPlants.at(cohortindex)->shootBiomassGreenLeaves + community.allPlants.at(cohortindex)->shootBiomassBrownLeaves;
+         community.allPlants.at(cohortindex)->shootCarbonGreenLeaves = community.allPlants.at(cohortindex)->shootBiomassGreenLeaves * carbonContentOdm;
+         community.allPlants.at(cohortindex)->shootCarbon = community.allPlants.at(cohortindex)->shootBiomass * carbonContentOdm;
+         community.allPlants.at(cohortindex)->shootNitrogenGreenLeaves = community.allPlants.at(cohortindex)->shootBiomassGreenLeaves / parameter.plantCNRatioGreenLeaves[pft];
+         community.allPlants.at(cohortindex)->shootNitrogen = community.allPlants.at(cohortindex)->shootNitrogenGreenLeaves + community.allPlants.at(cohortindex)->shootNitrogenBrownLeaves;
 
          /// belowground root allocation
          community.allPlants.at(cohortindex)->rootBiomass += biomassIncrementForAllocation * community.allPlants.at(cohortindex)->nppAllocationRoot;
+         community.allPlants.at(cohortindex)->rootCarbon = community.allPlants.at(cohortindex)->rootBiomass * carbonContentOdm;
+         community.allPlants.at(cohortindex)->rootNitrogen = community.allPlants.at(cohortindex)->rootCarbon / parameter.plantCNRatioRoots[pft];
 
          /// plant biomass update
          community.allPlants.at(cohortindex)->plantBiomass = community.allPlants.at(cohortindex)->shootBiomass + community.allPlants.at(cohortindex)->rootBiomass;
+         community.allPlants.at(cohortindex)->plantCarbon = community.allPlants.at(cohortindex)->plantBiomass * carbonContentOdm;
+         community.allPlants.at(cohortindex)->plantNitrogen = community.allPlants.at(cohortindex)->shootNitrogen + community.allPlants.at(cohortindex)->rootNitrogen;
 
          /// allocation to recruitment biomass pool for seed production
          community.allPlants.at(cohortindex)->recruitmentBiomass += biomassIncrementForAllocation * community.allPlants.at(cohortindex)->nppAllocationRecruitment;
+         community.allPlants.at(cohortindex)->recruitmentCarbon = community.allPlants.at(cohortindex)->recruitmentBiomass * carbonContentOdm;
+         community.allPlants.at(cohortindex)->recruitmentNitrogen = community.allPlants.at(cohortindex)->recruitmentCarbon / parameter.plantCNRatioSeeds[pft];
 
          /// allocation to exudates
          community.allPlants.at(cohortindex)->exudationBiomass = biomassIncrementForAllocation * community.allPlants.at(cohortindex)->nppAllocationExudation;
+         community.allPlants.at(cohortindex)->exudationCarbon = community.allPlants.at(cohortindex)->exudationBiomass * carbonContentOdm;
+         community.allPlants.at(cohortindex)->exudationNitrogen = community.allPlants.at(cohortindex)->exudationCarbon / parameter.plantCNRatioExudates[pft];
 
-         // TODO: add landtrans code from Matthes
-         /*if (par.externalLandtransSoilModel == 1)
-         {
-            calcExudatesPerLayerForLandtrans(1, community.allPlants.at(cohortindex)->exudationBiomass, plant->nitrogenUptakeExudation,
-                                             plant->numberOfSoilLayersRooting);
-         }
-         // TODO: transfer exudation biomass to soil pool
-         CPool_Soil_active += community.allPlants.at(cohortindex)->exudationBiomass; // QQM: times plant->N ??? -> then also replace 1 in function by plant->N
-          community.allPlants.at(cohortindex)->exudationBiomass = 0;
-         */
+         // to be added: transfer exudation biomass to soil pool
+         // soil.CPool_Soil_active += community.allPlants.at(cohortindex)->amount * community.allPlants.at(cohortindex)->exudationBiomass;
+         // community.allPlants.at(cohortindex)->exudationBiomass = 0;
       }
    }
 }
@@ -399,19 +417,6 @@ void GROWTH::doPlantGrowthInSizeAndAging(UTILS utils, PARAMETER parameter, COMMU
          community.allPlants.at(cohortindex)->height = newHeightByGrowthInHeightAndWidth;
          community.allPlants.at(cohortindex)->coveredArea = allometry.areaFromWidth(newWidthByGrowthInHeightAndWidth);
       }
-
-      // TODO: remove the parameter maximumHeight and check if plants can ever exceed their maximum height or self-regulate
-      /*if (community.allPlants.at(cohortindex)->height > parameter.maximumPlantHeight[pft])
-      {
-         community.allPlants.at(cohortindex)->height = parameter.maximumPlantHeight[pft];
-         community.allPlants.at(cohortindex)->width = allometry.widthFromHeightHwr(community.allPlants.at(cohortindex)->height, parameter.plantHeightToWidthRatio[pft]);
-         community.allPlants.at(cohortindex)->coveredArea = allometry.areaFromWidth(community.allPlants.at(cohortindex)->width);
-
-         community.allPlants.at(cohortindex)->shootBiomass =
-             biomassFromHeightWidthForm(community.allPlants.at(cohortindex)->height, community.allPlants.at(cohortindex)->width, parameter.plantShootCorrectionFactor[pft]);
-
-         // if this cut-off remains, growth respiration and C-balance needs to be adjusted
-         }*/
 
       /// update all other geometric size variables of the plants
       community.allPlants.at(cohortindex)->rootingDepth = allometry.rootDepthFromRootBiomassParametersRatioAndShootCorrection(utils, community.allPlants.at(cohortindex)->rootBiomass, parameter.plantRootDepthParamIntercept[pft], parameter.plantRootDepthParamExponent[pft], parameter.plantShootRootRatio[pft], parameter.plantShootCorrectionFactor[pft]);
@@ -519,7 +524,6 @@ double GROWTH::calculateProportionalityFactorForAllocationDistributionToPlantPar
       // distribute gpp such that actual shoot_root ratio converge towards par value
       // calc proportion of Gpp that must go into Shoot in order to restore shoot-root ratio
       // use proportionOfGppToShoot as proportionOfNppAllocationToPlantGrowthToShoot
-      // TODO: use better approximation for npp that gpp? (using gpp (with gpp > npp), regulation is damped)
       double proportionOfGppToShoot = (shootRootRatio * (community.allPlants.at(cohortindex)->rootBiomass + gpp) - community.allPlants.at(cohortindex)->shootBiomass) / ((1 + shootRootRatio) * gpp);
       (proportionOfGppToShoot > 1) ? (proportionOfGppToShoot = 1) : ((proportionOfGppToShoot < 0) ? (proportionOfGppToShoot = 0) : (proportionOfGppToShoot = proportionOfGppToShoot));
       return (proportionOfGppToShoot);

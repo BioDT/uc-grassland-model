@@ -21,38 +21,21 @@ public:
    COMMUNITY();
    ~COMMUNITY();
 
-   /** @brief Incremental integer variable for generating random numbers.
-    *
-    * This variable starts from a seed defined in the simulation parameters
-    * and is used to create random numbers for processes such as plant mortality.
-    */
    int randomNumberIndex;
 
-   /** @brief Vector of all living plants in the grassland community.
-    *
-    * This vector holds shared pointers to `PLANT` objects representing
-    * the various cohorts within the community.
-    */
    std::vector<std::shared_ptr<PLANT>> allPlants;
 
-   /** @brief Vector describing the composition of Plant Functional Types (PFTs).
-    *
-    * This vector tracks the relative abundance of each PFT within the community.
-    */
-   std::vector<double> pftComposition;
-
-   /** @brief Total number of plants in the community.
-    *
-    * This variable holds the aggregated amount of all living plants present
-    * in the `allPlants` vector.
-    */
    int totalNumberOfPlantsInCommunity;
+   int totalNumberOfCohortsInCommunity;
 
-   /** @brief Vector that tracks the number of plants per each PFT.
-    *
-    * This vector records the amount of plants associated with each PFT,
-    * allowing for PFT-specific assessments.
-    */
+   double maximumHeightOfAllPlants;         // cm
+   double leafAreaIndexOfPlantsInCommunity; // cm per cm
+   double coveredAreaOfAllPlants;
+   double greenBiomassYield;
+   double brownBiomassYield;
+   double biomassYield;
+
+   std::vector<double> pftComposition;
    std::vector<double> numberOfPlantsPerPFT;
    std::vector<double> coveredAreaOfPlantsPerPFT;
    std::vector<double> shootBiomassOfPlantsPerPFT;
@@ -67,16 +50,9 @@ public:
    std::vector<double> nppOfPlantsPerPFT;
    std::vector<double> respirationOfPlantsPerPFT;
 
-   std::vector<double> greenBiomassYield;
-   std::vector<double> brownBiomassYield;
-   std::vector<double> biomassYield;
-   double greenYield;
-   double brownYield;
-   double yield;
-
-   double maximumHeightOfAllPlants; // cm
-   int totalNumberOfCohortsInCommunity;
-   double leafAreaIndexOfPlantsInCommunity; // cm per cm
+   std::vector<double> greenBiomassYieldPerPFT;
+   std::vector<double> brownBiomassYieldPerPFT;
+   std::vector<double> biomassYieldPerPFT;
 
    void checkPlantsAreAliveInCommunity(UTILS utils);
    void updateCommunityStateVariablesForOutput(PARAMETER parameter);

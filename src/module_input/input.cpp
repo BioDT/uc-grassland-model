@@ -700,12 +700,6 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
       {
          utils.handleError("Error (weather input): the simulation period as specified in the configuration file is not included in the weather file.");
       }
-
-      // TODO: check if there are no missing days inbetween (should also be possible if simulationTime is lower than time series length)
-      // if ((m - 1) < parameter.simulationTimeInDays)
-      //{
-      //   utils.handleError("Error (weather input): there are not enough data given in the weather file for the simulation period as specified in the configuration file.");
-      //}
    }
    else
    {
@@ -1075,9 +1069,6 @@ void INPUT::openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parame
       {
          utils.handleError("Error (soil input): there are not enough or too many values for 20 soil layers. Please check the soil file.");
       }
-
-      // TODO (when soil dynamics added): check if added for groundwater storage layer???
-      // par.nitrogenSoilPerLayer.push_back(atof(linevalue) * 1E-06);
    }
    else
    {

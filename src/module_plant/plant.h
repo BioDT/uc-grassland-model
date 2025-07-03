@@ -36,10 +36,6 @@ public:
       age = 0;
       plantBiomass = parameter.seedMasses[pft];
       height = allometry.heightFromPlantBiomassShootCorrectionAndByRatios(utils, plantBiomass, parameter.plantHeightToWidthRatio[pft], parameter.plantShootCorrectionFactor[pft], parameter.plantShootRootRatio[pft]);
-      /*if (height < 3) // TODO: adapt and move such plausibility checks to photosynthesis calculation
-      {
-         utils.handleError("Plant height is too small!");
-      }*/
       width = allometry.widthFromHeightByRatio(utils, height, parameter.plantHeightToWidthRatio[pft]);
       coveredArea = allometry.areaFromWidth(width);
 
@@ -53,7 +49,6 @@ public:
       shootBiomassAboveClippingHeight = 0.0;
 
       // carbon content of plant pools
-      // TODO: create a generic function for the conversion to call here
       shootCarbonGreenLeaves = shootBiomassGreenLeaves * carbonContentOdm;
       shootCarbonBrownLeaves = shootBiomassBrownLeaves * carbonContentOdm;
       shootCarbon = shootCarbonBrownLeaves + shootCarbonGreenLeaves;
@@ -63,7 +58,6 @@ public:
       plantCarbon = plantBiomass * carbonContentOdm;
 
       // nitrogen content of plant pools
-      // TODO: create generic function for conversion to call here that also checks for division by 0
       if (parameter.plantCNRatioGreenLeaves[pft] > 0.0)
       {
          shootNitrogenGreenLeaves = shootCarbonGreenLeaves / parameter.plantCNRatioGreenLeaves[pft];
@@ -97,13 +91,11 @@ public:
       lai = laiGreen + laiBrown;
 
       annualMortality = 0.0;
-      // minLayerReductionFactor = 1.0; // TODO: maybe remove this when crowding is removed
 
-      // TODO: can be removed if maturity ages and seedling mortality will be removed
-      /*if (parameter.plantLifeSpan[pft] == "annual" && parameter.maturityAges[pft] > 365)
+      if (parameter.plantLifeSpan[pft] == "annual" && parameter.maturityAges[pft] > 365)
       {
          utils.handleError("Plant species is defined as annual, but their maturity age is set to an age larger than one year. Please adjust maturityAges in the plant traits file!");
-      }*/
+      }
 
       cumulativeOvertoppingCommunityLAI = 0.0;
       availableRadiation = 0.0;
@@ -116,7 +108,6 @@ public:
       growthRespiration = 0.0;
       maintenanceRespiration = 0.0;
 
-      // TODO: create allometric functions for this to call that also check for division by 0 and negative values
       if ((1.0 + parameter.plantShootRootRatio[pft]) > 0.0)
       {
          nppAllocationShoot = (1.0 - parameter.plantNppAllocationExudation[pft]) * (parameter.plantShootRootRatio[pft] / (1.0 + parameter.plantShootRootRatio[pft])); // init with full allocation to shoot and root
@@ -126,7 +117,7 @@ public:
       nppAllocationExudation = parameter.plantNppAllocationExudation[pft];
 
       limitingFactorGppWater = 1.0;
-      limitingFactorGppNitrogen = 1.0;
+      limitingFactorNppNitrogen = 1.0;
       limitingFactorSymbiosisRhizobia = 1.0;
 
       nitrogenSurplus = 0.0;
@@ -136,8 +127,8 @@ public:
    }
    ~PLANT();
 
-   int amount; /// * Number of plants in cohort with equal properties listed below (representative for ONE plant)
-   short pft;  /// * Number of plant functional types (PFT)
+   int amount; /// Number of plants in cohort with equal properties listed below (representative for ONE plant)
+   short pft;  /// Number of plant functional types (PFT)
    double age; /// Plant age (in days)
 
    double coveredArea;            /// Ground area covered by plant (in square cm)
@@ -174,12 +165,10 @@ public:
    double exudationNitrogen;        /// Nitrogen content in exudation biomass per plant (in gN)
    double plantNitrogen;            /// Nitrogen content in biomass per plant of root and shoot (in gN)
 
-   // double minLayerReductionFactor; /// Minimum layer reduction fraction TODO: check if we want to keep that
-   double annualMortality; /// Annual probability for a plant to die
-
-   double cumulativeOvertoppingCommunityLAI; /// * Cumulative leaf area index above a plant accounting for light extinction (in square cm per square cm)
-   double availableRadiation;                /// * Incoming radiation [micromol(photon) per square m per second]
-   double shadingIndicator;                  /// * fraction of sunlight reaching the plant in relation to full sun light (-)
+   double annualMortality;                   /// Annual probability for a plant to die
+   double cumulativeOvertoppingCommunityLAI; /// Cumulative leaf area index above a plant accounting for light extinction (in square cm per square cm)
+   double availableRadiation;                /// Incoming radiation [micromol(photon) per square m per second]
+   double shadingIndicator;                  /// Fraction of sunlight reaching the plant in relation to full sun light (-)
 
    double gpp;                               /// Gross primary productivity GPP (in gODM per day)
    double npp;                               /// Net primary productivity NPP (in gODM per day)
@@ -196,7 +185,7 @@ public:
    double nppAllocationExudation;   /// Allocation rate of NPP to exudates
 
    double limitingFactorGppWater;          /// Limitation factor addressing the impact of soil water deficit and surplus on GPP
-   double limitingFactorGppNitrogen;       /// Limitation factor addressing the impact of soil nitrogen deficits on NPP // TODO: rename
+   double limitingFactorNppNitrogen;       /// Limitation factor addressing the impact of soil nitrogen deficits on NPP
    double limitingFactorSymbiosisRhizobia; /// ...
 
    double nitrogenSurplus;           /// Nitrogen surplus provided by leaf senescence and nitrogen retranslocation to green leaves (in gN)

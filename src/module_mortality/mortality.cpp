@@ -28,13 +28,15 @@ void MORTALITY::doPlantMortality(UTILS utils, PARAMETER parameter, COMMUNITY &co
       doSenescenceAndLitterFall(utils, parameter, community, allometry, growth, interaction, soil, cohortIndex, pft);
 
       // 2. Crowding mortality
-      // community.randomNumberIndex++;
-      // TODO: decide weather to keep or remove crowding
-      // doThinning();
+      if (parameter.crowdingMortalityActivated)
+      {
+         community.randomNumberIndex++;
+         doPlantCrowding(parameter, utils, soil, community, cohortIndex, pft);
+      }
 
       // 3. Basic mortality
       community.randomNumberIndex++;
-      doBasicMortality(parameter, utils, community, cohortIndex, pft);
+      doBasicMortality(parameter, utils, soil, community, cohortIndex, pft);
    }
 
    // 4. Delete cohorts if no more plants are alive
@@ -49,8 +51,7 @@ void MORTALITY::doSenescenceAndLitterFall(UTILS utils, PARAMETER parameter, COMM
 {
    /// Leaf senescence
    double browningLeafBiomass = doLeafSenescence(community, parameter, growth, interaction, cohortIndex, pft);
-   double carbonContentBrowningLeaves = browningLeafBiomass * carbonContentOdm;
-   // doNitrogenRelocation(utils, community, parameter,carbonContentBrowningLeaves);
+   doNitrogenRelocation(utils, parameter, community, browningLeafBiomass, cohortIndex, pft);
 
    // Litter fall of senescent leaves & transfer to surface litter pool
    doLeafLitterFall(utils, community, allometry, parameter, soil, cohortIndex, pft);
@@ -61,12 +62,18 @@ void MORTALITY::doSenescenceAndLitterFall(UTILS utils, PARAMETER parameter, COMM
 
 double MORTALITY::doLeafSenescence(COMMUNITY &community, PARAMETER parameter, GROWTH growth, INTERACTION interaction, int cohortIndex, int pft)
 {
-   // TODO: search for appropriate temperature and soil moisture functions (or others) for leaf aging
-   // For now: same functions as for GPP is used (just for testing)
    double effectOfDayTimeTemperature = growth.calculateEffectOfAirTemperatureOnGPP(interaction.dayTimeAirTemperature);
-   double browningLeafBiomass = effectOfDayTimeTemperature * (community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves / parameter.leafLifeSpan[pft]); // * (1.0 - community.allPlants.at(cohortIndex)->limitingFactorGppWater);
+   double browningLeafBiomass = effectOfDayTimeTemperature * (community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves / parameter.leafLifeSpan[pft]); // to be added: effect of community.allPlants.at(cohortIndex)->limitingFactorGppWater
+
    community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves += browningLeafBiomass;
    community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves -= browningLeafBiomass;
+   // community.allPlants.at(cohortIndex)->shootBiomass remains unchanged here
+
+   community.allPlants.at(cohortIndex)->shootCarbonBrownLeaves = community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves * carbonContentOdm;
+   community.allPlants.at(cohortIndex)->shootCarbonGreenLeaves = community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves * carbonContentOdm;
+
+   community.allPlants.at(cohortIndex)->shootNitrogenBrownLeaves = community.allPlants.at(cohortIndex)->shootCarbonBrownLeaves / parameter.plantCNRatioBrownLeaves[pft];
+   community.allPlants.at(cohortIndex)->shootNitrogenGreenLeaves = community.allPlants.at(cohortIndex)->shootCarbonGreenLeaves / parameter.plantCNRatioGreenLeaves[pft];
 
    return (browningLeafBiomass);
 }
@@ -77,19 +84,23 @@ void MORTALITY::doLeafLitterFall(UTILS utils, COMMUNITY &community, ALLOMETRY al
    {
       double fractionLeavesFalling = parameter.brownBiomassFractionFalling;
       (parameter.day % 365 == 0) ? (fractionLeavesFalling = 1) : (fractionLeavesFalling = fractionLeavesFalling);
-      // TODO: add running date parallel to day to account for leap years, so that we do not have to use modulo 365 hard coded
 
       if (fractionLeavesFalling > 0)
       {
          double fallingLeafBiomass = fractionLeavesFalling * community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves;
+
          community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves -= fallingLeafBiomass;
          community.allPlants.at(cohortIndex)->shootBiomass = community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves + community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves;
 
-         //  double carbonContentFallingBiomass = fallingLeafBiomass * carbonContentOdm;
-         //  double nitrogenContentFallingBiomass = carbonContentFallingBiomass / parameter.plantCNRatioBrownLeaves[pft];
-         //  community.allPlants.at(cohortIndex)->nitrogenContentShoot -= nitrogenContentFallingBiomass;
-         soil.transferDyingPlantPartsToLitterPools(parameter, community.allPlants.at(cohortIndex)->amount, fallingLeafBiomass, 1, pft);
+         community.allPlants[cohortIndex]->shootCarbonBrownLeaves = community.allPlants[cohortIndex]->shootBiomassBrownLeaves * carbonContentOdm;
+         community.allPlants[cohortIndex]->shootCarbon = community.allPlants[cohortIndex]->shootCarbonGreenLeaves + community.allPlants[cohortIndex]->shootCarbonBrownLeaves;
 
+         community.allPlants[cohortIndex]->shootNitrogenBrownLeaves = community.allPlants[cohortIndex]->shootCarbonBrownLeaves / parameter.plantCNRatioBrownLeaves[pft];
+         community.allPlants[cohortIndex]->shootNitrogen = community.allPlants[cohortIndex]->shootNitrogenGreenLeaves + community.allPlants[cohortIndex]->shootNitrogenBrownLeaves;
+
+         // community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves remains unchanged here
+
+         soil.transferDyingPlantPartsToLitterPools(parameter, community.allPlants.at(cohortIndex)->amount, fallingLeafBiomass, 1, pft);
          updatePlantSize(utils, community, allometry, parameter, fractionLeavesFalling, cohortIndex, pft);
       }
    }
@@ -123,47 +134,66 @@ void MORTALITY::updatePlantSize(UTILS utils, COMMUNITY &community, ALLOMETRY all
 void MORTALITY::doRootSenescenceAndLitterFall(COMMUNITY &community, PARAMETER parameter, SOIL soil, int cohortIndex, int pft)
 {
    double dyingRootBiomass = community.allPlants.at(cohortIndex)->rootBiomass * (1.0 / parameter.rootLifeSpan[pft]);
-   // double carbonContentDyingRootBiomass = dyingRootBiomass * carbonContentOdm;
-   // double nitrogenContentDyingRootBiomass = carbonContentDyingRootBiomass / parameter.plantCNRatioRoots[pft];
 
    soil.transferDyingPlantPartsToLitterPools(parameter, community.allPlants.at(cohortIndex)->amount, dyingRootBiomass, 2, pft);
-
-   /* TODO: add landtrans code of Matthes
-   if (par.externalLandtransSoilModel == 1)
-   {
-      calcDyingRootPerLayerForLandtrans(community.allPlants.at(cohortIndex)->amount, dyingRootBiomass, nitrogenContentDyingRootBiomass, community.allPlants.at(cohortIndex)->numberOfSoilLayersRooting);
-   }*/
-
    community.allPlants.at(cohortIndex)->rootBiomass -= dyingRootBiomass;
-   // community.allPlants.at(cohortIndex)->nitrogenContentRoot -= nitrogenContentDyingRootBiomass;
+   community.allPlants.at(cohortIndex)->rootCarbon = community.allPlants.at(cohortIndex)->rootBiomass * carbonContentOdm;
+   community.allPlants.at(cohortIndex)->rootNitrogen = community.allPlants.at(cohortIndex)->rootCarbon / parameter.plantCNRatioRoots[pft];
 }
 
-void MORTALITY::doNitrogenRelocation(UTILS utils, COMMUNITY &community, PARAMETER parameter)
+void MORTALITY::doNitrogenRelocation(UTILS utils, PARAMETER parameter, COMMUNITY &community, double browningLeafBiomass, int cohortIndex, int pft)
 {
+   double carbonContentBrowningLeaves = browningLeafBiomass * carbonContentOdm;
+   double previousNitrogenContentBrowningLeaves = carbonContentBrowningLeaves / parameter.plantCNRatioGreenLeaves[pft];
+   double currentNitrogenContentBrowningLeaves = carbonContentBrowningLeaves / parameter.plantCNRatioBrownLeaves[pft];
 
-   // double startNitrogenContentBrowning = carbonContentBrowning / parameter.cnRatioGreenLeaves[pft];
-   // double endNitrogenContentBrowning = carbonContentBrowning / parameter.cnRatioBrownLeaves[pft];
-   /*double relocatedNitrogen = startNitrogenContentBrowning - endNitrogenContentBrowning;
-   plant->nitrogenSurplus += relocatedNitrogen;
-   plant->nitrogenContentShoot -= relocatedNitrogen;
+   double relocatedNitrogen = previousNitrogenContentBrowningLeaves - currentNitrogenContentBrowningLeaves;
+   community.allPlants[cohortIndex]->nitrogenSurplus += relocatedNitrogen;
+   community.allPlants[cohortIndex]->shootNitrogen -= relocatedNitrogen;
 
-   double multiplier = 1000;
-   nitrogenBalance = plant->nitrogenContentShoot -
-                     plant->biomassGreen * ODM_TO_C / par.cnRatioGreenLeaves[pft] -
-                     plant->biomassBrown * ODM_TO_C / par.cnRatioBrownLeaves[pft];
-   if (abs(nitrogenBalance) > multiplier * tolerance)
+   if (abs((community.allPlants.at(cohortIndex)->shootNitrogenBrownLeaves + community.allPlants.at(cohortIndex)->shootNitrogenGreenLeaves) - community.allPlants.at(cohortIndex)->shootNitrogen) > tolerance)
    {
-      std::cerr << "Wrong nitrogen amount in plant shoot after browning!" << std::endl;
-      std::cerr << "N difference 'shoot' - 'biomass': " << nitrogenBalance << std::endl;
-      std::cerr << "pft: " << pft << std::endl;
-      std::cerr << "timestep: " << parameter.day << std::endl;
+      utils.handleError("Error (mortality): relocated nitrogen due to senescence does not match with CN ratios.");
    }
-   */
 }
 
 /* Plant mortality due to thinning of the community */
-void MORTALITY::doThinning()
+// * @cite Concept of crowding mortality is derived from the forest model FORMIND (www.formind.org)
+void MORTALITY::doPlantCrowding(PARAMETER parameter, UTILS utils, SOIL &soil, COMMUNITY &community, int cohortIndex, int pft)
 {
+   if (community.allPlants[cohortIndex]->amount > 0)
+   {
+      if (community.coveredAreaOfAllPlants > 1.0)
+      {
+         std::uniform_real_distribution<> dis(0.0, 1.0);
+         std::mt19937 gen(community.randomNumberIndex); // generator initialized with the incremental variable
+         double randomNumber = dis(gen);
+
+         double amountOfTooManyPlants = community.allPlants[cohortIndex]->amount * (1.0 - (1.0 / community.coveredAreaOfAllPlants));
+         double letAnotherPlantDy = amountOfTooManyPlants - int(amountOfTooManyPlants);
+         if (randomNumber <= letAnotherPlantDy)
+         {
+            amountOfTooManyPlants += 1.0;
+         }
+
+         if (community.allPlants[cohortIndex]->amount - amountOfTooManyPlants >= 0)
+         {
+            soil.transferDyingPlantPartsToLitterPools(parameter, amountOfTooManyPlants, community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves, 0, pft);
+            soil.transferDyingPlantPartsToLitterPools(parameter, amountOfTooManyPlants, community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves, 1, pft);
+            soil.transferDyingPlantPartsToLitterPools(parameter, amountOfTooManyPlants, community.allPlants.at(cohortIndex)->rootBiomass, 2, pft);
+            soil.transferDyingPlantPartsToLitterPools(parameter, amountOfTooManyPlants, community.allPlants.at(cohortIndex)->recruitmentBiomass, 3, pft);
+            community.allPlants[cohortIndex]->amount -= amountOfTooManyPlants;
+         }
+         else
+         {
+            utils.handleError("Error (mortality): more plants shall die than are available in the cohort.");
+         }
+      }
+   }
+   else
+   {
+      utils.handleError("Error (mortality): no more plants available in the cohort to die.");
+   }
 }
 
 /**
@@ -183,20 +213,27 @@ void MORTALITY::doThinning()
  *       checks if the plant amount in the cohort is greater than zero before decrementing it.
  *       If the amount is zero, an error is reported using the utility function.
  */
-void MORTALITY::doBasicMortality(PARAMETER parameter, UTILS utils, COMMUNITY &community, int cohortIndex, int pft)
+void MORTALITY::doBasicMortality(PARAMETER parameter, UTILS utils, SOIL &soil, COMMUNITY &community, int cohortIndex, int pft)
 {
    double mortalityProbability = getPlantMortalityProbability(parameter, community, cohortIndex, pft);
 
-   std::uniform_real_distribution<> dis(0.0, 1.0);
-   std::mt19937 gen(community.randomNumberIndex); // generator initialized with the incremental variable
-   double randomNumber = dis(gen);
-
-   /* let plants die according to the mortality probability */
-   if (randomNumber <= mortalityProbability)
+   for (int plantIndex = 0; plantIndex < community.allPlants[cohortIndex]->amount; plantIndex++)
    {
       if (community.allPlants[cohortIndex]->amount > 0)
       {
-         community.allPlants[cohortIndex]->amount -= 1;
+         std::uniform_real_distribution<> dis(0.0, 1.0);
+         std::mt19937 gen(community.randomNumberIndex); // generator initialized with the incremental variable
+         double randomNumber = dis(gen);
+
+         /* let plants die according to the mortality probability */
+         if (randomNumber <= mortalityProbability)
+         {
+            soil.transferDyingPlantPartsToLitterPools(parameter, 1, community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves, 0, pft);
+            soil.transferDyingPlantPartsToLitterPools(parameter, 1, community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves, 1, pft);
+            soil.transferDyingPlantPartsToLitterPools(parameter, 1, community.allPlants.at(cohortIndex)->rootBiomass, 2, pft);
+            soil.transferDyingPlantPartsToLitterPools(parameter, 1, community.allPlants.at(cohortIndex)->recruitmentBiomass, 3, pft);
+            community.allPlants[cohortIndex]->amount -= 1;
+         }
       }
       else
       {
@@ -225,20 +262,19 @@ void MORTALITY::doBasicMortality(PARAMETER parameter, UTILS utils, COMMUNITY &co
  */
 double MORTALITY::getPlantMortalityProbability(PARAMETER parameter, COMMUNITY community, int cohortIndex, int pft)
 {
-   // TODO: remove seedling mortality & maturityAges and add environmental conditions to germination rate
-   /// if (community.allPlants[cohortIndex]->age >= parameter.maturityAges[pft])
-   //{
-   if (parameter.plantLifeSpan[pft] == "annual" && community.allPlants[cohortIndex]->age > 365)
+   if (community.allPlants[cohortIndex]->age >= parameter.maturityAges[pft])
    {
-      return (1.0);
+      if (parameter.plantLifeSpan[pft] == "annual" && community.allPlants[cohortIndex]->age > 365)
+      {
+         return (1.0);
+      }
+      else
+      {
+         return (parameter.plantMortalityProbability[pft]);
+      }
    }
-   else
-   {
-      return (parameter.plantMortalityProbability[pft]);
-   }
-   /*}
    else
    {
       return (parameter.seedlingMortalityProbability[pft]);
-   }*/
+   }
 }

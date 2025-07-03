@@ -15,13 +15,13 @@ void MANAGEMENT::initializeYieldVariables(COMMUNITY &community, PARAMETER parame
    // initialize variables to track yield
    for (int pft = 0; pft < parameter.pftCount; pft++)
    {
-      community.greenBiomassYield[pft] = 0.0;
-      community.brownBiomassYield[pft] = 0.0;
-      community.biomassYield[pft] = 0.0;
+      community.greenBiomassYieldPerPFT[pft] = 0.0;
+      community.brownBiomassYieldPerPFT[pft] = 0.0;
+      community.biomassYieldPerPFT[pft] = 0.0;
 
-      community.greenYield = 0.0;
-      community.brownYield = 0.0;
-      community.yield = 0.0;
+      community.greenBiomassYield = 0.0;
+      community.brownBiomassYield = 0.0;
+      community.biomassYield = 0.0;
    }
 }
 
@@ -56,34 +56,26 @@ void MANAGEMENT::cutPlantsAndTrackYieldAndUpdatePlantAttributes(UTILS utils, COM
          double cutBrownLeaves = heightProportionalityFactor * community.allPlants[cohortIndex]->shootBiomassBrownLeaves;
 
          // track the yield
-         community.greenBiomassYield[pft] += (cutGreenLeaves * community.allPlants[cohortIndex]->amount);
-         community.brownBiomassYield[pft] += (cutBrownLeaves * community.allPlants[cohortIndex]->amount);
-         community.biomassYield[pft] += ((cutBrownLeaves + cutGreenLeaves) * community.allPlants[cohortIndex]->amount);
+         community.greenBiomassYieldPerPFT[pft] += (cutGreenLeaves * community.allPlants[cohortIndex]->amount);
+         community.brownBiomassYieldPerPFT[pft] += (cutBrownLeaves * community.allPlants[cohortIndex]->amount);
+         community.biomassYieldPerPFT[pft] += ((cutBrownLeaves + cutGreenLeaves) * community.allPlants[cohortIndex]->amount);
 
-         community.greenYield += (cutGreenLeaves * community.allPlants[cohortIndex]->amount);
-         community.brownYield += (cutBrownLeaves * community.allPlants[cohortIndex]->amount);
-         community.yield += ((cutBrownLeaves + cutGreenLeaves) * community.allPlants[cohortIndex]->amount);
+         community.greenBiomassYield += (cutGreenLeaves * community.allPlants[cohortIndex]->amount);
+         community.brownBiomassYield += (cutBrownLeaves * community.allPlants[cohortIndex]->amount);
+         community.biomassYield += ((cutBrownLeaves + cutGreenLeaves) * community.allPlants[cohortIndex]->amount);
 
          // update attributes of plants
          community.allPlants[cohortIndex]->shootBiomass -= (cutGreenLeaves + cutBrownLeaves);
          community.allPlants[cohortIndex]->shootBiomassGreenLeaves -= cutGreenLeaves;
          community.allPlants[cohortIndex]->shootBiomassBrownLeaves -= cutBrownLeaves;
 
-         // community.allPlants[cohortIndex]->shootNitrogen = (community.allPlants[cohortIndex]->shootBiomassGreenLeaves * carbonContentOdm / parameter.plantCNRatioGreenLeaves[pft]) +
-         //                                                   (community.allPlants[cohortIndex]->shootBiomassBrownLeaves * carbonContentOdm / parameter.plantCNRatioBrownLeaves[pft]);
+         community.allPlants[cohortIndex]->shootCarbonGreenLeaves = community.allPlants[cohortIndex]->shootBiomassGreenLeaves * carbonContentOdm;
+         community.allPlants[cohortIndex]->shootCarbonBrownLeaves = community.allPlants[cohortIndex]->shootBiomassBrownLeaves * carbonContentOdm;
+         community.allPlants[cohortIndex]->shootCarbon = community.allPlants[cohortIndex]->shootCarbonGreenLeaves + community.allPlants[cohortIndex]->shootCarbonBrownLeaves;
 
-         // Check if nitrogen pool of plant is consistent to CN ratios and biomass
-         /*double nContentCalculatedFromBiomass =
-             ((community.allPlants[cohortIndex]->shootBiomassBrownLeaves * carbonContentOdm) / parameter.plantCNRatioBrownLeaves[pft]) +
-             ((community.allPlants[cohortIndex]->shootBiomassGreenLeaves * carbonContentOdm) / parameter.plantCNRatioGreenLeaves[pft]);
-         if (nContentCalculatedFromBiomass > community.allPlants[cohortIndex]->shootNitrogen)
-         {
-            utils.handleError("Nitrogen content in plants is too low. There might be an code error!");
-         }
-         else if (nContentCalculatedFromBiomass < community.allPlants[cohortIndex]->shootNitrogen)
-         {
-            utils.handleError("Nitrogen content in plants is too high. There might be an code error!");
-         }*/
+         community.allPlants[cohortIndex]->shootNitrogenGreenLeaves = community.allPlants[cohortIndex]->shootCarbonGreenLeaves / parameter.plantCNRatioGreenLeaves[pft];
+         community.allPlants[cohortIndex]->shootNitrogenBrownLeaves = community.allPlants[cohortIndex]->shootCarbonBrownLeaves / parameter.plantCNRatioBrownLeaves[pft];
+         community.allPlants[cohortIndex]->shootNitrogen = community.allPlants[cohortIndex]->shootNitrogenGreenLeaves + community.allPlants[cohortIndex]->shootNitrogenBrownLeaves;
 
          community.allPlants[cohortIndex]->height = heightToCutPlantsDownTo;
          community.allPlants[cohortIndex]->laiGreen = allometry.laiFromShootBiomassAreaSla(utils, community.allPlants[cohortIndex]->shootBiomassGreenLeaves,

@@ -99,6 +99,7 @@ void COMMUNITY::updateCommunityStateVariablesForOutput(PARAMETER parameter)
          // Community-wide calculations
          totalNumberOfPlantsInCommunity += allPlants[cohortindex]->amount;
          leafAreaIndexOfPlantsInCommunity += allPlants[cohortindex]->lai * allPlants[cohortindex]->coveredArea * allPlants[cohortindex]->amount;
+         coveredAreaOfAllPlants += allPlants[cohortindex]->coveredArea * parameter.plantShootOverlapFactors[allPlants[cohortindex]->pft];
       }
 
       // Normalizations

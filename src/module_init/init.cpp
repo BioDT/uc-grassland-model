@@ -92,9 +92,10 @@ void INIT::initAndResetProcessVariables(PARAMETER parameter, RECRUITMENT &recrui
    /// Output-related variables
    community.totalNumberOfPlantsInCommunity = 0;
    community.leafAreaIndexOfPlantsInCommunity = 0;
-   community.greenYield = 0.0;
-   community.brownYield = 0.0;
-   community.yield = 0.0;
+   community.coveredAreaOfAllPlants = 0.0;
+   community.greenBiomassYield = 0.0;
+   community.brownBiomassYield = 0.0;
+   community.biomassYield = 0.0;
 
    community.numberOfPlantsPerPFT.clear();
    community.pftComposition.clear();
@@ -109,9 +110,9 @@ void INIT::initAndResetProcessVariables(PARAMETER parameter, RECRUITMENT &recrui
    community.gppOfPlantsPerPFT.clear();
    community.nppOfPlantsPerPFT.clear();
    community.respirationOfPlantsPerPFT.clear();
-   community.greenBiomassYield.clear();
-   community.brownBiomassYield.clear();
-   community.biomassYield.clear();
+   community.greenBiomassYieldPerPFT.clear();
+   community.brownBiomassYieldPerPFT.clear();
+   community.biomassYieldPerPFT.clear();
 
    for (int pft = 0; pft < parameter.pftCount; pft++)
    {
@@ -130,8 +131,8 @@ void INIT::initAndResetProcessVariables(PARAMETER parameter, RECRUITMENT &recrui
       community.nppOfPlantsPerPFT.push_back(0);
       community.respirationOfPlantsPerPFT.push_back(0);
 
-      community.greenBiomassYield.push_back(0);
-      community.brownBiomassYield.push_back(0);
-      community.biomassYield.push_back(0);
+      community.greenBiomassYieldPerPFT.push_back(0);
+      community.brownBiomassYieldPerPFT.push_back(0);
+      community.biomassYieldPerPFT.push_back(0);
    }
 }

@@ -84,21 +84,14 @@ void STEP::doDayStepOfModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMET
    interaction.calculateLightAttenuationAndAvailabilityForPlants(utils, parameter, community, interaction.fullSunLight);
 
    /* Plant photosynthesis, respiration, NPP and allocation */
-   growth.doPlantGrowth(utils, parameter, community, interaction, allometry);
+   growth.doPlantGrowth(utils, parameter, community, interaction, allometry, soil);
 
    /* Management activities */
    management.applyManagementRegime(utils, community, allometry, parameter);
 
-   /* //TODO: add calculation of carbon flux and pools in soil and landtrans code of Matthes
-     if (par.externalLandtransSoilModel == 1)
-      {
-         calculateLitterInputForBodium();
-      }
-      else if (!par.externalLandtransSoilModel || par.externalLandtransSoilModel == 3)
-      {
-         calculateCarbonFluxCentury();
-      }
-   */
+   /* Soil resource dynamics */
+   // to be added
+   // soil.calculateSoilCarbonNitrogenWaterDynamics(utils, parameter, community);
 }
 
 /**
@@ -168,7 +161,7 @@ void STEP::saveSimulationResultsToBuffer(UTILS utils, PARAMETER parameter, COMMU
                output.bufferPlant << community.allPlants.at(cohortindex)->exudationBiomass << "\t" << community.allPlants.at(cohortindex)->gpp << "\t";
                output.bufferPlant << community.allPlants.at(cohortindex)->npp << "\t" << community.allPlants.at(cohortindex)->totalRespiration << "\t";
                output.bufferPlant << community.allPlants.at(cohortindex)->availableRadiation << "\t" << community.allPlants.at(cohortindex)->shadingIndicator << "\t";
-               output.bufferPlant << community.allPlants.at(cohortindex)->limitingFactorGppWater << "\t" << community.allPlants.at(cohortindex)->limitingFactorGppNitrogen << "\t";
+               output.bufferPlant << community.allPlants.at(cohortindex)->limitingFactorGppWater << "\t" << community.allPlants.at(cohortindex)->limitingFactorNppNitrogen << "\t";
                output.bufferPlant << community.allPlants.at(cohortindex)->nppAllocationShoot << "\t" << community.allPlants.at(cohortindex)->nppAllocationRoot << "\t";
                output.bufferPlant << community.allPlants.at(cohortindex)->nppAllocationRecruitment << "\t" << community.allPlants.at(cohortindex)->nppAllocationExudation;
                output.bufferPlant << std::endl;
@@ -205,7 +198,7 @@ void STEP::saveSimulationResultsToBuffer(UTILS utils, PARAMETER parameter, COMMU
          output.bufferPlant << community.allPlants.at(cohortindex)->exudationBiomass << "\t" << community.allPlants.at(cohortindex)->gpp << "\t";
          output.bufferPlant << community.allPlants.at(cohortindex)->npp << "\t" << community.allPlants.at(cohortindex)->totalRespiration << "\t";
          output.bufferPlant << community.allPlants.at(cohortindex)->availableRadiation << "\t" << community.allPlants.at(cohortindex)->shadingIndicator << "\t";
-         output.bufferPlant << community.allPlants.at(cohortindex)->limitingFactorGppWater << "\t" << community.allPlants.at(cohortindex)->limitingFactorGppNitrogen << "\t";
+         output.bufferPlant << community.allPlants.at(cohortindex)->limitingFactorGppWater << "\t" << community.allPlants.at(cohortindex)->limitingFactorNppNitrogen << "\t";
          output.bufferPlant << community.allPlants.at(cohortindex)->nppAllocationShoot << "\t" << community.allPlants.at(cohortindex)->nppAllocationRoot << "\t";
          output.bufferPlant << community.allPlants.at(cohortindex)->nppAllocationRecruitment << "\t" << community.allPlants.at(cohortindex)->nppAllocationExudation;
          output.bufferPlant << std::endl;

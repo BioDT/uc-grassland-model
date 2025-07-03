@@ -12,7 +12,7 @@ public:
    GROWTH();
    ~GROWTH();
 
-   void doPlantGrowth(UTILS utils, PARAMETER parameter, COMMUNITY &community, INTERACTION interaction, ALLOMETRY allometry);
+   void doPlantGrowth(UTILS utils, PARAMETER parameter, COMMUNITY &community, INTERACTION interaction, ALLOMETRY allometry, SOIL &soil);
 
    void doPlantPhotosynthesis(PARAMETER parameter, COMMUNITY &community, INTERACTION interaction);
    double calculateGPPOfPlant(PARAMETER parameter, int pft, double plantLAI, double plantCoveredAre, double plantRadiation, double dayLength);
@@ -23,7 +23,7 @@ public:
    double calculateEffectOfAirTemperatureOnGPP(double dayTimeAirTemperature);
    double calculateEffectOfAirTemperatureOnRespiration(PARAMETER parameter, double airTemperature);
    void adjustAllocationRates(UTILS utils, PARAMETER parameter, COMMUNITY &community);
-   void doPlantNPPAllocation(UTILS utils, COMMUNITY &community);
+   void doPlantNPPAllocation(UTILS utils, PARAMETER parameter, COMMUNITY &community, SOIL &soil);
    double calculateProportionalityFactorForAllocationDistributionToPlantParts(PARAMETER parameter, COMMUNITY &community, int cohortindex, int pft);
    void adjustAllocationRatesForMaturePlants(PARAMETER parameter, COMMUNITY &community, int cohortindex, int pft, double proportionOfNppAllocationToPlantGrowthToShoot);
    void adjustAllocationRatesForRegrowingPlants(PARAMETER parameter, COMMUNITY &community, int cohortindex, int pft, double proportionOfNppAllocationToPlantGrowthToShoot);

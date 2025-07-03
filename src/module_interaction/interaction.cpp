@@ -16,8 +16,6 @@ void INTERACTION::calculateLightAttenuationAndAvailabilityForPlants(UTILS utils,
    /// 4. and calculation of available sunlight reaching this plant cohort
    /// based on Beer-Lambert law of light transmission and extinction
    calculateLightAvailabilityForPlants(utils, community, parameter, fullSunLight);
-
-   // TODO: decide if to remove calculateCrowdingConditions();
 }
 
 void INTERACTION::calculateNumberOfHeightLayersFromLargestPlant(UTILS utils, COMMUNITY &community)
@@ -128,9 +126,6 @@ void INTERACTION::calculateLightAvailabilityForPlants(UTILS utils, COMMUNITY &co
          calculateShadingIndicatorOfPlantForOutput(utils, parameter, community, cohortindex, fullSunLight);
       }
    }
-
-   // TODO: calculate light at soil surface for germination?
-   // fractionOfLightAtFloor = getRadiationAtLowerBoundaryOfHeightLayer(LAIwithLightExtinction.at(0), 1);
 }
 
 void INTERACTION::getOvertoppingCumulativeLeafAreaIndexOfPlant(COMMUNITY &community, int cohortindex, int layerindex)
