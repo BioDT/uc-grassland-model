@@ -1,9 +1,9 @@
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 set(CMAKE_CXX_STANDARD 17)
 
 project(
-    GRASSMIND3.0
+    GRASSMIND3
     DESCRIPTION "Individual-based mechanistic model for managed grasslands")
 
 #Copy header files from src to include directory
@@ -68,7 +68,7 @@ set(HEADERS
 )
 
 #Create executable target
-add_executable(grassDTmodel ${SOURCES} ${HEADERS})
+add_executable(GRASSMIND3 ${SOURCES} ${HEADERS})
 
 #Set include directories for the target
-target_include_directories(grassDTmodel PUBLIC include)
+target_include_directories(GRASSMIND3 PUBLIC include)
