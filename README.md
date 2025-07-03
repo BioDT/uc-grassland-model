@@ -2,6 +2,8 @@
 GRASSMIND3.0 is an individual-based mechanistic grassland model to simulate European species-rich grasslands 
 under farmer management and location-specific site conditions.
 
+10.5281/zenodo.15795094.
+
 # Copyright
 Copyright (C) 2025 Helmholtz Centre for Environmental Research GmbH - UFZ, Germany
 
