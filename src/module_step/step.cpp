@@ -33,8 +33,9 @@ void STEP::runModelSimulation(UTILS utils, PARAMETER &parameter, INIT init, ALLO
    {
       parameter.day = day; // increase day according to for-loop
 
-      /* Resetting of specific state / process variables of the community */
-      init.initAndResetProcessVariables(parameter, recruitment, community, interaction);
+      /* Resetting of process- and flux-specific state variables of the vegetation community and soil resources */
+      init.resetVegetationProcessVariables(parameter, recruitment, community, interaction);
+      init.resetSoilResourceProcessAndFluxVariables(soil);
 
       /* Environmental conditions of the day */
       interaction.getEnvironmentalConditionsOfDay(weather, soil, management, parameter.day);
@@ -42,7 +43,9 @@ void STEP::runModelSimulation(UTILS utils, PARAMETER &parameter, INIT init, ALLO
       /* Calculation of ecological and plant processes */
       doDayStepOfModelSimulation(utils, parameter, allometry, community, recruitment, mortality, growth, interaction, management, soil);
 
-      community.updateCommunityStateVariablesForOutput(parameter);
+      /*TODO: put both to output class similar as init??? */
+      community.updateVegetationStateVariablesForOutput(parameter);
+      // soil.updateSoilResourceStateVariablesForOutput(parameter);
 
       /* Writing of daily output of simulation results */
       saveSimulationResultsToBuffer(utils, parameter, community, output);
@@ -90,8 +93,7 @@ void STEP::doDayStepOfModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMET
    management.applyManagementRegime(utils, community, allometry, parameter);
 
    /* Soil resource dynamics */
-   // to be added
-   // soil.calculateSoilCarbonNitrogenWaterDynamics(utils, parameter, community);
+   soil.calculateSoilResourceDynamics(utils, parameter, community);
 }
 
 /**

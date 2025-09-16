@@ -2,6 +2,7 @@
 #include "../module_init/constants.h"
 #include "../module_parameter/parameter.h"
 #include "../module_plant/community.h"
+#include "../module_weather/weather.h"
 #include <vector>
 #include <iostream>
 
@@ -20,151 +21,219 @@ public:
    std::vector<double> porosity;
    std::vector<double> saturatedHydraulicConductivity;
 
+   // water content in pools
    double snowContent;
+   std::vector<double> waterContent_soilWaterPoolPerLayer;
+
    double soilTemperature;
 
-   double greenCarbonSurfaceLitter;
-   double brownCarbonSurfaceLitter;
-   double rootCarbonSoilLitter;
-   double seedCarbonSoilLitter;
+   // carbon content in pools
+   double carbonContent_surfaceGreenLitterPool;
+   double carbonContent_surfaceBrownLitterPool;
+   double carbonContent_soilRootLitterPool;
+   double carbonContent_soilSeedLitterPool;
 
-   double greenNitrogenSurfaceLitter;
-   double brownNitrogenSurfaceLitter;
-   double rootNitrogenSoilLitter;
-   double seedNitrogenSoilLitter;
+   double carbonContent_soilMetabolicLitterPool;
+   double carbonContent_surfaceMetabolicLitterPool;
+   double carbonContent_soilStructuralLitterPool;
+   double carbonContent_surfaceStructuralLitterPool;
 
-   double CPool_Soil_passive;
-   double CPool_Soil_slow;
-   double CPool_Soil_active;
-   double CPool_Soil_microbes;
-   double CPool_Soil_litter_met;
-   double CPool_Surface_litter_met;
-   double CPool_Soil_litter_struc;
-   double CPool_Surface_litter_struc;
+   double carbonContent_soilPassivePool;
+   double carbonContent_soilSlowPool;
+   double carbonContent_soilActivePool;
+   double carbonContent_soilMicrobesPool;
 
-   double NPool_Soil_passive;
-   double NPool_Soil_slow;
-   double NPool_Soil_active;
-   double NPool_Soil_microbes;
-   double NPool_Soil_litter_met;
-   double NPool_Surface_litter_met;
-   double NPool_Soil_litter_struc;
-   double NPool_Surface_litter_struc;
+   // nitrogen content in pools
+   double nitrogenContent_surfaceGreenLitterPool;
+   double nitrogenContent_surfaceBrownLitterPool;
+   double nitrogenContent_soilRootLitterPool;
+   double nitrogenContent_soilSeedLitterPool;
 
-   double CN_passive;
-   double CN_slow;
-   double CN_active;
-   double CN_microbes;
-   double CN_soil_active_met;
-   double CN_surface_active_met;
-   double CN_soil_active_new;
-   double CN_surface_active_new;
-   double CN_surface_slow_new;
-   double CN_soil_slow_new;
-   double CN_active_passive;
-   double CN_slow_passive;
+   double nitrogenContent_soilMetabolicLitterPool;
+   double nitrogenContent_surfaceMetabolicLitterPool;
+   double nitrogenContent_soilStructuralLitterPool;
+   double nitrogenContent_surfaceStructuralLitterPool;
 
-   double Cflux_Surface_to_Soil_slow;
-   double Cflux_Surface_to_Soil_microbes;
-   double Cflux_Soil_to_Soil_slow;
-   double Cflux_Soil_to_Soil_active;
-   double Cflux_Surface_to_Soil_microbes_met;
-   double Cflux_Soil_to_Soil_active_met;
-   double Cflux_Microbe_to_Slow;
-   double Cflux_Active_to;
-   double Cflux_Slow_to;
-   double Cflux_Passive_to_Active;
-   double Cflux_Slow_to_Passive;
-   double Cflux_Active_to_Passive;
-   double Cflux_Slow_to_Active;
-   double Cflux_Active_to_Slow;
+   double nitrogenContent_soilPassivePool;
+   double nitrogenContent_soilSlowPool;
+   double nitrogenContent_soilActivePool;
+   double nitrogenContent_soilMicrobesPool;
 
-   double Resp_DecompC_surface_slow;
-   double Resp_DecompC_surface_microbes;
-   double Resp_DecompC_soil_slow;
-   double Resp_DecompC_soil_active;
-   double Resp_DecompC_surface_met;
-   double Resp_DecompC_soil_met;
-   double Resp_DecompC_microbes;
-   double Resp_DecompC_active;
-   double Resp_DecompC_slow;
-   double Resp_DecompC_passive;
+   std::vector<double> nitrogenContent_soilMineralPoolPerSoilLayer;
 
-   double Resp_DecompN_surface_slow;
-   double Resp_DecompN_surface_microbes;
-   double Resp_DecompN_soil_slow;
-   double Resp_DecompN_soil_active;
-   double Resp_DecompN_surface_met;
-   double Resp_DecompN_soil_met;
-   double Resp_DecompN_microbes;
-   double Resp_DecompN_active;
-   double Resp_DecompN_slow;
-   double Resp_DecompN_passive;
+   // decisive carbon-nitrogen ratios for deciding on the decomposition of pools
+   // and for determining nitrogen mineralization or immobilization during decomposition
+   // calculated via regression functions (independent from actual CN ratios of each pool)
+   double decisiveCNRatio_soilMicrobesPool_soilSlowPool;
+   double decisiveCNRatio_soilPassivePool_soilActivePool;
+   double decisiveCNRatio_soilSlowPool_soilActivePool;
+   double decisiveCNRatio_soilSlowPool_soilPassivePool;
+   double decisiveCNRatio_soilActivePool_soilSlowPool;
+   double decisiveCNRatio_soilActivePool_soilPassivePool;
+   double decisiveCNRatio_soilMetabolicLitterPool_soilActivePool;
+   double decisiveCNRatio_surfaceMetabolicLitterPool_soilMicrobesPool;
 
-   double NMineralization_gross;
-   double NMineralization_net;
-   double Nflux_Surface_to_Soil_slow;
-   double Nflux_Soil_to_Soil_slow;
-   double Nflux_Microbe_to_Slow;
-   double Nflux_Active_to_Slow;
-   double Nflux_Surface_to_Soil_microbes;
-   double Nflux_Surface_to_Soil_microbes_met;
-   double Nflux_Soil_to_Soil_active;
-   double Nflux_Soil_to_Soil_active_met;
-   double Nflux_Slow_to_Active;
-   double Nflux_Passive_to_Active;
-   double Nflux_Active_to_Passive;
-   double Nflux_Slow_to_Passive;
+   // decisive CN ratios initialized only once in the init function
+   double decisiveCNRatio_surfaceStructuralLitterPool_soilMicrobesPool; // TODO: dependent on litter pool content -> why not move to each day update?
+   double decisiveCNRatio_surfaceStructuralLitterPool_soilSlowPool;
+   double decisiveCNRatio_soilStructuralLitterPool_soilActivePool;
+   double decisiveCNRatio_soilStructuralLitterPool_soilSlowPool;
 
-   double Nflow_Surface_slow;
-   double Nflow_microbes;
-   double Nflow_Soil_slow;
-   double Nflow_active;
-   double Nflow_microbes_met;
-   double Nflow_active_met;
-   double Nflow_Microbe_Slow;
-   double Nflow_Active_Passive;
-   double Nflow_Active_Slow;
-   double Nflow_Slow_Passive;
-   double Nflow_Slow_Active;
-   double Nflow_Passive_Active;
+   // lignin contents
+   ligninContent_surfaceStructuralLitterPool;
+   ligninContent_soilStructuralLitterPool;
 
-   double immob_Surface_slow;
-   double immob_microbes;
-   double immob_Soil_slow;
-   double immob_active;
-   double immob_microbes_met;
-   double immob_active_met;
-   double immob_microbe_slow;
-   double immob_active_passive;
-   double immob_active_slow;
-   double immob_slow_passive;
-   double immob_slow_active;
-   double immob_passive_active;
+   // carbon fluxes
+   double carbonFlux_surfaceStructuralLitterPool_to_soilSlowPool;     //*
+   double carbonFlux_surfaceStructuralLitterPool_to_soilMicrobesPool; //*
+   double carbonFlux_surfaceMetabolicLitterPool_to_soilMicrobesPool;  //*
 
-   double miner_Surface_slow;
-   double miner_microbes;
-   double miner_Soil_slow;
-   double miner_active;
-   double miner_microbes_met;
-   double miner_active_met;
-   double miner_microbe_slow;
-   double miner_active_passive;
-   double miner_active_slow;
-   double miner_slow_passive;
-   double miner_slow_active;
-   double miner_passive_active;
+   double carbonFlux_soilStructuralLitterPool_to_soilSlowPool;   //*
+   double carbonFlux_soilStructuralLitterPool_to_soilActivePool; //*
+   double carbonFlux_soilMetabolicLitterPool_to_soilActivePool;  //*
 
-   double CLeach;
+   double carbonFlux_soilActivePool_to_soilPassiveAndSlowPool; //*
+   double carbonFlux_soilSlowPool_to_soilPassiveAndActivePool; //*
 
-   void transferDyingPlantPartsToLitterPools(PARAMETER parameter, int number, double biomass, int typeOfMaterial, int pft);
-   /*void calculateSoilCarbonNitrogenWaterDynamics(UTILS utils, PARAMETER parameter, COMMUNITY &community);
+   double carbonFlux_soilMicrobesPool_to_soilSlowPool;  //*
+   double carbonFlux_soilSlowPool_to_soilPassivePool;   //*
+   double carbonFlux_soilSlowPool_to_soilActivePool;    //*
+   double carbonFlux_soilActivePool_to_soilPassivePool; //*
+   double carbonFlux_soilActivePool_to_soilSlowPool;    //*
+   double carbonFlux_soilPassivePool_to_soilActivePool; //*
+
+   // nitrogen fluxes
+   double nitrogenFlux_surfaceStructuralLitterPool_to_soilSlowPool;     //*
+   double nitrogenFlux_surfaceStructuralLitterPool_to_soilMicrobesPool; //*
+   double nitrogenFlux_surfaceMetabolicLitterPool_to_soilMicrobesPool;  //*
+
+   double nitrogenFlux_soilStructuralLitterPool_to_soilSlowPool;   //*
+   double nitrogenFlux_soilStructuralLitterPool_to_soilActivePool; //*
+   double nitrogenFlux_soilMetabolicLitterPool_to_soilActivePool;  //*
+
+   double nitrogenFlux_soilMicrobesPool_to_soilSlowPool;  //*
+   double nitrogenFlux_soilSlowPool_to_soilActivePool;    //*
+   double nitrogenFlux_soilActivePool_to_soilSlowPool;    //*
+   double nitrogenFlux_soilSlowPool_to_soilPassivePool;   //*
+   double nitrogenFlux_soilPassivePool_to_soilActivePool; //*
+   double nitrogenFlux_soilActivePool_to_soilPassivePool; //*
+
+   // respiratory carbon fluxes
+   double respiration_decompositionCarbon_surfaceStructuralLitterPool_soilSlowPool;     //*
+   double respiration_decompositionCarbon_surfaceStructuralLitterPool_soilMicrobesPool; //*
+   double respiration_decompositionCarbon_soilStructuralLitterPool_soilSlowPool;        //*
+   double respiration_decompositionCarbon_soilStructuralLitterPool_soilActivePool;      //*
+   double respiration_decompositionCarbon_surfaceMetabolicLitterPool_soilMicrobesPool;  //*
+   double respiration_decompositionCarbon_soilMetabolicLitterPool_soilActivePool;       //*
+   double respiration_decompositionCarbon_soilMicrobesPool_soilSlowPool;                //*
+   double respiration_decompositionCarbon_soilActivePool_soilPassiveAndSlowPool;        //*
+   double respiration_decompositionCarbon_soilSlowPool_soilPassiveAndActivePool;        //*
+   double respiration_decompositionCarbon_soilPassivePool_soilActivePool;               //*
+
+   double respirationCarbon_surface_litter;
+   double respirationCarbon_soil_litter;
+   double respirationCarbon_litter;
+   double respirationCarbon_soilpools;
+
+   // respiratory nitrogen fluxes
+   double respiration_decompositionNitrogen_surfaceStructuralLitterPool_soilSlowPool;     //*
+   double respiration_decompositionNitrogen_surfaceStructuralLitterPool_soilMicrobesPool; //*
+   double respiration_decompositionNitrogen_soilStructuralLitterPool_soilSlowPool;        //*
+   double respiration_decompositionNitrogen_soilStructuralLitterPool_soilActivePool;      //*
+   double respiration_decompositionNitrogen_surfaceMetabolicLitterPool_soilMicrobesPool;  //*
+   double respiration_decompositionNitrogen_soilMetabolicLitterPool_soilActivePool;       //*
+   double respiration_decompositionNitrogen_soilMicrobesPool_soilSlowPool;                //*
+   double respiration_decompositionNitrogen_soilActivePool_soilPassiveAndSlowPool;        //*
+   double respiration_decompositionNitrogen_soilSlowPool_soilPassiveAndActivePool;        //*
+   double respiration_decompositionNitrogen_soilPassivePool_soilActivePool;               //*
+
+   // Nitrogen mineralization and loss
+   double nitrogenGrossMineralization;
+   double nitrogenNetMineralization;
+   double nitrogenVolatilization;
+
+   double nitrogenFlow_surfaceStructuralLitterPool_to_soilSlowPool;     //*
+   double nitrogenFlow_surfaceStructuralLitterPool_to_soilMicrobesPool; //*
+   double nitrogenFlow_soilStructuralLitterPool_to_soilSlowPool;        //*
+   double nitrogenFlow_soilStructuralLitterPool_to_soilActivePool;      //*
+   double nitrogenFlow_surfaceMetabolicLitterPool_to_soilMicrobesPool;  //*
+   double nitrogenFlow_soilMetabolicLitterPool_to_soilActivePool;       //*
+
+   double nitrogenFlow_soilMicrobesPool_to_soilSlowPool;  //*
+   double nitrogenFlow_soilActivePool_to_soilPassivePool; //*
+   double nitrogenFlow_soilActivePool_to_soilSlowPool;    //*
+   double nitrogenFlow_soilSlowPool_to_soilPassivePool;   //*
+   double nitrogenFlow_soilSlowPool_to_soilActivePool;    //*
+   double nitrogenFlow_soilPassivePool_to_soilActivePool; //*
+
+   double immobilize_surfaceStructuralLitterPool_to_soilSlowPool;     //*
+   double immobilize_surfaceStructuralLitterPool_to_soilMicrobesPool; //*
+   double immobilize_soilStructuralLitterPool_to_soilSlowPool;        //*
+   double immobilize_soilStructuralLitterPool_to_soilActivePool;      //*
+   double immobilize_surfaceMetabolicLitterPool_to_soilMicrobesPool;  //*
+   double immobilize_soilMetabolicLitterPool_to_soilActivePool;       //*
+
+   double immobilize_soilMicrobesPool_to_soilSlowPool;  //*
+   double immobilize_soilActivePool_to_soilPassivePool; //*
+   double immobilize_soilActivePool_to_soilSlowPool;    //*
+   double immobilize_soilSlowPool_to_soilPassivePool;   //*
+   double immobilize_soilSlowPool_to_soilActivePool;    //*
+   double immobilize_soilPassivePool_to_soilActivePool; //*
+
+   double mineralize_surfaceStructuralLitterPool_to_soilSlowPool;     //*
+   double mineralize_surfaceStructuralLitterPool_to_soilMicrobesPool; //*
+   double mineralize_soilStructuralLitterPool_to_soilSlowPool;        //*
+   double mineralize_soilStructuralLitterPool_to_soilActivePool;      //*
+   double mineralize_surfaceMetabolicLitterPool_to_soilMicrobesPool;  //*
+   double mineralize_soilMetabolicLitterPool_to_soilActivePool;       //*
+
+   double mineralize_soilMicrobesPool_to_soilSlowPool;  //*
+   double mineralize_soilActivePool_to_soilPassivePool; //*
+   double mineralize_soilActivePool_to_soilSlowPool;    //*
+   double mineralize_soilSlowPool_to_soilPassivePool;   //*
+   double mineralize_soilSlowPool_to_soilActivePool;    //*
+   double mineralize_soilPassivePool_to_soilActivePool; //*
+
+   double carbonLeaching; //**
+   double LeachingC;
+   double NLeach;
+   double LeachingN;
+
+   double C_flux;
+   double Nflux;
+   double R_total;
+
+   double decompositionFactor;
+   double nitrogenFixationToSoil;
+
+   void transferDyingPlantPartsToLitterPools(UTILS utils, PARAMETER parameter, int number, double biomass, std::string typeOfMaterial, int pft);
+   void calculateSoilResourceDynamics(UTILS utils, PARAMETER parameter, WEATHER weather);
+
+   void splitLitterFluxesToStructuralAndMetabolicLitterPools(UTILS utils, PARAMETER parameter, WEATHER weather);
+   void addCarbonNitrogenOfPlantLitterToStructuralAndMetabolicLitterPools(UTILS utils, PARAMETER parameter, WEATHER weather, std::string type);
+   double calculateDIRABS(UTILS utils, std::string type);
+   double calculateLigninFraction(UTILS utils, WEATHER weather, PARAMETER parameter, std::string type);
+   double calculateNitrogenFraction(UTILS utils, double dirabs, std::string type);
+   double calculateFractionOfMetabolicLitter(UTILS utils, double fractionOfLignin, double ligninToNitrogenRatio, std::string type);
+   double adjustLigninContentOfStructuralLitter(UTILS utils, double fractionOfLignin, double carbonAddedToStructuralLitter, double strlig, std::string type);
+   void processLitterFluxes(UTILS utils, double dirabs, double cadds, double caddm, double eadds, double eaddm, std::string type);
+
    double calculateTemperatureAndWaterEffectsOnDecomposition(UTILS utils, PARAMETER parameter);
-   bool decomposable(PARAMETER parameter, double aminrl, std::string type);
-   void calculateLitterCarbonRespiration(std::string type, std::string dest);
-   void calculateLitterNitrogenRespiration(std::string type, std::string dest);
-   double calculateLitterNitrogenFlow(std::string type, std::string dest);
-   double immobilizeNitrogen(std::string type, std::string dest, double cmprratio);
-   double mineralizeNitrogen(std::string type, std::string dest, double cmprratio, double oldflow);
-   bool decompose(double flow, double ligcon, double aminrl, std::string type);*/
+   void doDecompositionFluxesInLitterAndSoilPools(UTILS utils);
+   void startDecomposition(UTILS utils, double carbonPool, double factor, double lignin, std::string typeOfSoilPool);
+   void calculateDecisiveCarbonNitrogenRatiosForDecomposition(UTILS utils, std::string typeOfPool);
+   bool decompose(UTILS utils, double flow, double ligcon, std::string type);
+
+   bool decomposable(UTILS utils, std::string type);
+   void calculateRespirationOfDecomposition(UTILS utils, std::string transferFromPool, std::string transferToPool);
+   void calculateCarbonRespirationOfDecomposition(UTILS utils, std::string transferFromPool, std::string transferToPool);
+   void calculateNitrogenRespirationOfDecomposition(UTILS utils, std::string transferFromPool, std::string transferToPool);
+   double determineNitrogenFlux(UTILS utils, std::string ttransferFromPoolype, std::string transferToPool);
+   void immobilizeOrMineralizeNitrogen(UTILS utils, double carbonFlux, double nitrogenFlow, double decisiveCNratio, std::string transferFromPool, std::string transferToPool);
+   void immobilizeNitrogen(UTILS utils, std::string transferFromPool, std::string transferToPool, double decisiveCNratio);
+   void mineralizeNitrogen(UTILS utils, std::string transferFromPool, std::string transferToPool, double decisiveCNratio, double oldflow);
+
+   void calculateNonsymbioticNitrogenFixationAndAthmosphericDeposition(UTILS utils, PARAMETER parameter, WEATHER weather);
+   void calculateNitrogenLossByVolatilization(UTILS utils);
+   void updateSoilPoolsByRespirationAndFluxes(UTILS utils);
 };

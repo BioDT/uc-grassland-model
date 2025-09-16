@@ -67,7 +67,7 @@ void COMMUNITY::checkPlantsAreAliveInCommunity(UTILS utils)
  * @param parameter A parameter object that provides information about the number of PFTs
  *                  (Plant Functional Types) in the simulation.
  */
-void COMMUNITY::updateCommunityStateVariablesForOutput(PARAMETER parameter)
+void COMMUNITY::updateVegetationStateVariablesForOutput(PARAMETER parameter)
 {
    if (allPlants.size() > 0)
    {

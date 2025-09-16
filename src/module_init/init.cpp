@@ -4,7 +4,8 @@ INIT::INIT() {};
 INIT::~INIT() {};
 
 /* main function to initialize state variables of the simulation start */
-void INIT::initModelSimulation(PARAMETER &parameter, COMMUNITY &community, RECRUITMENT &recruitment, SOIL &soil, INTERACTION &interaction)
+/* is done only once at the beginning of a simulation */
+void INIT::initModelSimulation(PARAMETER &parameter, COMMUNITY &community, RECRUITMENT &recruitment, SOIL &soil, INTERACTION &interaction, WEATHER weather)
 {
    /* init time variables */
    initTimeVariables(parameter);
@@ -12,11 +13,17 @@ void INIT::initModelSimulation(PARAMETER &parameter, COMMUNITY &community, RECRU
    /* init random number generator seed */
    initRandomNumberGeneratorSeed(parameter, community);
 
-   /* init state variables of community */
-   initStateVariables(community, parameter, recruitment, soil);
+   /* init state variables of community (that will change through the process dynamics) */
+   initVegetationStateVariables(community, parameter, recruitment, soil);
 
-   /* init process-specific state variables */
-   initAndResetProcessVariables(parameter, recruitment, community, interaction);
+   /* init process-specific state variables that will also be reset at each time step again */
+   resetVegetationProcessVariables(parameter, recruitment, community, interaction);
+
+   /* init soil resource state variables (that will change through the process dynamics) */
+   initSoilResourceStateVariables(utils, soil, weather, parameter);
+
+   /* init process- and flux-specific state variables that will be reset at each time step again */
+   resetSoilResourceProcessAndFluxVariables(soil);
 }
 
 /* initialization of state variables of time */
@@ -37,7 +44,7 @@ void INIT::initRandomNumberGeneratorSeed(PARAMETER &parameter, COMMUNITY &commun
 }
 
 /* initialization of the community vector and grassland state variables */
-void INIT::initStateVariables(COMMUNITY &community, PARAMETER parameter, RECRUITMENT &recruitment, SOIL &soil)
+void INIT::initVegetationStateVariables(COMMUNITY &community, PARAMETER parameter, RECRUITMENT &recruitment, SOIL &soil)
 {
    // simulation-related variables
    community.allPlants.clear();
@@ -65,7 +72,7 @@ void INIT::initStateVariables(COMMUNITY &community, PARAMETER parameter, RECRUIT
    soil.seedNitrogenSoilLitter = 0;
 }
 
-void INIT::initAndResetProcessVariables(PARAMETER parameter, RECRUITMENT &recruitment, COMMUNITY &community, INTERACTION &interaction)
+void INIT::resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &recruitment, COMMUNITY &community, INTERACTION &interaction)
 {
    /// Process-related variables
    // 1. Recruitment
@@ -135,4 +142,202 @@ void INIT::initAndResetProcessVariables(PARAMETER parameter, RECRUITMENT &recrui
       community.brownBiomassYieldPerPFT.push_back(0);
       community.biomassYieldPerPFT.push_back(0);
    }
+}
+
+/**
+ * @cite: function adapted from Century 4.0 model
+ */
+void INIT::initSoilCarbonNitrogenWaterStateVariables(UTILS utils, SOIL &soil, WEATHER weather, PARAMETER parameter)
+{
+   // litter pools are set to zero at the beginning
+   soil.carbonContent_surfaceStructuralLitterPool = 0;
+   soil.carbonContent_soilStructuralLitterPool = 0;
+   soil.carbonContent_surfaceMetabolicLitterPool = 0;
+   soil.carbonContent_soilMetabolicLitterPool = 0;
+   soil.nitrogenContent_surfaceStructuralLitterPool = 0;
+   soil.nitrogenContent_soilStructuralLitterPool = 0;
+   soil.nitrogenContent_surfaceMetabolicLitterPool = 0;
+   soil.nitrogenContent_soilMetabolicLitterPool = 0;
+
+   soil.ligninContent_surfaceStructuralLitterPool = 0;
+   soil.ligninContent_soilStructuralLitterPool = 0;
+
+   // microbes are set to a fixed initial value
+   soil.carbonContent_soilMicrobesPool = 10.0; // gm-2
+   soil.nitrogenContent_soilMicrobesPool = soil.carbonContent_soilMicrobesPool / 16.0;
+
+   // soil pools are dependent on average weather variables and soil attributes
+   initCarbonContentOfSoilPools = calculateInitialCarbonContentOfAllSoilPools(utils, weather, parameter);
+   soil.carbonContent_soilActivePool = initCarbonContentOfSoilPools * 0.02;
+   soil.carbonContent_soilSlowPool = initCarbonContentOfSoilPools * 0.64;
+   soil.carbonContent_soilPassivePool = initCarbonContentOfSoilPools * 0.34;
+   soil.nitrogenContent_soilActivePool = soil.carbonContent_soilActivePool / 12.0;
+   soil.nitrogenContent_soilSlowPool = soil.carbonContent_soilSlowPool / 17.0;
+   soil.nitrogenContent_soilPassivePool = soil.carbonContent_soilPassivePool / 8.0;
+}
+
+/**
+ * @cite: Century4.0
+ * soil pools are initialized based on average weather data
+ */
+double INIT::calculateInitialCarbonContentOfAllSoilPools(UTILS utils, WEATHER weather, PARAMETER parameter)
+{
+   // TODO: or choose mean annual/average values for entire simulation period instead of first year only ?
+   double annualPrecipitation = weather.calculateAnnualPrecipitationOfSpecificYear(utils, parameter, parameter.firstYear) / 10.0; // cm
+   double averageAirTemperature = weather.calculateAverageAirTemperatureOfSpecificYear(utils, parameter, parameter.firstYear);    // °C
+
+   if (averageAirTemperature > 23.0) // Germany: summer 20°C, winter 1-2°C
+   {
+      averageAirTemperature = 23.0;
+   }
+   if (annualPrecipitation > 120.0) // Germany: average values are around 72.0 mm
+   {
+      annualPrecipitation = 120.0;
+   }
+
+   double initCarbonContentOfSoilPools = ((-8.27E-01 * averageAirTemperature) + (2.24E-02 * averageAirTemperature * averageAirTemperature) + (annualPrecipitation * 1.27E-01) - (9.38E-04 * annualPrecipitation * annualPrecipitation) +
+                                          (annualPrecipitation * siltContent * 8.99E-02) + (annualPrecipitation * clayContent * 6.00E-02) + 4.09) *
+                                         1000.0; // g/m²
+
+   return (initCarbonContentOfSoilPools);
+}
+
+void INIT::resetSoilResourceProcessAndFluxVariables(SOIL &soil)
+{
+   /* carbon fluxes */
+   soil.carbonFlux_surfaceStructuralLitterPool_to_soilMicrobesPool = 0;
+   soil.carbonFlux_surfaceMetabolicLitterPool_to_soilMicrobesPool = 0;
+   soil.carbonFlux_surfaceStructuralLitterPool_to_soilSlowPool = 0;
+
+   soil.carbonFlux_soilStructuralLitterPool_to_soilSlowPool = 0;
+   soil.carbonFlux_soilStructuralLitterPool_to_soilActivePool = 0;
+   soil.carbonFlux_soilMetabolicLitterPool_to_soilActivePool = 0;
+
+   soil.carbonFlux_soilMicrobesPool_to_soilSlowPool = 0;
+
+   soil.carbonFlux_soilActivePool_to_soilPassiveAndSlowPool = 0;
+   soil.carbonFlux_soilActivePool_to_soilPassivePool = 0;
+   soil.carbonFlux_soilActivePool_to_soilSlowPool = 0;
+
+   soil.carbonFlux_soilSlowPool_to_soilPassiveAndActivePool = 0;
+   soil.carbonFlux_soilSlowPool_to_soilPassivePool = 0;
+   soil.carbonFlux_soilSlowPool_to_soilActivePool = 0;
+
+   soil.carbonFlux_soilPassivePool_to_soilActivePool = 0;
+
+   soil.carbonLeaching = 0; // carbon leached from active soil pool
+   soil.LeachingC = 0;      // carbon leached from active soil pool
+
+   /* carbon respiratory fluxes */
+   soil.respiration_decompositionCarbon_surfaceStructuralLitterPool_soilSlowPool = 0;
+   soil.respiration_decompositionCarbon_surfaceStructuralLitterPool_soilMicrobesPool = 0;
+   soil.respiration_decompositionCarbon_surfaceMetabolicLitterPool_soilMicrobesPool = 0;
+
+   soil.respiration_decompositionCarbon_soilStructuralLitterPool_soilSlowPool = 0;
+   soil.respiration_decompositionCarbon_soilStructuralLitterPool_soilActivePool = 0;
+   soil.respiration_decompositionCarbon_soilMetabolicLitterPool_soilActivePool = 0;
+
+   soil.respiration_decompositionCarbon_soilMicrobesPool_soilSlowPool = 0;
+   soil.respiration_decompositionCarbon_soilActivePool_soilPassiveAndSlowPool = 0;
+   soil.respiration_decompositionCarbon_soilSlowPool_soilPassiveAndActivePool = 0;
+   soil.respiration_decompositionCarbon_soilPassivePool_soilActivePool = 0;
+
+   soil.respirationCarbon_surface_litter = 0;
+   soil.respirationCarbon_soil_litter = 0;
+   soil.respirationCarbon_litter = 0;
+   soil.respirationCarbon_soilpools = 0;
+
+   /* nitrogen fluxes */
+   soil.nitrogenFlow_surfaceStructuralLitterPool_to_soilSlowPool = 0;
+   soil.nitrogenFlow_surfaceStructuralLitterPool_to_soilMicrobesPool = 0;
+   soil.nitrogenFlow_surfaceMetabolicLitterPool_to_soilMicrobesPool = 0;
+
+   soil.nitrogenFlow_soilStructuralLitterPool_to_soilSlowPool = 0;
+   soil.nitrogenFlow_soilStructuralLitterPool_to_soilActivePool = 0;
+   soil.nitrogenFlow_soilMetabolicLitterPool_to_soilActivePool = 0;
+
+   soil.nitrogenFlow_soilMicrobesPool_to_soilSlowPool = 0;
+
+   soil.nitrogenFlow_soilActivePool_to_soilSlowPool = 0;
+   soil.nitrogenFlow_soilActivePool_to_soilPassivePool = 0;
+
+   soil.nitrogenFlow_soilSlowPool_to_soilActivePool = 0;
+   soil.nitrogenFlow_soilSlowPool_to_soilPassivePool = 0;
+
+   soil.nitrogenFlow_soilPassivePool_to_soilActivePool = 0;
+
+   soil.NLeach = 0;
+   soil.LeachingN = 0;
+
+   soil.nitrogenFlow_surfaceStructuralLitterPool_to_soilSlowPool = 0;
+   soil.nitrogenFlow_surfaceStructuralLitterPool_to_soilMicrobesPool = 0;
+   soil.nitrogenFlow_soilStructuralLitterPool_to_soilSlowPool = 0;
+   soil.nitrogenFlow_soilStructuralLitterPool_to_soilActivePool = 0;
+   soil.nitrogenFlow_surfaceMetabolicLitterPool_to_soilMicrobesPool = 0;
+   soil.nitrogenFlow_soilMetabolicLitterPool_to_soilActivePool = 0;
+
+   soil.nitrogenFlow_soilMicrobesPool_to_soilSlowPool = 0;
+
+   soil.nitrogenFlow_soilActivePool_to_soilPassivePool = 0;
+   soil.nitrogenFlow_soilActivePool_to_soilSlowPool = 0;
+
+   soil.nitrogenFlow_soilSlowPool_to_soilPassivePool = 0;
+   soil.nitrogenFlow_soilSlowPool_to_soilActivePool = 0;
+
+   soil.nitrogenFlow_soilPassivePool_to_soilActivePool = 0;
+
+   /* nitrogen respiratory fluxes */
+   soil.respiration_decompositionNitrogen_surfaceStructuralLitterPool_soilSlowPool = 0;
+   soil.respiration_decompositionCarbon_surfaceStructuralLitterPool_soilMicrobesPool = 0;
+   soil.respiration_decompositionNitrogen_surfaceMetabolicLitterPool_soilMicrobesPool = 0;
+
+   soil.respiration_decompositionNitrogen_soilStructuralLitterPool_soilSlowPool = 0;
+   soil.respiration_decompositionNitrogen_soilStructuralLitterPool_soilActivePool = 0;
+   soil.respiration_decompositionNitrogen_soilMetabolicLitterPool_soilActivePool = 0;
+
+   soil.respiration_decompositionNitrogen_soilMicrobesPool_soilSlowPool = 0;
+   soil.respiration_decompositionNitrogen_soilActivePool_soilPassiveAndSlowPool = 0;
+   soil.respiration_decompositionNitrogen_soilSlowPool_soilPassiveAndActivePool = 0;
+   soil.respiration_decompositionNitrogen_soilPassivePool_soilActivePool = 0;
+
+   /* nitrogen mineralization, immobilization and volatilization */
+   soil.nitrogenGrossMineralization = 0;
+   soil.nitrogenNetMineralization = 0;
+   soil.nitrogenVolatilization = 0;
+
+   soil.mineralize_surfaceStructuralLitterPool_to_soilSlowPool = 0;
+   soil.mineralize_surfaceStructuralLitterPool_to_soilMicrobesPool = 0;
+   soil.mineralize_surfaceMetabolicLitterPool_to_soilMicrobesPool = 0;
+
+   soil.mineralize_soilStructuralLitterPool_to_soilSlowPool = 0;
+   soil.mineralize_soilStructuralLitterPool_to_soilActivePool = 0;
+   soil.mineralize_soilMetabolicLitterPool_to_soilActivePool = 0;
+
+   soil.mineralize_soilMicrobesPool_to_soilSlowPool = 0;
+   soil.mineralize_soilActivePool_to_soilPassivePool = 0;
+   soil.mineralize_soilActivePool_to_soilSlowPool = 0;
+   soil.mineralize_soilSlowPool_to_soilPassivePool = 0;
+   soil.mineralize_soilSlowPool_to_soilActivePool = 0;
+   soil.mineralize_soilPassivePool_to_soilActivePool = 0;
+
+   soil.immobilize_surfaceStructuralLitterPool_to_soilSlowPool = 0;
+   soil.immobilize_surfaceStructuralLitterPool_to_soilMicrobesPool = 0;
+   soil.immobilize_surfaceMetabolicLitterPool_to_soilMicrobesPool = 0;
+
+   soil.immobilize_soilStructuralLitterPool_to_soilSlowPool = 0;
+   soil.immobilize_soilStructuralLitterPool_to_soilActivePool = 0;
+   soil.immobilize_soilMetabolicLitterPool_to_soilActivePool = 0;
+
+   soil.immobilize_soilMicrobesPool_to_soilSlowPool = 0;
+   soil.immobilize_soilActivePool_to_soilPassivePool = 0;
+   soil.immobilize_soilActivePool_to_soilSlowPool = 0;
+   soil.immobilize_soilSlowPool_to_soilPassivePool = 0;
+   soil.immobilize_soilSlowPool_to_soilActivePool = 0;
+   soil.immobilize_soilPassivePool_to_soilActivePool = 0;
+
+   soil.C_flux = 0;
+   soil.Nflux = 0;
+   soil.R_total = 0;
+
+   soil.decompositionFactor = 1.0;
 }

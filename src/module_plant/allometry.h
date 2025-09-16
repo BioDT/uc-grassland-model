@@ -1,7 +1,7 @@
 #pragma once
 #include "../module_init/constants.h"
 #include "../utils/utils.h"
-#include <math.h>
+#include <cmath>
 
 /**
  * @brief Represents allometric relationships for plants.

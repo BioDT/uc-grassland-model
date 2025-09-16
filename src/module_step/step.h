@@ -10,6 +10,7 @@
 #include "../module_growth/growth.h"
 #include "../module_management/management.h"
 #include "../module_output/output.h"
+#include "../module_soil/soil.h"
 #include "../utils/utils.h"
 #include <random>
 

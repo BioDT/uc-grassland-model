@@ -55,5 +55,5 @@ public:
    std::vector<double> biomassYieldPerPFT;
 
    void checkPlantsAreAliveInCommunity(UTILS utils);
-   void updateCommunityStateVariablesForOutput(PARAMETER parameter);
+   void updateVegetationStateVariablesForOutput(PARAMETER parameter);
 };

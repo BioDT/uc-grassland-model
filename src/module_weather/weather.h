@@ -64,4 +64,9 @@ public:
     * The values represent the astronomically duration of daylight (from sunrise to sunset, in hours / day).
     */
    std::vector<double> dayLength;
+
+   double calculateAnnualPrecipitationOfSpecificYear(UTILS utils, PARAMETER parameter, int year);
+   double calculateMeanAnnualPrecipitationFromYearAToYearB(UTILS utils, PARAMETER parameter, int yearA, int yearB);
+   double calculateAverageAirTemperatureOfSpecificYear(UTILS utils, PARAMETER parameter, int specificYear);
+   double calculateAverageAirTemperatureFromYearAToYearB(UTILS utils, PARAMETER parameter, int yearA, int yearB);
 };
