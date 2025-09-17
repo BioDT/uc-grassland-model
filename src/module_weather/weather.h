@@ -1,6 +1,8 @@
 #pragma once
 #include <vector>
 #include <iostream>
+#include "../utils/utils.h"
+#include "../module_parameter/parameter.h"
 
 /**
  * @brief Represents weather data for the simulation.

@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
    /**
     * @brief Initializes variables and sets up initial conditions for the simulation.
     */
-   init.initModelSimulation(parameter, community, recruitment, soil, interaction);
+   init.initModelSimulation(utils, parameter, community, recruitment, soil, interaction, weather);
 
    /**
     * @brief Prepares output files for writing simulation results.

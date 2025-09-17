@@ -412,7 +412,7 @@ void RECRUITMENT::transferFailedToGerminateSeedsToLitterPool(UTILS utils, PARAME
    }
 
    /* transfer carbon and nitrogen content of failed seeds to the respective litter pools for decomposition */
-   soil.transferDyingPlantPartsToLitterPools(parameter, failedToGerminateSeeds, parameter.seedMasses[pft], "soil_seed", pft);
+   soil.transferDyingPlantPartsToLitterPools(utils, parameter, failedToGerminateSeeds, parameter.seedMasses[pft], "soil_seed", pft);
 }
 
 /**

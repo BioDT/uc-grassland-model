@@ -80,8 +80,8 @@ public:
    double decisiveCNRatio_soilStructuralLitterPool_soilSlowPool;
 
    // lignin contents
-   ligninContent_surfaceStructuralLitterPool;
-   ligninContent_soilStructuralLitterPool;
+   double ligninContent_surfaceStructuralLitterPool;
+   double ligninContent_soilStructuralLitterPool;
 
    // carbon fluxes
    double carbonFlux_surfaceStructuralLitterPool_to_soilSlowPool;     //*
@@ -228,7 +228,7 @@ public:
    void calculateRespirationOfDecomposition(UTILS utils, std::string transferFromPool, std::string transferToPool);
    void calculateCarbonRespirationOfDecomposition(UTILS utils, std::string transferFromPool, std::string transferToPool);
    void calculateNitrogenRespirationOfDecomposition(UTILS utils, std::string transferFromPool, std::string transferToPool);
-   double determineNitrogenFlux(UTILS utils, std::string ttransferFromPoolype, std::string transferToPool);
+   void determineNitrogenFlux(UTILS utils, std::string transferFromPoolype, std::string transferToPool);
    void immobilizeOrMineralizeNitrogen(UTILS utils, double carbonFlux, double nitrogenFlow, double decisiveCNratio, std::string transferFromPool, std::string transferToPool);
    void immobilizeNitrogen(UTILS utils, std::string transferFromPool, std::string transferToPool, double decisiveCNratio);
    void mineralizeNitrogen(UTILS utils, std::string transferFromPool, std::string transferToPool, double decisiveCNratio, double oldflow);
@@ -236,4 +236,5 @@ public:
    void calculateNonsymbioticNitrogenFixationAndAthmosphericDeposition(UTILS utils, PARAMETER parameter, WEATHER weather);
    void calculateNitrogenLossByVolatilization(UTILS utils);
    void updateSoilPoolsByRespirationAndFluxes(UTILS utils);
+   void doLeaching(UTILS utils);
 };

@@ -41,7 +41,7 @@ void STEP::runModelSimulation(UTILS utils, PARAMETER &parameter, INIT init, ALLO
       interaction.getEnvironmentalConditionsOfDay(weather, soil, management, parameter.day);
 
       /* Calculation of ecological and plant processes */
-      doDayStepOfModelSimulation(utils, parameter, allometry, community, recruitment, mortality, growth, interaction, management, soil);
+      doDayStepOfModelSimulation(utils, parameter, allometry, community, recruitment, mortality, growth, interaction, management, soil, weather);
 
       /*TODO: put both to output class similar as init??? */
       community.updateVegetationStateVariablesForOutput(parameter);
@@ -75,7 +75,7 @@ void STEP::runModelSimulation(UTILS utils, PARAMETER &parameter, INIT init, ALLO
  * @param soil Reference to a `SOIL` object that represents the soil characteristics
  *              affecting plant processes.
  */
-void STEP::doDayStepOfModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT &recruitment, MORTALITY mortality, GROWTH growth, INTERACTION &interaction, MANAGEMENT management, SOIL &soil)
+void STEP::doDayStepOfModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT &recruitment, MORTALITY mortality, GROWTH growth, INTERACTION &interaction, MANAGEMENT management, SOIL &soil, WEATHER weather)
 {
    /* Plant recruitment */
    recruitment.doPlantRecruitment(utils, parameter, allometry, community, management, soil);
@@ -93,7 +93,7 @@ void STEP::doDayStepOfModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMET
    management.applyManagementRegime(utils, community, allometry, parameter);
 
    /* Soil resource dynamics */
-   soil.calculateSoilResourceDynamics(utils, parameter, community);
+   soil.calculateSoilResourceDynamics(utils, parameter, weather);
 }
 
 /**

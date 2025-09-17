@@ -43,7 +43,7 @@ void SOIL::calculateSoilResourceDynamics(UTILS utils, PARAMETER parameter, WEATH
    splitLitterFluxesToStructuralAndMetabolicLitterPools(utils, parameter, weather);
 
    decompositionFactor = calculateTemperatureAndWaterEffectsOnDecomposition(utils, parameter);
-   doDecompositionFluxesInLitterAndSoilPools(utils, decompositionFactor);
+   doDecompositionFluxesInLitterAndSoilPools(utils);
 
    updateSoilPoolsByRespirationAndFluxes(utils);
 
@@ -54,13 +54,13 @@ void SOIL::calculateSoilResourceDynamics(UTILS utils, PARAMETER parameter, WEATH
    calculateNitrogenLossByVolatilization(utils);
 
    // balance = N(respiration) + N(mineralization) - N(immobilization) - volatilization + fixation + fertilizer
-   ecosystemNitrogenBalance = nitrogenNetMineralization - nitrogenVolatilization + nitrogenFixation + nitrogenFertilization;
+   // ecosystemNitrogenBalance = nitrogenNetMineralization - nitrogenVolatilization + nitrogenFixation + nitrogenFertilization;
 
    // R_total = RespC_litter + RespC_soilpools + carbonContentOdm *
    // R_total_biomass_month;
-   ecosystemRespiration = respirationCarbon_litter + respirationCarbon_soilpools + carbonContentOdm * R_total_biomass;
-   ecosystemCarbonBalance = ((carbonContentOdm * (PB_month + ingrowth_month)) - ecosystemRespiration -
-                             LeachingC - carbonContentOdm * (HarvestBb + HarvestBg));
+   // ecosystemRespiration = respirationCarbon_litter + respirationCarbon_soilpools + carbonContentOdm * R_total_biomass;
+   // ecosystemCarbonBalance = ((carbonContentOdm * (PB_month + ingrowth_month)) - ecosystemRespiration -
+   //                          LeachingC - carbonContentOdm * (HarvestBb + HarvestBg));
 
    // add Fertilization option
 }
@@ -343,23 +343,23 @@ void SOIL::calculateDecisiveCarbonNitrogenRatiosForDecomposition(UTILS utils, st
 
    if (transferFromPool == "surface_structural")
    {
-      double biomassContent = soil.carbonContent_surfaceStructuralLitterPool / carbonContentOdm;
-      double nitrogenContentInBiomass = (biomassContent > 0) ? (soil.nitrogenContent_surfaceStructuralLitterPool / biomassContent) : 0;
+      double biomassContent = carbonContent_surfaceStructuralLitterPool / carbonContentOdm;
+      double nitrogenContentInBiomass = (biomassContent > 0) ? (nitrogenContent_surfaceStructuralLitterPool / biomassContent) : 0;
 
       // for decomposition of surface structural litter to soil microbes pool
-      soil.decisiveCNRatio_surfaceStructuralLitterPool_soilMicrobesPool = std::min(16.0 + nitrogenContentInBiomass * ((10.0 - 16.0) / 0.02), 10.0);
+      decisiveCNRatio_surfaceStructuralLitterPool_soilMicrobesPool = std::min(16.0 + nitrogenContentInBiomass * ((10.0 - 16.0) / 0.02), 10.0);
 
       // for decomposition of surface structural litter to soil slow pool
-      double auxillaryVariable = soil.decisiveCNRatio_surfaceStructuralLitterPool_soilMicrobesPool + (12.0 + 3.0 * (soil.decisiveCNRatio_surfaceStructuralLitterPool_soilMicrobesPool - 10.0));
-      soil.decisiveCNRatio_surfaceStructuralLitterPool_soilSlowPool = std::max(5.0, auxillaryVariable);
+      double auxillaryVariable = decisiveCNRatio_surfaceStructuralLitterPool_soilMicrobesPool + (12.0 + 3.0 * (decisiveCNRatio_surfaceStructuralLitterPool_soilMicrobesPool - 10.0));
+      decisiveCNRatio_surfaceStructuralLitterPool_soilSlowPool = std::max(5.0, auxillaryVariable);
    }
    else if (transferFromPool == "soil_structural")
    {
       // transfer to soil active pool
-      soil.decisiveCNRatio_soilStructuralLitterPool_soilActivePool = 14.0;
+      decisiveCNRatio_soilStructuralLitterPool_soilActivePool = 14.0;
 
       // transfer to soil slow pool
-      soil.decisiveCNRatio_soilStructuralLitterPool_soilSlowPool = 20.0;
+      decisiveCNRatio_soilStructuralLitterPool_soilSlowPool = 20.0;
    }
    else if (transferFromPool == "surface_metabolic")
    {
@@ -724,7 +724,7 @@ bool SOIL::decompose(UTILS utils, double carbonFlux, double ligninContent, std::
                                         decisiveCNRatio_soilActivePool_soilPassivePool, transferFromPool, transferToPool);
 
          // leaching
-         doLeaching();
+         doLeaching(utils);
 
          // -------------- flux to slow soil pool
          transferToPool = "slow";
@@ -828,7 +828,7 @@ void SOIL::calculateCarbonRespirationOfDecomposition(UTILS utils, std::string tr
       }
       else if (transferToPool == "active")
       {
-         respiration_decompositionCarbon_soilStructuralLitterPool_soilActivePool = carbonFlux_soilStructuralLitterPool_to_soilActivePool 0.55;
+         respiration_decompositionCarbon_soilStructuralLitterPool_soilActivePool = carbonFlux_soilStructuralLitterPool_to_soilActivePool * 0.55;
          carbonFlux_soilStructuralLitterPool_to_soilActivePool -= respiration_decompositionCarbon_soilStructuralLitterPool_soilActivePool;
       }
    }
@@ -951,7 +951,7 @@ void SOIL::calculateNitrogenRespirationOfDecomposition(UTILS utils, std::string 
    }
    else if (transferPoolFrom == "active")
    {
-      if (transferPoolTo = "slow_passive")
+      if (transferPoolTo == "slow_passive")
       {
          actualCNRatioOfPool = (nitrogenContent_soilActivePool / carbonContent_soilActivePool);
 
@@ -961,7 +961,7 @@ void SOIL::calculateNitrogenRespirationOfDecomposition(UTILS utils, std::string 
    }
    else if (transferPoolFrom == "slow")
    {
-      if (transferPoolTo = "active_passive")
+      if (transferPoolTo == "active_passive")
       {
          actualCNRatioOfPool = (nitrogenContent_soilSlowPool / carbonContent_soilSlowPool);
 
@@ -971,7 +971,7 @@ void SOIL::calculateNitrogenRespirationOfDecomposition(UTILS utils, std::string 
    }
    else if (transferPoolFrom == "passive")
    {
-      if (transferPoolTo = "active")
+      if (transferPoolTo == "active")
       {
          actualCNRatioOfPool = (nitrogenContent_soilPassivePool / carbonContent_soilPassivePool);
 
@@ -1467,4 +1467,9 @@ void SOIL::calculateNitrogenLossByVolatilization(UTILS utils)
       nitrogenContent_soilMineralPoolPerSoilLayer.at(0) = 0.0;
       utils.handleError("Soil mineral nitrogen in the top soil layer is negative!");
    }
+}
+
+void SOIL::doLeaching(UTILS utils)
+{
+   //....
 }

@@ -71,7 +71,8 @@ double WEATHER::calculateAverageAirTemperatureFromYearAToYearB(UTILS utils, PARA
 
    for (int i = yearA; i <= yearB; i++)
    {
-      averageAirTemperature += calculateAverageAirTemperatureOfSpecificYear(utils, parameter, i);
+      double averageTemperature = calculateAverageAirTemperatureOfSpecificYear(utils, parameter, i);
+      averageAirTemperature += averageTemperature;
    }
 
    return (averageAirTemperature / numberOfYears);

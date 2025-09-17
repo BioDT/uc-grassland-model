@@ -5,7 +5,7 @@ INIT::~INIT() {};
 
 /* main function to initialize state variables of the simulation start */
 /* is done only once at the beginning of a simulation */
-void INIT::initModelSimulation(PARAMETER &parameter, COMMUNITY &community, RECRUITMENT &recruitment, SOIL &soil, INTERACTION &interaction, WEATHER weather)
+void INIT::initModelSimulation(UTILS utils, PARAMETER &parameter, COMMUNITY &community, RECRUITMENT &recruitment, SOIL &soil, INTERACTION &interaction, WEATHER weather)
 {
    /* init time variables */
    initTimeVariables(parameter);
@@ -62,14 +62,14 @@ void INIT::initVegetationStateVariables(COMMUNITY &community, PARAMETER paramete
    }
 
    /* Mortality variables */
-   soil.greenCarbonSurfaceLitter = 0;
-   soil.brownCarbonSurfaceLitter = 0;
-   soil.rootCarbonSoilLitter = 0;
-   soil.seedCarbonSoilLitter = 0;
-   soil.greenNitrogenSurfaceLitter = 0;
-   soil.brownNitrogenSurfaceLitter = 0;
-   soil.rootNitrogenSoilLitter = 0;
-   soil.seedNitrogenSoilLitter = 0;
+   soil.carbonContent_surfaceGreenLitterPool = 0;
+   soil.carbonContent_surfaceBrownLitterPool = 0;
+   soil.carbonContent_soilRootLitterPool = 0;
+   soil.carbonContent_soilSeedLitterPool = 0;
+   soil.nitrogenContent_surfaceGreenLitterPool = 0;
+   soil.nitrogenContent_surfaceBrownLitterPool = 0;
+   soil.nitrogenContent_soilRootLitterPool = 0;
+   soil.nitrogenContent_soilSeedLitterPool = 0;
 }
 
 void INIT::resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &recruitment, COMMUNITY &community, INTERACTION &interaction)
@@ -147,7 +147,7 @@ void INIT::resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &rec
 /**
  * @cite: function adapted from Century 4.0 model
  */
-void INIT::initSoilCarbonNitrogenWaterStateVariables(UTILS utils, SOIL &soil, WEATHER weather, PARAMETER parameter)
+void INIT::initSoilResourceStateVariables(UTILS utils, SOIL &soil, WEATHER weather, PARAMETER parameter)
 {
    // litter pools are set to zero at the beginning
    soil.carbonContent_surfaceStructuralLitterPool = 0;
@@ -167,7 +167,7 @@ void INIT::initSoilCarbonNitrogenWaterStateVariables(UTILS utils, SOIL &soil, WE
    soil.nitrogenContent_soilMicrobesPool = soil.carbonContent_soilMicrobesPool / 16.0;
 
    // soil pools are dependent on average weather variables and soil attributes
-   initCarbonContentOfSoilPools = calculateInitialCarbonContentOfAllSoilPools(utils, weather, parameter);
+   double initCarbonContentOfSoilPools = calculateInitialCarbonContentOfAllSoilPools(utils, weather, parameter, soil);
    soil.carbonContent_soilActivePool = initCarbonContentOfSoilPools * 0.02;
    soil.carbonContent_soilSlowPool = initCarbonContentOfSoilPools * 0.64;
    soil.carbonContent_soilPassivePool = initCarbonContentOfSoilPools * 0.34;
@@ -180,7 +180,7 @@ void INIT::initSoilCarbonNitrogenWaterStateVariables(UTILS utils, SOIL &soil, WE
  * @cite: Century4.0
  * soil pools are initialized based on average weather data
  */
-double INIT::calculateInitialCarbonContentOfAllSoilPools(UTILS utils, WEATHER weather, PARAMETER parameter)
+double INIT::calculateInitialCarbonContentOfAllSoilPools(UTILS utils, WEATHER weather, PARAMETER parameter, SOIL soil)
 {
    // TODO: or choose mean annual/average values for entire simulation period instead of first year only ?
    double annualPrecipitation = weather.calculateAnnualPrecipitationOfSpecificYear(utils, parameter, parameter.firstYear) / 10.0; // cm
@@ -196,7 +196,7 @@ double INIT::calculateInitialCarbonContentOfAllSoilPools(UTILS utils, WEATHER we
    }
 
    double initCarbonContentOfSoilPools = ((-8.27E-01 * averageAirTemperature) + (2.24E-02 * averageAirTemperature * averageAirTemperature) + (annualPrecipitation * 1.27E-01) - (9.38E-04 * annualPrecipitation * annualPrecipitation) +
-                                          (annualPrecipitation * siltContent * 8.99E-02) + (annualPrecipitation * clayContent * 6.00E-02) + 4.09) *
+                                          (annualPrecipitation * soil.siltContent * 8.99E-02) + (annualPrecipitation * soil.clayContent * 6.00E-02) + 4.09) *
                                          1000.0; // g/m²
 
    return (initCarbonContentOfSoilPools);
