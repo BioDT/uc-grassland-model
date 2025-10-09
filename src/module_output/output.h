@@ -6,7 +6,12 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
+#ifdef _WIN32
 #include <direct.h>
+#else
+#include <sys/stat.h>
+#include <sys/types.h>
+#endif
 
 /**
  * @brief Handles output operations for the simulation.

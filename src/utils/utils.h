@@ -1,6 +1,10 @@
 #pragma once
 #include <iostream>
+#ifdef _WIN32
 #include <direct.h>
+#else
+#include <sys/stat.h> // For mkdir on Unix-like systems
+#endif
 #include <vector>
 #include <string>
 #include <locale>
