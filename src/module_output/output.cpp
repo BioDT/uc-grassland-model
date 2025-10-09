@@ -264,6 +264,7 @@ void OUTPUT::createOutputFolder(std::string path, UTILS utils)
       outputDirectory = outputDirectory + utils.strings.at(it) + "\\";
    }
    outputDirectory = outputDirectory + "output\\";
+}
 
 /**
  * @brief Reads output writing dates from a file.
