@@ -1,6 +1,5 @@
 #include "output.h"
 #include <sys/stat.h> // Required for mkdir
-#include <errno.h>    // Required for errno and EEXIST
 
 OUTPUT::OUTPUT() {};
 OUTPUT::~OUTPUT() {};
@@ -265,11 +264,6 @@ void OUTPUT::createOutputFolder(std::string path, UTILS utils)
       outputDirectory = outputDirectory + utils.strings.at(it) + "\\";
    }
    outputDirectory = outputDirectory + "output\\";
-   if (mkdir(outputDirectory.c_str(), 0777) && errno != EEXIST) {
-        // Handle error, though the current code doesn't explicitly handle mkdir errors
-        // For now, just a comment. If utils.handleError was suitable, I would use it.
-   }
-}
 
 /**
  * @brief Reads output writing dates from a file.
