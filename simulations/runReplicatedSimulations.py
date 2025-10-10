@@ -1,5 +1,6 @@
 import sys
 import os
+import platform
 
 #print ('argument list', sys.argv)
 lat = sys.argv[1]
@@ -23,6 +24,11 @@ for i in range(11):
     # write the modified configuration file	
     with open(filename, "w", encoding="utf-8") as configFile:
         configFile.writelines(singleLines)
-    os.system('runSimulation.cmd')
+    
+    # Run the appropriate simulation script based on the operating system
+    if platform.system() == 'Windows':
+        os.system('runSimulation.cmd')
+    else:
+        os.system('./runSimulation.sh')
 
 

@@ -81,6 +81,22 @@ with open("runSimulation.cmd", "r") as batchFile:
 with open("runSimulation.cmd", "w") as batchFile:
     batchFile.writelines(singleLines)
 
+##################################
+# model run bash script ##########
+##################################
+
+# Create the bash script with the actual parameters
+bash_script_content = f"""#!/bin/bash
+
+../../build/GRASSMIND3 "${{pwd}}/lat{lat}_lon{lon}__{first_year}-01-01_{last_year}-12-31__configuration__generic_v1.txt" "${{pwd}}/stout.txt" "${{pwd}}/sterr.txt"
+"""
+
+with open("runSimulation.sh", "w") as bashFile:
+    bashFile.write(bash_script_content)
+
+# Make the bash script executable
+os.chmod("runSimulation.sh", 0o755)
+
 
 ##################################
 # plant traits file ##############
