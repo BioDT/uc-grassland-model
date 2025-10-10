@@ -1,11 +1,15 @@
 import sys
 import os
+import platform
 
 lat = sys.argv[1]
 lon = sys.argv[2]
 first_year = sys.argv[3]
 last_year = sys.argv[4]
 deimsID = sys.argv[5]
+
+# Detect operating system
+is_windows = platform.system() == 'Windows'
 
 ##################################
 # configuration file #############
@@ -30,13 +34,13 @@ keywordEnd = "lastYear"
 newValueEnd = last_year
 
 keywordWeather = "weatherFile"
-newValueWeather = "lat" + lat + "_lon" + lon + "__" + first_year + "-01-01_" + last_year + "-12-31__weather.txt"
+newValueWeather = "../../scenarios/lat" + lat + "_lon" + lon + "/lat" + lat + "_lon" + lon + "/weather/lat" + lat + "_lon" + lon + "__" + first_year + "-01-01_" + last_year + "-12-31__weather.txt"
 
 keywordSoil = "soilFile"
-newValueSoil = "lat" + lat + "_lon" + lon + "__2020__soil.txt"
+newValueSoil = "../../scenarios/lat" + lat + "_lon" + lon + "/lat" + lat + "_lon" + lon + "/soil/lat" + lat + "_lon" + lon + "__2020__soil.txt"
 
 keywordManagement = "managementFile"
-newValueManagement = "lat" + lat + "_lon" + lon + "__" + first_year + "-01-01_" + last_year + "-12-31__management__GER_Schwieder.txt"
+newValueManagement = "../../scenarios/lat" + lat + "_lon" + lon + "/lat" + lat + "_lon" + lon + "/management/lat" + lat + "_lon" + lon + "__" + first_year + "-01-01_" + last_year + "-12-31__management__GER_Schwieder.txt"
 
 
 # read-in the configuration file
@@ -68,35 +72,37 @@ with open(filename, "w", encoding="utf-8") as configFile:
 # model run batch file ###########
 ##################################
 
-keywordRun = "grassDTmodel.exe"
-newValueRun = "%olddir%\lat" + lat + "_lon" + lon + "__" + first_year + "-01-01_" + last_year + "-12-31__configuration__generic_v1.txt 1> %olddir%\stout.txt 2> %olddir%\sterr.txt"
+if is_windows:
+    # Windows batch file modification
+    keywordRun = "grassDTmodel.exe"
+    newValueRun = r"%olddir%\lat" + lat + "_lon" + lon + "__" + first_year + "-01-01_" + last_year + r"-12-31__configuration__generic_v1.txt 1> %olddir%\stout.txt 2> %olddir%\sterr.txt"
+    
+    # read-in the batch-file
+    with open("runSimulation.cmd", "r") as batchFile:
+        singleLines = batchFile.readlines()
+        for i, eachLine in enumerate(singleLines):
+            if eachLine.startswith(keywordRun):
+                singleLines[i] = f"{keywordRun} {newValueRun}\n"
+                
+    with open("runSimulation.cmd", "w") as batchFile:
+        batchFile.writelines(singleLines)
+    
+    print("Created/modified runSimulation.cmd for Windows")
 
-# read-in the batch-file
-with open("runSimulation.cmd", "r") as batchFile:
-    singleLines = batchFile.readlines()
-    for i, eachLine in enumerate(singleLines):
-        if eachLine.startswith(keywordRun):
-            singleLines[i] = f"{keywordRun} {newValueRun}\n"
-            
-with open("runSimulation.cmd", "w") as batchFile:
-    batchFile.writelines(singleLines)
+else:
+    # Unix bash script creation
+    bash_script_content = f"""#!/bin/bash
 
-##################################
-# model run bash script ##########
-##################################
-
-# Create the bash script with the actual parameters
-bash_script_content = f"""#!/bin/bash
-
-../../build/GRASSMIND3 "${{pwd}}/lat{lat}_lon{lon}__{first_year}-01-01_{last_year}-12-31__configuration__generic_v1.txt" "${{pwd}}/stout.txt" "${{pwd}}/sterr.txt"
+../../build/GRASSMIND3 "${{PWD}}/lat{lat}_lon{lon}__{first_year}-01-01_{last_year}-12-31__configuration__generic_v1.txt" "${{PWD}}/stout.txt" "${{PWD}}/sterr.txt"
 """
-
-with open("runSimulation.sh", "w") as bashFile:
-    bashFile.write(bash_script_content)
-
-# Make the bash script executable
-os.chmod("runSimulation.sh", 0o755)
-
+    
+    with open("runSimulation.sh", "w") as bashFile:
+        bashFile.write(bash_script_content)
+    
+    # Make the bash script executable
+    os.chmod("runSimulation.sh", 0o755)
+    
+    print("Created runSimulation.sh for Unix/Linux")
 
 ##################################
 # plant traits file ##############

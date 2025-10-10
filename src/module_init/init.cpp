@@ -149,6 +149,23 @@ void INIT::resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &rec
  */
 void INIT::initSoilResourceStateVariables(UTILS utils, SOIL &soil, WEATHER weather, PARAMETER parameter)
 {
+   // Initialize soil layer vectors (20 layers)
+   int soilLayers = 20;
+   soil.waterContent_soilWaterPoolPerLayer.resize(soilLayers, 0.0);
+   soil.nitrogenContent_soilMineralPoolPerSoilLayer.resize(soilLayers, 0.0);
+   
+   // Initialize water content to field capacity for all layers
+   for (int i = 0; i < soilLayers; i++)
+   {
+      if (i < soil.fieldCapacity.size())
+      {
+         soil.waterContent_soilWaterPoolPerLayer[i] = soil.fieldCapacity[i];
+      }
+   }
+   
+   // Initialize mineral nitrogen in top layer (layer 0)
+   soil.nitrogenContent_soilMineralPoolPerSoilLayer[0] = 1.0; // initial value in g/m²
+   
    // litter pools are set to zero at the beginning
    soil.carbonContent_surfaceStructuralLitterPool = 0;
    soil.carbonContent_soilStructuralLitterPool = 0;

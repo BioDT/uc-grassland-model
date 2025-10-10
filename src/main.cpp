@@ -48,6 +48,17 @@ int main(int argc, char *argv[])
    {
       commandLineInput.push_back(argv[it]);
    }
+   
+   /**
+    * @brief Check if the required command line argument is provided.
+    */
+   if (argc < 2)
+   {
+      std::cerr << "Error: Missing required argument." << std::endl;
+      std::cerr << "Usage: " << argv[0] << " <path_to_configuration_file>" << std::endl;
+      return 1;
+   }
+   
    std::string path = commandLineInput.at(1);
 
    /**

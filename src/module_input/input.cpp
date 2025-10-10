@@ -133,6 +133,13 @@ void INPUT::extractLinesOfCorrectFormat(UTILS utils, std::string keyword, std::v
          }
       }
 
+      // Skip empty lines (lines with only whitespace/tabs)
+      if (cleanLine.empty())
+      {
+         index++;
+         continue;
+      }
+
       if (cleanLine.at(0) == keyword) // the correct format: (cleaned) line should start with the parameter name (here, keyword) followed by its value
       {
          if (cleanLine.size() == 1)
@@ -574,14 +581,32 @@ void INPUT::transferPlantTraitsParameterValueToModelParameter(PARAMETER &paramet
 /* open and read plant traits parameter file */
 void INPUT::openAndReadPlantTraitsFile(std::string path, UTILS utils, PARAMETER &parameter)
 {
+   // Clear the directory string from any previous use
+   plantTraitsDirectory.clear();
+   
+   // Determine the platform-specific path separator
    char separator = '\\';
+#ifdef __unix__
+   separator = '/';
+#elif __APPLE__
+   separator = '/';
+#endif
+   
    utils.strings.clear();
    utils.splitString(path, separator);
-   for (int it = 0; it < utils.strings.size() - 3; it++)
+   
+   // Check if we have enough path components before proceeding
+   if (utils.strings.size() < 1)
    {
-      plantTraitsDirectory = plantTraitsDirectory + utils.strings.at(it) + "\\";
+      utils.handleError("Error: Invalid path format. Path: " + path);
    }
-   plantTraitsDirectory = plantTraitsDirectory + "parameters\\" + parameter.plantTraitsFile;
+   
+   // Build the directory path (all components except the filename)
+   for (int it = 0; it < utils.strings.size() - 1; it++)
+   {
+      plantTraitsDirectory = plantTraitsDirectory + utils.strings.at(it) + separator;
+   }
+   plantTraitsDirectory = plantTraitsDirectory + ".." + separator + ".." + separator + "parameters" + separator + parameter.plantTraitsFile;
    const char *filename = plantTraitsDirectory.c_str();
 
    for (auto par : parameter.plantTraitsParameterNames) /* parameterNames are listed in the class definition of PARAMETER (parameter.h)*/
@@ -606,20 +631,34 @@ void INPUT::openAndReadPlantTraitsFile(std::string path, UTILS utils, PARAMETER 
 /* read-in weather variables from input file */
 void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &parameter, WEATHER &weather)
 {
+   // Clear the directory string from any previous use
+   weatherDirectory.clear();
+   
+   // Determine the platform-specific path separator
    char separator = '\\';
+#ifdef __unix__
+   separator = '/';
+#elif __APPLE__
+   separator = '/';
+#endif
+   
    utils.strings.clear();
    utils.splitString(path, separator);
-   for (int it = 0; it < utils.strings.size() - 3; it++)
+   
+   // Check if we have enough path components before proceeding
+   if (utils.strings.size() < 1)
    {
-      weatherDirectory = weatherDirectory + utils.strings.at(it) + "\\";
+      utils.handleError("Error: Invalid path format for weather file. Path: " + path);
    }
-   std::string location = utils.strings.at(utils.strings.size() - 1);
-   separator = '_';
-   utils.strings.clear();
-   utils.splitString(location, separator);
-   location = utils.strings.at(0) + "_" + utils.strings.at(1);
-
-   weatherDirectory = weatherDirectory + "scenarios\\" + location + "\\weather\\" + parameter.weatherFile;
+   
+   // Build the directory path (all components except the filename)
+   for (int it = 0; it < utils.strings.size() - 1; it++)
+   {
+      weatherDirectory = weatherDirectory + utils.strings.at(it) + separator;
+   }
+   
+   // Append the weatherFile (which may contain relative paths like ../../)
+   weatherDirectory = weatherDirectory + parameter.weatherFile;
    const char *filename = weatherDirectory.c_str();
 
    weather.weatherDates.clear();
@@ -710,20 +749,34 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
 /* read-in management information from input file */
 void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &parameter, MANAGEMENT &management)
 {
+   // Clear the directory string from any previous use
+   manageDirectory.clear();
+   
+   // Determine the platform-specific path separator
    char separator = '\\';
+#ifdef __unix__
+   separator = '/';
+#elif __APPLE__
+   separator = '/';
+#endif
+   
    utils.strings.clear();
    utils.splitString(path, separator);
-   for (int it = 0; it < utils.strings.size() - 3; it++)
+   
+   // Check if we have enough path components before proceeding
+   if (utils.strings.size() < 1)
    {
-      manageDirectory = manageDirectory + utils.strings.at(it) + "\\";
+      utils.handleError("Error: Invalid path format for management file. Path: " + path);
    }
-   std::string location = utils.strings.at(utils.strings.size() - 1);
-   separator = '_';
-   utils.strings.clear();
-   utils.splitString(location, separator);
-   location = utils.strings.at(0) + "_" + utils.strings.at(1);
-
-   manageDirectory = manageDirectory + "scenarios\\" + location + "\\management\\" + parameter.managementFile;
+   
+   // Build the directory path (all components except the filename)
+   for (int it = 0; it < utils.strings.size() - 1; it++)
+   {
+      manageDirectory = manageDirectory + utils.strings.at(it) + separator;
+   }
+   
+   // Append the managementFile (which may contain relative paths like ../../)
+   manageDirectory = manageDirectory + parameter.managementFile;
    const char *filename = manageDirectory.c_str();
 
    management.mowingDate.clear();
@@ -953,20 +1006,34 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
 /* Reads-in soil parameters from input file */
 void INPUT::openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parameter, SOIL &soil)
 {
+   // Clear the directory string from any previous use
+   soilDirectory.clear();
+   
+   // Determine the platform-specific path separator
    char separator = '\\';
+#ifdef __unix__
+   separator = '/';
+#elif __APPLE__
+   separator = '/';
+#endif
+   
    utils.strings.clear();
    utils.splitString(path, separator);
-   for (int it = 0; it < utils.strings.size() - 3; it++)
+   
+   // Check if we have enough path components before proceeding
+   if (utils.strings.size() < 1)
    {
-      soilDirectory = soilDirectory + utils.strings.at(it) + "\\";
+      utils.handleError("Error: Invalid path format for soil file. Path: " + path);
    }
-   std::string location = utils.strings.at(utils.strings.size() - 1);
-   separator = '_';
-   utils.strings.clear();
-   utils.splitString(location, separator);
-   location = utils.strings.at(0) + "_" + utils.strings.at(1);
-
-   soilDirectory = soilDirectory + "scenarios\\" + location + "\\soil\\" + parameter.soilFile;
+   
+   // Build the directory path (all components except the filename)
+   for (int it = 0; it < utils.strings.size() - 1; it++)
+   {
+      soilDirectory = soilDirectory + utils.strings.at(it) + separator;
+   }
+   
+   // Append the soilFile (which may contain relative paths like ../../)
+   soilDirectory = soilDirectory + parameter.soilFile;
    const char *filename = soilDirectory.c_str();
 
    soil.siltContent = -1;

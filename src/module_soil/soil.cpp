@@ -182,7 +182,8 @@ double SOIL::calculateLigninFraction(UTILS utils, WEATHER weather, PARAMETER par
       param2 = 0.0015;
    }
 
-   ligninFraction = param1 + (param2 * (weather.precipitation.at(parameter.day) / 10.0));
+   // parameter.day is 1-indexed, but weather arrays are 0-indexed
+   ligninFraction = param1 + (param2 * (weather.precipitation.at(parameter.day - 1) / 10.0));
 
    double lowerLimit = 0.02 / 365.0;
    double upperLimit = 0.5 / 365.0;
@@ -1440,7 +1441,8 @@ void SOIL::calculateNonsymbioticNitrogenFixationAndAthmosphericDeposition(UTILS 
    double athomsphericDeposition;
 
    nonsymbioticNitrogenFixation = 0;
-   athomsphericDeposition = 0.01 * (weather.potEvapoTranspiration.at(parameter.day) - (30.0 / 365.0));
+   // parameter.day is 1-indexed, but weather arrays are 0-indexed
+   athomsphericDeposition = 0.01 * (weather.potEvapoTranspiration.at(parameter.day - 1) - (30.0 / 365.0));
    athomsphericDeposition = std::max(athomsphericDeposition, 0.0);
 
    nitrogenContent_soilMineralPoolPerSoilLayer.at(0) += (athomsphericDeposition + nonsymbioticNitrogenFixation);

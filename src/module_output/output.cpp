@@ -257,13 +257,33 @@ void OUTPUT::closeOutputFiles(UTILS utils)
  */
 void OUTPUT::createOutputFolder(std::string path, UTILS utils)
 {
+   // Clear any previous path
+   outputDirectory.clear();
+   
+   // Determine the platform-specific path separator
    char separator = '\\';
+#ifdef __unix__
+   separator = '/';
+#elif __APPLE__
+   separator = '/';
+#endif
+   
    utils.splitString(path, separator);
    for (int it = 0; it < utils.strings.size() - 1; it++)
    {
-      outputDirectory = outputDirectory + utils.strings.at(it) + "\\";
+      outputDirectory = outputDirectory + utils.strings.at(it) + separator;
    }
-   outputDirectory = outputDirectory + "output\\";
+   outputDirectory = outputDirectory + "output" + separator;
+   
+   // Actually create the output directory
+   // Remove trailing separator for mkdir
+   std::string dirToCreate = outputDirectory.substr(0, outputDirectory.length() - 1);
+   
+#ifdef _WIN32
+   _mkdir(dirToCreate.c_str());
+#else
+   mkdir(dirToCreate.c_str(), 0755);
+#endif
 }
 
 /**
@@ -286,11 +306,21 @@ void OUTPUT::createOutputFolder(std::string path, UTILS utils)
  */
 void OUTPUT::openAndReadOutputWritingDates(std::string path, UTILS utils, PARAMETER &parameter)
 {
+   // Clear any previous path
+   fileDirectory.clear();
+   
+   // Determine the platform-specific path separator
    char separator = '\\';
+#ifdef __unix__
+   separator = '/';
+#elif __APPLE__
+   separator = '/';
+#endif
+   
    utils.splitString(path, separator);
    for (int it = 0; it < utils.strings.size() - 1; it++)
    {
-      fileDirectory = fileDirectory + utils.strings.at(it) + "\\";
+      fileDirectory = fileDirectory + utils.strings.at(it) + separator;
    }
    fileDirectory = fileDirectory + parameter.outputWritingDatesFile;
 
