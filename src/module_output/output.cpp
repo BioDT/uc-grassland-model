@@ -5,6 +5,79 @@ OUTPUT::OUTPUT() {};
 OUTPUT::~OUTPUT() {};
 
 /**
+ * @brief Calculates aggregated state variables based on dynamic changes of the community vector.
+ *
+ * This function updates various state variables related to the plant community, including
+ * PFT composition and total amount of plants. It iterates over all plant cohorts in the
+ * `allPlants` vector, aggregating their amount into PFT-specific and community-wide totals values.
+ *
+ * After processing all cohorts, the function normalizes the PFT composition values to
+ * reflect their proportions relative to the total amount of plants in the community.
+ *
+ * @param parameter A parameter object that provides information about the number of PFTs
+ *                  (Plant Functional Types) in the simulation.
+ */
+void OUTPUT::updateVegetationStateVariablesForOutput(PARAMETER parameter, COMMUNITY &community, SOIL soil, MANAGEMENT management, RECRUITMENT recruitment)
+{
+   // Summing up plant-specific variables for population- and community-based variables
+   if (community.allPlants.size() > 0)
+   {
+      for (int cohortindex = 0; cohortindex < community.allPlants.size(); cohortindex++)
+      {
+         // PFT-specific calculations
+         community.pftComposition[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->amount;
+         community.numberOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->amount;
+         community.coveredAreaOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->coveredArea * community.allPlants[cohortindex]->amount;
+         community.shootBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->shootBiomass * community.allPlants[cohortindex]->amount;
+         community.greenShootBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->shootBiomassGreenLeaves * community.allPlants[cohortindex]->amount;
+         community.brownShootBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->shootBiomassBrownLeaves * community.allPlants[cohortindex]->amount;
+
+         if (community.allPlants.at(cohortindex)->height > parameter.clippingHeightOfBiomassMeasurement)
+         {
+            community.allPlants.at(cohortindex)->shootBiomassAboveClippingHeight =
+                ((community.allPlants.at(cohortindex)->height - parameter.clippingHeightOfBiomassMeasurement) / community.allPlants.at(cohortindex)->height) * community.allPlants.at(cohortindex)->shootBiomass;
+            community.clippedShootBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->shootBiomassAboveClippingHeight * community.allPlants[cohortindex]->amount;
+         }
+
+         community.rootBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->rootBiomass * community.allPlants[cohortindex]->amount;
+         community.recruitmentBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->recruitmentBiomass * community.allPlants[cohortindex]->amount;
+         community.exudationBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->exudationBiomass * community.allPlants[cohortindex]->amount;
+
+         community.gppOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->gpp * community.allPlants[cohortindex]->amount;
+         community.nppOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->npp * community.allPlants[cohortindex]->amount;
+         community.carbonRespirationOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->totalRespiration * community.allPlants[cohortindex]->amount;
+
+         // Community-wide calculations
+         community.totalNumberOfPlantsInCommunity += community.allPlants[cohortindex]->amount;
+         community.coveredAreaOfAllPlants += community.allPlants[cohortindex]->coveredArea * parameter.plantShootOverlapFactors[community.allPlants[cohortindex]->pft];
+         community.carbonRespirationOfAllPlants += community.allPlants[cohortindex]->totalRespiration * community.allPlants[cohortindex]->amount * carbonContentOdm;
+         community.carbonNPPOfAllPlants += community.allPlants[cohortindex]->npp * community.allPlants[cohortindex]->amount * carbonContentOdm;
+      }
+
+      // Normalizations
+      if (community.totalNumberOfPlantsInCommunity > 0)
+      {
+         for (int pft = 0; pft < parameter.pftCount; pft++)
+         {
+            community.pftComposition[pft] *= 100.0 / community.totalNumberOfPlantsInCommunity;
+         }
+      }
+   }
+
+   // Summing up PFT-specific variables for community-based variables
+   for (int pft = 0; pft < parameter.pftCount; pft++)
+   {
+      community.carbonSeedlingIngrowthOfAllPlants += recruitment.successfullGerminatedSeeds.at(pft) * parameter.seedMasses[pft] * carbonContentOdm;
+   }
+
+   // Summing up community-specific variables for ecosystem-based variables
+   community.ecosystemNitrogenBalance = soil.nitrogenNetMineralization - soil.nitrogenVolatilization + soil.nitrogenFixationToSoil + soil.addedMineralNitrogenToSoilByFertilization;
+   community.ecosystemCarbonRespiration = soil.respirationCarbon_litter + soil.respirationCarbon_soilpools + community.carbonRespirationOfAllPlants;
+   community.ecosystemCarbonBalance = community.carbonNPPOfAllPlants + community.carbonSeedlingIngrowthOfAllPlants - community.ecosystemCarbonRespiration - soil.carbonContent_leachedFromSoil - (carbonContentOdm * community.biomassYield);
+}
+
+
+/**
  * @brief Creates the result folder, output file, and its header.
  *
  * This method prepares the model output by performing the following steps:

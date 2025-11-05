@@ -8,7 +8,6 @@
 #include "../module_recruitment/recruitment.h"
 #include "../module_mortality/mortality.h"
 #include "../module_growth/growth.h"
-#include "../module_management/management.h"
 #include "../module_output/output.h"
 #include "../module_soil/soil.h"
 #include "../module_weather/weather.h"

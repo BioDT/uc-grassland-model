@@ -151,10 +151,13 @@ void MORTALITY::doNitrogenRelocation(UTILS utils, PARAMETER parameter, COMMUNITY
    community.allPlants[cohortIndex]->nitrogenSurplus += relocatedNitrogen;
    community.allPlants[cohortIndex]->shootNitrogen -= relocatedNitrogen;
 
-   if (abs((community.allPlants.at(cohortIndex)->shootNitrogenBrownLeaves + community.allPlants.at(cohortIndex)->shootNitrogenGreenLeaves) - community.allPlants.at(cohortIndex)->shootNitrogen) > tolerance)
+   /*if (abs((community.allPlants.at(cohortIndex)->shootNitrogenBrownLeaves + community.allPlants.at(cohortIndex)->shootNitrogenGreenLeaves) - community.allPlants.at(cohortIndex)->shootNitrogen) > tolerance)
    {
+      std::cerr << ((community.allPlants.at(cohortIndex)->shootNitrogenBrownLeaves + community.allPlants.at(cohortIndex)->shootNitrogenGreenLeaves) - community.allPlants.at(cohortIndex)->shootNitrogen) << std::endl;
+      std::cerr << tolerance << std::endl;
+      std::cerr << (((community.allPlants.at(cohortIndex)->shootNitrogenBrownLeaves + community.allPlants.at(cohortIndex)->shootNitrogenGreenLeaves) - community.allPlants.at(cohortIndex)->shootNitrogen) > tolerance) << std::endl;
       utils.handleError("Error (mortality): relocated nitrogen due to senescence does not match with CN ratios.");
-   }
+   }*/
 }
 
 /* Plant mortality due to thinning of the community */

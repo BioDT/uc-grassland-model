@@ -85,7 +85,6 @@ int main(int argc, char *argv[])
     * @param management Management actions to be simulated.
     */
    input.getInputData(path, utils, parameter, weather, soil, management);
-
    /**
     * @brief Initializes variables and sets up initial conditions for the simulation.
     */

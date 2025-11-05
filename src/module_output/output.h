@@ -2,6 +2,9 @@
 #include "../module_parameter/parameter.h"
 #include "../module_plant/community.h"
 #include "../module_input/input.h"
+#include "../module_soil/soil.h"
+#include "../module_management/management.h"
+#include "../module_recruitment/recruitment.h"
 #include "../utils/utils.h"
 #include <iostream>
 #include <vector>
@@ -39,6 +42,7 @@ public:
    std::vector<int> outputWritingDates; /// Dates for writing output data.
    bool outputWritingDatesFileOpened;   /// Flag indicating if the output writing dates file is opened.
 
+   void updateVegetationStateVariablesForOutput(PARAMETER parameter, COMMUNITY &community, SOIL soil, MANAGEMENT management, RECRUITMENT recruitment);
    void prepareModelOutput(std::string path, UTILS utils, PARAMETER &parameter);
    void createOutputFolder(std::string path, UTILS utils);
    void openAndReadOutputWritingDates(std::string path, UTILS utils, PARAMETER &parameter);

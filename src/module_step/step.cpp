@@ -38,14 +38,11 @@ void STEP::runModelSimulation(UTILS utils, PARAMETER &parameter, INIT init, ALLO
       init.resetSoilResourceProcessAndFluxVariables(soil);
 
       /* Environmental conditions of the day */
-      interaction.getEnvironmentalConditionsOfDay(weather, soil, management, parameter.day);
+      interaction.getEnvironmentalConditionsOfDay(weather, parameter.day);
 
       /* Calculation of ecological and plant processes */
       doDayStepOfModelSimulation(utils, parameter, allometry, community, recruitment, mortality, growth, interaction, management, soil, weather);
-
-      /*TODO: put both to output class similar as init??? */
-      community.updateVegetationStateVariablesForOutput(parameter);
-      // soil.updateSoilResourceStateVariablesForOutput(parameter);
+      output.updateVegetationStateVariablesForOutput(parameter, community, soil, management, recruitment);
 
       /* Writing of daily output of simulation results */
       saveSimulationResultsToBuffer(utils, parameter, community, output);
@@ -83,17 +80,17 @@ void STEP::doDayStepOfModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMET
    /* Plant mortality */
    mortality.doPlantMortality(utils, parameter, community, allometry, growth, interaction, soil);
 
-   /* Calculate light conditions & plant shading */
+   /* Light conditions & plant shading */
    interaction.calculateLightAttenuationAndAvailabilityForPlants(utils, parameter, community, interaction.fullSunLight);
 
    /* Plant photosynthesis, respiration, NPP and allocation */
    growth.doPlantGrowth(utils, parameter, community, interaction, allometry, soil);
 
    /* Management activities */
-   management.applyManagementRegime(utils, community, allometry, parameter);
+   management.applyManagementRegime(utils, community, allometry, parameter, soil);
 
    /* Soil resource dynamics */
-   soil.calculateSoilResourceDynamics(utils, parameter, weather);
+   soil.calculateSoilResourceDynamics(utils, parameter, weather, community, interaction);
 }
 
 /**
@@ -136,7 +133,8 @@ void STEP::saveSimulationResultsToBuffer(UTILS utils, PARAMETER parameter, COMMU
          if (parameter.day == day)
          {
             output.bufferCommunity << date << "\t" << parameter.day << "\t";
-            output.bufferCommunity << community.totalNumberOfPlantsInCommunity << "\t" << community.leafAreaIndexOfPlantsInCommunity << "\t";
+            output.bufferCommunity << community.totalNumberOfPlantsInCommunity << "\t" << community.totalNumberOfCohortsInCommunity << "\t" << community.totalLeafAreaIndexOfPlantsInCommunity << "\t";
+            output.bufferCommunity << community.maximumHeightOfAllPlants << "\t" << community.coveredAreaOfAllPlants << "\t" << community.ecosystemCarbonBalance << "\t" << community.ecosystemNitrogenBalance << std::endl;
 
             for (int pft = 0; pft < parameter.pftCount; pft++)
             {
@@ -146,7 +144,7 @@ void STEP::saveSimulationResultsToBuffer(UTILS utils, PARAMETER parameter, COMMU
                output.bufferPFTPopulation << community.greenShootBiomassOfPlantsPerPFT[pft] << "\t" << community.brownShootBiomassOfPlantsPerPFT[pft] << "\t";
                output.bufferPFTPopulation << community.clippedShootBiomassOfPlantsPerPFT[pft] << "\t" << community.rootBiomassOfPlantsPerPFT[pft] << "\t";
                output.bufferPFTPopulation << community.recruitmentBiomassOfPlantsPerPFT[pft] << "\t" << community.exudationBiomassOfPlantsPerPFT[pft] << "\t";
-               output.bufferPFTPopulation << community.gppOfPlantsPerPFT[pft] << "\t" << community.nppOfPlantsPerPFT[pft] << "\t" << community.respirationOfPlantsPerPFT[pft];
+               output.bufferPFTPopulation << community.gppOfPlantsPerPFT[pft] << "\t" << community.nppOfPlantsPerPFT[pft] << "\t" << community.carbonRespirationOfPlantsPerPFT[pft];
                output.bufferPFTPopulation << std::endl;
             }
 
@@ -174,7 +172,8 @@ void STEP::saveSimulationResultsToBuffer(UTILS utils, PARAMETER parameter, COMMU
    else /* daily results stored in buffer */
    {
       output.bufferCommunity << date << "\t" << parameter.day << "\t";
-      output.bufferCommunity << community.totalNumberOfPlantsInCommunity << "\t" << community.leafAreaIndexOfPlantsInCommunity << std::endl;
+      output.bufferCommunity << community.totalNumberOfPlantsInCommunity << "\t" << community.totalLeafAreaIndexOfPlantsInCommunity << "\t";
+      output.bufferCommunity << community.maximumHeightOfAllPlants << "\t" << community.coveredAreaOfAllPlants << "\t" << community.ecosystemCarbonBalance << "\t" << community.ecosystemNitrogenBalance << std::endl;
 
       for (int pft = 0; pft < parameter.pftCount; pft++)
       {
@@ -183,7 +182,7 @@ void STEP::saveSimulationResultsToBuffer(UTILS utils, PARAMETER parameter, COMMU
          output.bufferPFTPopulation << community.greenShootBiomassOfPlantsPerPFT[pft] << "\t" << community.brownShootBiomassOfPlantsPerPFT[pft] << "\t";
          output.bufferPFTPopulation << community.clippedShootBiomassOfPlantsPerPFT[pft] << "\t" << community.rootBiomassOfPlantsPerPFT[pft] << "\t";
          output.bufferPFTPopulation << community.recruitmentBiomassOfPlantsPerPFT[pft] << "\t" << community.exudationBiomassOfPlantsPerPFT[pft] << "\t";
-         output.bufferPFTPopulation << community.gppOfPlantsPerPFT[pft] << "\t" << community.nppOfPlantsPerPFT[pft] << "\t" << community.respirationOfPlantsPerPFT[pft];
+         output.bufferPFTPopulation << community.gppOfPlantsPerPFT[pft] << "\t" << community.nppOfPlantsPerPFT[pft] << "\t" << community.carbonRespirationOfPlantsPerPFT[pft];
          output.bufferPFTPopulation << std::endl;
       }
 

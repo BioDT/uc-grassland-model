@@ -1,6 +1,7 @@
 #pragma once
 #include "../module_plant/community.h"
 #include "../module_parameter/parameter.h"
+#include "../module_soil/soil.h"
 #include "../module_growth/growth.h"
 #include "../utils/utils.h"
 #include <random>

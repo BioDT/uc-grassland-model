@@ -86,7 +86,7 @@ void INIT::resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &rec
       recruitment.successfullGerminatedSeeds.push_back(0);
    }
 
-   // 2. Light availability (interaction)
+   // 2. Light availability, crowding (interaction)
    interaction.LAI.clear();
    interaction.LAIwithLightExtinction.clear();
    for (int layerindex = 0; layerindex <= maximumHeightLayer; layerindex++)
@@ -95,11 +95,20 @@ void INIT::resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &rec
       interaction.LAIwithLightExtinction.push_back(0.0);
    }
    community.maximumHeightOfAllPlants = 0;
+   community.totalLeafAreaIndexOfPlantsInCommunity = 0;
+   community.greenleafAreaIndexOfPlantsInCommunity = 0;
+   community.coveredAreaOfAllPlants = 0.0;
+
+   // 3. Carbon and nitrogen balances
+   community.carbonRespirationOfAllPlants = 0.0;
+   community.carbonNPPOfAllPlants = 0.0;
+   community.carbonSeedlingIngrowthOfAllPlants = 0.0;
+   community.ecosystemNitrogenBalance = 0.0;
+   community.ecosystemCarbonBalance = 0.0;
+   community.ecosystemCarbonRespiration = 0.0;
 
    /// Output-related variables
    community.totalNumberOfPlantsInCommunity = 0;
-   community.leafAreaIndexOfPlantsInCommunity = 0;
-   community.coveredAreaOfAllPlants = 0.0;
    community.greenBiomassYield = 0.0;
    community.brownBiomassYield = 0.0;
    community.biomassYield = 0.0;
@@ -116,7 +125,7 @@ void INIT::resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &rec
    community.exudationBiomassOfPlantsPerPFT.clear();
    community.gppOfPlantsPerPFT.clear();
    community.nppOfPlantsPerPFT.clear();
-   community.respirationOfPlantsPerPFT.clear();
+   community.carbonRespirationOfPlantsPerPFT.clear();
    community.greenBiomassYieldPerPFT.clear();
    community.brownBiomassYieldPerPFT.clear();
    community.biomassYieldPerPFT.clear();
@@ -136,7 +145,7 @@ void INIT::resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &rec
       community.exudationBiomassOfPlantsPerPFT.push_back(0);
       community.gppOfPlantsPerPFT.push_back(0);
       community.nppOfPlantsPerPFT.push_back(0);
-      community.respirationOfPlantsPerPFT.push_back(0);
+      community.carbonRespirationOfPlantsPerPFT.push_back(0);
 
       community.greenBiomassYieldPerPFT.push_back(0);
       community.brownBiomassYieldPerPFT.push_back(0);
@@ -174,6 +183,40 @@ void INIT::initSoilResourceStateVariables(UTILS utils, SOIL &soil, WEATHER weath
    soil.nitrogenContent_soilActivePool = soil.carbonContent_soilActivePool / 12.0;
    soil.nitrogenContent_soilSlowPool = soil.carbonContent_soilSlowPool / 17.0;
    soil.nitrogenContent_soilPassivePool = soil.carbonContent_soilPassivePool / 8.0;
+
+   soil.nitrogenContent_soilMineralPoolPerSoilLayer.clear();
+   for (int i = 0; i < maximumSoilLayer; i++)
+   {
+      soil.nitrogenContent_soilMineralPoolPerSoilLayer.push_back(1.0); // 1 g/m² TODO: add parameter
+   }
+
+      /* soil water dynamics */
+   soil.waterContent_soilWaterPoolPerLayer.clear();
+   for (int i = 0; i < maximumSoilLayer + 1; i++)
+   {
+      // if (!par.externalLandtransSoilModel || par.externalLandtransSoilModel == 3)
+      //{
+      if (i < maximumSoilLayer)
+      {
+         soil.waterContent_soilWaterPoolPerLayer.push_back(soil.fieldCapacity.at(i));
+      }
+      else if (i == maximumSoilLayer)
+      {
+         // groundwater storage at layer i = maximumSoilLayer
+         soil.waterContent_soilWaterPoolPerLayer.push_back(0.0);
+      }
+      /*}
+      else
+      {
+         soil.waterContent_soilWaterPoolPerLayer.push_back(NAN); // no internal water, when coupled to external soil model
+      }*/
+   }
+
+   soil.solidSnowContent = 0.0;  // snow accumulation
+   soil.liquidSnowContent = 0.0; // snow liquid content
+
+   soil.addedMineralNitrogenToSoilByFertilization = 0;
+   soil.addedWaterToSoilByIrrigation = 0;
 }
 
 /**
@@ -204,6 +247,27 @@ double INIT::calculateInitialCarbonContentOfAllSoilPools(UTILS utils, WEATHER we
 
 void INIT::resetSoilResourceProcessAndFluxVariables(SOIL &soil)
 {
+   /* soil water fluxes */
+   soil.interception = 0.0;  // interception [mm/day]
+   soil.evaporation = 0.0;   // snow evaporation [mm/day]
+   soil.surfaceRunOff = 0.0; // run-off above-ground [mm/day]
+   soil.soilRunOff = 0.0;    // run-off below-ground [mm/day]
+   soil.soilWaterFluxDownwardsOutOfSoilLayer.clear();
+   for (int i = 0; i < maximumSoilLayer; i++)
+   {
+      soil.soilWaterFluxDownwardsOutOfSoilLayer.push_back(0);
+   }
+   /* plant-related uptake rates */
+   /*patch->waterDemandPerLayer.clear();
+   patch->waterDemandPerLayer.push_back(0.0); // potential transpiration [mm/d]
+   patch->transpiration.clear();
+   patch->transpiration.push_back(0.0);           // actual transpiration [mm/d]
+   patch->totalBranchLengthOfRoot.clear();        // total root length [m]
+   patch->totalBranchLengthOfRoot.push_back(0.0); // total root length [m]
+
+   patch->waterDemand = 0;
+   patch->waterUptake = 0;*/
+
    /* carbon fluxes */
    soil.carbonFlux_surfaceStructuralLitterPool_to_soilMicrobesPool = 0;
    soil.carbonFlux_surfaceMetabolicLitterPool_to_soilMicrobesPool = 0;
@@ -225,8 +289,8 @@ void INIT::resetSoilResourceProcessAndFluxVariables(SOIL &soil)
 
    soil.carbonFlux_soilPassivePool_to_soilActivePool = 0;
 
-   soil.carbonLeaching = 0; // carbon leached from active soil pool
-   soil.LeachingC = 0;      // carbon leached from active soil pool
+   soil.carbonContent_leachedFromSoil = 0; // overall amount of carbon leached from active soil pool during simulation
+   soil.leachingCarbon = 0;                // daily amount of carbon leached from active soil pool
 
    /* carbon respiratory fluxes */
    soil.respiration_decompositionCarbon_surfaceStructuralLitterPool_soilSlowPool = 0;
@@ -266,9 +330,6 @@ void INIT::resetSoilResourceProcessAndFluxVariables(SOIL &soil)
 
    soil.nitrogenFlow_soilPassivePool_to_soilActivePool = 0;
 
-   soil.NLeach = 0;
-   soil.LeachingN = 0;
-
    soil.nitrogenFlow_surfaceStructuralLitterPool_to_soilSlowPool = 0;
    soil.nitrogenFlow_surfaceStructuralLitterPool_to_soilMicrobesPool = 0;
    soil.nitrogenFlow_soilStructuralLitterPool_to_soilSlowPool = 0;
@@ -286,9 +347,12 @@ void INIT::resetSoilResourceProcessAndFluxVariables(SOIL &soil)
 
    soil.nitrogenFlow_soilPassivePool_to_soilActivePool = 0;
 
+   soil.nitrogenContent_leachedFromSoil = 0; // overall amount of nitrogen leached from active soil pool during simulation
+   soil.leachingNitrogen = 0;                // daily amount of nitrogen leached from active soil pool
+
    /* nitrogen respiratory fluxes */
    soil.respiration_decompositionNitrogen_surfaceStructuralLitterPool_soilSlowPool = 0;
-   soil.respiration_decompositionCarbon_surfaceStructuralLitterPool_soilMicrobesPool = 0;
+   soil.respiration_decompositionNitrogen_surfaceStructuralLitterPool_soilMicrobesPool = 0;
    soil.respiration_decompositionNitrogen_surfaceMetabolicLitterPool_soilMicrobesPool = 0;
 
    soil.respiration_decompositionNitrogen_soilStructuralLitterPool_soilSlowPool = 0;
@@ -335,9 +399,10 @@ void INIT::resetSoilResourceProcessAndFluxVariables(SOIL &soil)
    soil.immobilize_soilSlowPool_to_soilActivePool = 0;
    soil.immobilize_soilPassivePool_to_soilActivePool = 0;
 
-   soil.C_flux = 0;
-   soil.Nflux = 0;
-   soil.R_total = 0;
-
    soil.decompositionFactor = 1.0;
+
+   /* plant-related uptake rates */
+   // patch->nitrogenContentReproduction = 0;    // Nitrogen available for reproduction
+   // patch->soilNitrogenUptakePerLayer.clear(); // nitrogen uptake [kg/d] --> for candy
+   // patch->soilNitrogenUptakePerLayer.push_back(0.0);
 }

@@ -24,6 +24,11 @@ void GROWTH::doPlantGrowth(UTILS utils, PARAMETER parameter, COMMUNITY &communit
 
    /* to be added: Limitation of plant NPP by unfavorable soil nitrogen conditions */
    // soil.doPlantNPPLimitationBySoilNitrogenConditions();
+   // calculate individual plant water uptake/transpiration and update soil water content [mm/day]
+   // wird eigentlich schon in Do SoilWaterCompetition null gesetzt:
+   // for (int lay = 0; lay<par.Water_SoilLayer; lay++)
+   // patch->transpiration.at(lay) = 0; // transpiration
+   // soilResourceUptakeAndCompetition();
 
    /* Plant allocation of NPP and according C and N parts */
    adjustAllocationRates(utils, parameter, community);
@@ -426,6 +431,10 @@ void GROWTH::doPlantGrowthInSizeAndAging(UTILS utils, PARAMETER parameter, COMMU
       community.allPlants.at(cohortindex)->laiBrown =
           allometry.laiFromShootBiomassAreaSla(utils, community.allPlants.at(cohortindex)->shootBiomassBrownLeaves, community.allPlants.at(cohortindex)->coveredArea, parameter.plantSpecificLeafArea[pft]);
       community.allPlants.at(cohortindex)->lai = community.allPlants.at(cohortindex)->laiBrown + community.allPlants.at(cohortindex)->laiGreen;
+
+      // state variable updates for soil evaporation
+      community.greenleafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->amount * community.allPlants[cohortindex]->laiGreen * community.allPlants[cohortindex]->coveredArea;
+      community.totalLeafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->lai * community.allPlants[cohortindex]->coveredArea * community.allPlants[cohortindex]->amount;
    }
 }
 

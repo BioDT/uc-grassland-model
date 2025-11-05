@@ -1,7 +1,6 @@
 #pragma once
 #include "plant.h"
 #include "allometry.h"
-#include "../module_parameter/parameter.h"
 #include "../utils/utils.h"
 #include <vector>
 #include <memory>
@@ -25,35 +24,56 @@ public:
 
    std::vector<std::shared_ptr<PLANT>> allPlants;
 
-   int totalNumberOfPlantsInCommunity;
-   int totalNumberOfCohortsInCommunity;
+   //*********************************************************/
+   // community / ecosystem specific state variables calculated in community.cpp for process calculations (and partly output)
+   int totalNumberOfCohortsInCommunity; // required for loops through community vector, updated in mortality.cpp and recruitment.cpp
+   int totalNumberOfPlantsInCommunity;  // required for output (calculated in output.cpp)
 
-   double maximumHeightOfAllPlants;         // cm
-   double leafAreaIndexOfPlantsInCommunity; // cm per cm
+   // required for light attenuation and shading calculations, and for output
+   double maximumHeightOfAllPlants; // cm (calculated in interaction.cpp)
+
+   // required for soil evaporation, calculated in soil.cpp
+   double greenleafAreaIndexOfPlantsInCommunity;
+   double totalLeafAreaIndexOfPlantsInCommunity; // cm per cm (calculated in output.cpp) --> CHANGE
+
+   // required for crowding, calculated in
    double coveredAreaOfAllPlants;
+
+   // required for carbon balance, calculated in
+   double carbonRespirationOfAllPlants;
+   double carbonNPPOfAllPlants;
+   double carbonSeedlingIngrowthOfAllPlants;
+
+   double ecosystemNitrogenBalance;
+   double ecosystemCarbonBalance;
+   double ecosystemCarbonRespiration;
+
+   // state variables calculated in management.cpp to track yield after mowing
    double greenBiomassYield;
    double brownBiomassYield;
    double biomassYield;
 
-   std::vector<double> pftComposition;
-   std::vector<double> numberOfPlantsPerPFT;
-   std::vector<double> coveredAreaOfPlantsPerPFT;
-   std::vector<double> shootBiomassOfPlantsPerPFT;
-   std::vector<double> greenShootBiomassOfPlantsPerPFT;
-   std::vector<double> brownShootBiomassOfPlantsPerPFT;
-   std::vector<double> clippedShootBiomassOfPlantsPerPFT;
-   std::vector<double> rootBiomassOfPlantsPerPFT;
-   std::vector<double> recruitmentBiomassOfPlantsPerPFT;
-   std::vector<double> exudationBiomassOfPlantsPerPFT;
+   //*********************************************************/
+   // PFT specific state variables calculated in community.cpp for output
+   std::vector<double> pftComposition;                    //*
+   std::vector<double> numberOfPlantsPerPFT;              //*
+   std::vector<double> coveredAreaOfPlantsPerPFT;         //*
+   std::vector<double> shootBiomassOfPlantsPerPFT;        //*
+   std::vector<double> greenShootBiomassOfPlantsPerPFT;   //*
+   std::vector<double> brownShootBiomassOfPlantsPerPFT;   //*
+   std::vector<double> clippedShootBiomassOfPlantsPerPFT; //*
+   std::vector<double> rootBiomassOfPlantsPerPFT;         //*
+   std::vector<double> recruitmentBiomassOfPlantsPerPFT;  //*
+   std::vector<double> exudationBiomassOfPlantsPerPFT;    //*
 
    std::vector<double> gppOfPlantsPerPFT;
    std::vector<double> nppOfPlantsPerPFT;
-   std::vector<double> respirationOfPlantsPerPFT;
+   std::vector<double> carbonRespirationOfPlantsPerPFT;
 
+   // state variables calculated in management.cpp for output
    std::vector<double> greenBiomassYieldPerPFT;
    std::vector<double> brownBiomassYieldPerPFT;
    std::vector<double> biomassYieldPerPFT;
 
    void checkPlantsAreAliveInCommunity(UTILS utils);
-   void updateVegetationStateVariablesForOutput(PARAMETER parameter);
 };

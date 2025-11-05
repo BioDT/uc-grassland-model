@@ -38,11 +38,350 @@ void SOIL::transferDyingPlantPartsToLitterPools(UTILS utils, PARAMETER parameter
  * @brief Main function of soil dynamics of water, carbon and nitrogen
  * @cite Function and code has been reused from the CENTURY4.0 soil model
  */
-void SOIL::calculateSoilResourceDynamics(UTILS utils, PARAMETER parameter, WEATHER weather)
+void SOIL::calculateSoilResourceDynamics(UTILS utils, PARAMETER parameter, WEATHER weather, COMMUNITY &community, INTERACTION interaction)
+{
+   /***********************/
+   /* soil water dynamics */
+   /***********************/
+   /*if (externalSoilWaterInputEnabled)
+   {
+      doWaterLandTrans();
+   }
+   else
+   {*/
+   calculateSoilWaterDynamics(utils, parameter, weather, interaction, community);
+   /*}   */
+
+   /************************************/
+   /* soil carbon & nitrogen dynamics */
+   /************************************/
+   calculateSoilCarbonNitrogenDynamics(utils, parameter, weather);
+}
+
+void SOIL::calculateSoilWaterDynamics(UTILS utils, PARAMETER parameter, WEATHER weather, INTERACTION interaction, COMMUNITY &community)
+{
+   // water input to soil [mm/day]
+   double dailyWaterInputToSoil = weather.precipitation.at(parameter.day - 1) + addedWaterToSoilByIrrigation;
+
+   // snow accumulation [mm/day]
+   dailyWaterInputToSoil = accumulateSnowWhenFreezing(utils, parameter, weather, dailyWaterInputToSoil);
+
+   // melting of solid snow and adding rain to liquid snowpack
+   dailyWaterInputToSoil = meltingOfSnow(utils, parameter, weather, dailyWaterInputToSoil);
+
+   // sublimation of solidSnowContent and liquidSnowContent
+   double remainingDailyPET = evaporationOfSnow(utils, weather, parameter);
+
+   // as long as there is a solid snow pack, vegetation and soil is covered
+   // preventing interception by vegetation, surface runoff and bare soil evaporation
+   if (solidSnowContent == 0.0)
+   {
+      // interception [mm/day]
+      dailyWaterInputToSoil = interceptionByVegetation(utils, interaction, dailyWaterInputToSoil, remainingDailyPET);
+
+      // surface runoff [mm/day]
+      dailyWaterInputToSoil = runOffAtSurface(utils, parameter, dailyWaterInputToSoil);
+   }
+
+   /*if (par.externalLandtransSoilModel == 1)
+   {
+      landtrans_soilWaterSurfaceInput = dailyWaterInputToSoil;
+   }
+   if (!par.externalLandtransSoilModel || par.externalLandtransSoilModel == 3)
+   {*/
+
+   // vertical stream of dailyWaterInputToSoil through soil layers
+   soilWaterPercolation(utils, dailyWaterInputToSoil);
+
+   // leaching of nitrogen downwards through the soil layers coupled to water fluxes
+   leachingOfNitrogenCoupledToWaterPercolation(utils);
+
+   //}
+
+   // if (!par.externalLandtransSoilModel || par.externalLandtransSoilModel == 3)
+   //{
+   //  evaporation from top soil layer [mm/day]
+   evaporationFromTopSoilLayer(utils, parameter, community, remainingDailyPET);
+
+   // nitrogen volatilization loss
+   /*if (nitrogenContent_soilMineralPoolPerSoilLayer.at(0) > 0.0)
+   {
+      double nitrogenVolatilizationLoss = 0.0 * nitrogenContent_soilMineralPoolPerSoilLayer.at(0); // TODO: add value as parameter
+
+      nitrogenContent_soilMineralPoolPerSoilLayer.at(0) -= nitrogenVolatilizationLoss;
+      nitrogenVolatilization += nitrogenVolatilizationLoss;
+
+      if (nitrogenContent_soilMineralPoolPerSoilLayer.at(0) + tolerance < 0.0)
+      {
+         utils.handleError("Soil nitrogen in upper soil layer is negative!");
+         nitrogenContent_soilMineralPoolPerSoilLayer.at(0) = 0.0;
+      }
+   }*/
+   //}
+}
+
+double SOIL::accumulateSnowWhenFreezing(UTILS utils, PARAMETER parameter, WEATHER weather, double waterInputToSoil)
+{
+   //// adding rain to solid snowpack if air temperature is below 0 degrees
+   // function returns then a value of 0 (with no further water able to percolate into soil)
+
+   double fullDayAverageAirTempertaure = weather.fullDayAirTemperature.at(parameter.day - 1);
+
+   if (fullDayAverageAirTempertaure <= 0.0)
+   {
+      solidSnowContent += waterInputToSoil;
+      return (0.0); // water input is accumulated as snow and no further water can percolate into soil
+   }
+   else
+   {
+      return waterInputToSoil;
+   }
+}
+
+double SOIL::meltingOfSnow(UTILS utils, PARAMETER parameter, WEATHER weather, double waterInputToSoil)
+{
+   // if air temperature is <= 0, precipitation has been accumulated as solid snow (see accumulateSnowWhenFreezing with the result of waterInputToSoil = 0)
+   // if air temperature >= 0, then a fraction of the solid snow can melt (see accumulateSnowWhenFreezing with the result of waterInputToSoil >= 0)
+   // the snowpack is only able to store waterInputToSoil at air temperature > 0
+   // at air temperatures = 0, waterInputToSoil would be accumulated as snow (while fraction of solid snow can melt to liquid snow parts)
+   // if there is no snowpack, waterInputToSoil is returned unchanged (and able to percolate into soil)
+   // if all of the snowpack has melted, solidSnowContent = 0 while liquidSnowContent > 0 percolating together with waterInputToSoil into soil
+
+   double fullDayAverageAirTemperature = weather.fullDayAirTemperature.at(parameter.day - 1);
+   double meltedSnowAsAddedWaterInputToSoil = 0.0;
+
+   if (fullDayAverageAirTemperature >= 0.0)
+   {
+      if (solidSnowContent > 0.0)
+      {
+         // 0.2% of snow (in mm) per temperature degree increase above 0 is able to melt per day
+         double meltingSnow = 0.002 * fullDayAverageAirTemperature;
+         meltingSnow = std::max(meltingSnow, solidSnowContent);
+         solidSnowContent -= meltingSnow;
+         liquidSnowContent += meltingSnow;
+      }
+
+      // if air temperature is above 0 (not at 0 degrees) and not all the solid snow has been melted
+      // then the snowpack is able to store the waterInputToSoil (preventing its percolation into soil)
+      if (fullDayAverageAirTemperature > 0.0 && solidSnowContent > 0.0)
+      {
+         liquidSnowContent += waterInputToSoil;
+         waterInputToSoil = 0;
+      }
+
+      // the snowpack is only able to store 5% as liquid
+      // the remaining melted snow is added to waterInputToSoil percolating into soil
+      double maximumLiquidSnowContent = 0.05 * solidSnowContent;
+      if (liquidSnowContent > maximumLiquidSnowContent)
+      {
+         meltedSnowAsAddedWaterInputToSoil = liquidSnowContent - maximumLiquidSnowContent;
+         liquidSnowContent -= meltedSnowAsAddedWaterInputToSoil;
+      }
+   }
+
+   return (waterInputToSoil + meltedSnowAsAddedWaterInputToSoil);
+}
+
+double SOIL::evaporationOfSnow(UTILS utils, WEATHER weather, PARAMETER parameter)
+{
+   // sublimation: reduces solidSnowContent and liquidSnowContent and increases evaporation
+   // usually 13% of dailyPET remain
+   // solid and liquid snow pack could be reduced to 0 in case of high evaporation
+   // if there is no solid snow pack, remainingDailyPET = dailyPET
+
+   // potential evapotranspiration [mm/day]
+   double dailyPET = weather.potEvapoTranspiration.at(parameter.day - 1);
+
+   if (solidSnowContent > 0.0)
+   {
+      double sumOfSnowPack = solidSnowContent + liquidSnowContent;
+
+      // if there is a snowpack, this fraction of PET is reserved for snow evaporation, leaving 13% of remaining PET for plant transpiration and soil evaporation
+      double snowEvaporation = dailyPET * 0.87;
+      snowEvaporation = std::min(snowEvaporation, sumOfSnowPack);
+
+      // proportional reduction of solid and liquid snow pack for evaporation
+      double reductionSolidSnow = solidSnowContent / sumOfSnowPack;
+      double reductionLiquidSnow = liquidSnowContent / sumOfSnowPack;
+
+      solidSnowContent -= (snowEvaporation * reductionSolidSnow);
+      liquidSnowContent -= (snowEvaporation * reductionLiquidSnow);
+
+      if (solidSnowContent < 0.0)
+      {
+         // utils.handleError("Solid snow pack is below 0 through evaporation / sublimation.");
+         solidSnowContent = 0.0;
+      }
+      if (liquidSnowContent < 0.0)
+      {
+         // utils.handleError("Liquid snow pack is below 0 through evaporation / sublimation.");
+         liquidSnowContent = 0.0;
+      }
+
+      // adding snow evaporation to total evaporation flux and reducing dailyPET
+      evaporation += snowEvaporation;
+      dailyPET -= snowEvaporation;
+      dailyPET = std::max(dailyPET, 0.0);
+   }
+
+   return dailyPET;
+}
+
+/**
+ * @cite approach adapted from FORMIND model
+ */
+double SOIL::interceptionByVegetation(UTILS utils, INTERACTION interaction, double dailyWaterInputToSoil, double remainingDailyPET)
+{
+   double maximumInterception = std::min(dailyWaterInputToSoil, 0.2 * interaction.LAI.at(0)); // TODO: 0.2 is a interception constant
+   double canopyClosure = 1.0 - exp(-interaction.LAIwithLightExtinction.at(0));
+   interception = maximumInterception * canopyClosure;
+
+   interception = std::max(remainingDailyPET, interception);
+   dailyWaterInputToSoil -= interception;
+   return (dailyWaterInputToSoil);
+}
+
+/**
+ * @cite approach adapted from CENTURY4.0 model
+ */
+double SOIL::runOffAtSurface(UTILS utils, PARAMETER parameter, double dailyWaterInputToSoil)
+{
+   // if (!par.disableRunoff) // TODO (coupling)
+   //{
+   surfaceRunOff = 0.41 * dailyWaterInputToSoil - (28.7 / 30.0);
+   surfaceRunOff = std::max(surfaceRunOff, 0.0);
+   dailyWaterInputToSoil -= surfaceRunOff;
+   //}
+
+   return (dailyWaterInputToSoil);
+}
+
+/**
+ * @cite approach adapted from CENTURY4.0 model
+ */
+void SOIL::soilWaterPercolation(UTILS utils, double waterInputToSoil)
+{
+   double addWaterExcessToNextSoilLayer = waterInputToSoil;
+   for (int i = 0; i < maximumSoilLayer; i++)
+   {
+      double percolationToNextSoilLayer = 0.0;
+
+      waterContent_soilWaterPoolPerLayer.at(i) += addWaterExcessToNextSoilLayer;
+      double waterContentBeyondSaturatedCapacity = waterContent_soilWaterPoolPerLayer.at(i) - fieldCapacity.at(i);
+
+      if (waterContentBeyondSaturatedCapacity > 0.0)
+      {
+         double lambda = 0.01 * saturatedHydraulicConductivity.at(i) / (porosity.at(i) - fieldCapacity.at(i));
+         percolationToNextSoilLayer = (lambda * std::pow(waterContentBeyondSaturatedCapacity, 2.0)) / (1.0 + lambda * waterContentBeyondSaturatedCapacity);
+      }
+
+      waterContent_soilWaterPoolPerLayer.at(i) -= percolationToNextSoilLayer;
+      soilWaterFluxDownwardsOutOfSoilLayer.at(i) = percolationToNextSoilLayer;
+      addWaterExcessToNextSoilLayer = percolationToNextSoilLayer;
+   }
+
+   // underground storage of water
+   double stormflow = 0, baseflow = 0;                                                                   // TODO: add values as parameter
+   waterContent_soilWaterPoolPerLayer.at(maximumSoilLayer) += addWaterExcessToNextSoilLayer - stormflow; // runoff into underground storage
+   baseflow = waterContent_soilWaterPoolPerLayer.at(maximumSoilLayer) * 0.0;                             // TODO: add 0 as parameter
+   waterContent_soilWaterPoolPerLayer.at(maximumSoilLayer) -= baseflow;
+   soilRunOff = (stormflow + baseflow);
+}
+
+/**
+ * @cite approach adapted from CENTURY4.0 model
+ */
+void SOIL::leachingOfNitrogenCoupledToWaterPercolation(UTILS utils)
+{
+   double streamOfNitrogen = 0.0; // TODO: no calculation here!
+
+   double amountOfLeachingNitrogen = 0.0;
+   int indexOfNextSoilLayer;
+
+   double soilTypeFactor = (0.6 + 0.4 * sandContent) * 0.95;
+
+   for (int i = 0; i < maximumSoilLayer; i++)
+   {
+      amountOfLeachingNitrogen = 0.0;
+      indexOfNextSoilLayer = i + 1;
+
+      // if there was a saturated water flow out of soil layer i and the mineral nitrogen content > 0
+      if ((soilWaterFluxDownwardsOutOfSoilLayer.at(i) > 0.0) && (nitrogenContent_soilMineralPoolPerSoilLayer.at(i) > 0.0))
+      {
+         double coupledSoilWaterFlux = std::min(1.0 - (2.5 - (soilWaterFluxDownwardsOutOfSoilLayer.at(i) / 10.0)) / 2.5, 1.0);
+         coupledSoilWaterFlux = std::max(coupledSoilWaterFlux, 0.0);
+
+         amountOfLeachingNitrogen = soilTypeFactor * nitrogenContent_soilMineralPoolPerSoilLayer.at(i) * coupledSoilWaterFlux;
+         amountOfLeachingNitrogen = std::min(amountOfLeachingNitrogen, nitrogenContent_soilMineralPoolPerSoilLayer.at(i));
+
+         // subtract from soil layer 'i'
+         nitrogenContent_soilMineralPoolPerSoilLayer.at(i) -= amountOfLeachingNitrogen;
+         if (nitrogenContent_soilMineralPoolPerSoilLayer.at(i) + tolerance < 0.0)
+         {
+            nitrogenContent_soilMineralPoolPerSoilLayer.at(i) = 0.0;
+            // utils.handleError("Plants do not have access to soil nitrogen or soil nitrogen pool is negative!");
+         }
+
+         // add to soil layer 'indexOfNextSoilLayer'
+         if (indexOfNextSoilLayer == maximumSoilLayer)
+         {
+            nitrogenContent_leachedFromSoil += amountOfLeachingNitrogen;
+         }
+         else if (indexOfNextSoilLayer < maximumSoilLayer)
+         {
+            nitrogenContent_soilMineralPoolPerSoilLayer.at(indexOfNextSoilLayer) += amountOfLeachingNitrogen;
+            if (nitrogenContent_soilMineralPoolPerSoilLayer.at(indexOfNextSoilLayer) + tolerance < 0.0)
+            {
+               // utils.handleError("Plants do not have access to soil nitrogen or soil nitrogen pool is negative!");
+               nitrogenContent_soilMineralPoolPerSoilLayer.at(indexOfNextSoilLayer) = 0.0;
+            }
+         }
+      }
+   }
+
+   nitrogenVolatilization += streamOfNitrogen;
+}
+
+/**
+ * @cite approach adapted from BOWET model
+ *   // BOWET: constant extraction of evaporative water to maximum soil depth of 40 cm
+ *        // parameters from BOWET soil model (basis of CANDY)
+ */
+void SOIL::evaporationFromTopSoilLayer(UTILS utils, PARAMETER parameter, COMMUNITY &community, double remainingDailyPET)
+{
+   double canopyClosure = 0.0;
+   if (community.totalLeafAreaIndexOfPlantsInCommunity > 0)
+   {
+      canopyClosure = community.greenleafAreaIndexOfPlantsInCommunity / community.totalLeafAreaIndexOfPlantsInCommunity;
+   }
+
+   int numberOfTopSoilLayersAffectedByEvaporation = 4;
+   for (int i = 0; i < numberOfTopSoilLayersAffectedByEvaporation; i++)
+   {
+      if (waterContent_soilWaterPoolPerLayer.at(i) > permanentWiltingPoint.at(i))
+      {
+
+         double rk = (waterContent_soilWaterPoolPerLayer.at(i) - permanentWiltingPoint.at(i)) / (fieldCapacity.at(i) - permanentWiltingPoint.at(i));
+         double layer0 = ((double)i) * soilLayerWidth;
+         double layer1 = ((double)(i + 1)) * soilLayerWidth;
+         double cf = 20.0; // TODO: add parameter.Water_DrainageProportion;
+         double h2 = rk * (1. / cf) * 22.7609 * (layer0 - layer1) +
+                     9.10436 * ((1. + cf) / (pow(cf, 2.))) * (log(0.4 + cf * layer1) - log(0.4 + cf * layer0));
+         double evlos = (1.0 - canopyClosure) * h2 * remainingDailyPET;
+
+         waterContent_soilWaterPoolPerLayer.at(i) -= evlos;
+         evaporation += evlos;
+         waterContent_soilWaterPoolPerLayer.at(i) = std::max(waterContent_soilWaterPoolPerLayer.at(i), permanentWiltingPoint.at(i));
+      }
+   }
+}
+
+void SOIL::calculateSoilCarbonNitrogenDynamics(UTILS utils, PARAMETER parameter, WEATHER weather)
 {
    splitLitterFluxesToStructuralAndMetabolicLitterPools(utils, parameter, weather);
 
    decompositionFactor = calculateTemperatureAndWaterEffectsOnDecomposition(utils, parameter);
+
    doDecompositionFluxesInLitterAndSoilPools(utils);
 
    updateSoilPoolsByRespirationAndFluxes(utils);
@@ -52,17 +391,6 @@ void SOIL::calculateSoilResourceDynamics(UTILS utils, PARAMETER parameter, WEATH
 
    // Volatilization loss of nitrogen as a function of gross mineralization
    calculateNitrogenLossByVolatilization(utils);
-
-   // balance = N(respiration) + N(mineralization) - N(immobilization) - volatilization + fixation + fertilizer
-   // ecosystemNitrogenBalance = nitrogenNetMineralization - nitrogenVolatilization + nitrogenFixation + nitrogenFertilization;
-
-   // R_total = RespC_litter + RespC_soilpools + carbonContentOdm *
-   // R_total_biomass_month;
-   // ecosystemRespiration = respirationCarbon_litter + respirationCarbon_soilpools + carbonContentOdm * R_total_biomass;
-   // ecosystemCarbonBalance = ((carbonContentOdm * (PB_month + ingrowth_month)) - ecosystemRespiration -
-   //                          LeachingC - carbonContentOdm * (HarvestBb + HarvestBg));
-
-   // add Fertilization option
 }
 
 void SOIL::splitLitterFluxesToStructuralAndMetabolicLitterPools(UTILS utils, PARAMETER parameter, WEATHER weather)
@@ -182,7 +510,7 @@ double SOIL::calculateLigninFraction(UTILS utils, WEATHER weather, PARAMETER par
       param2 = 0.0015;
    }
 
-   ligninFraction = param1 + (param2 * (weather.precipitation.at(parameter.day) / 10.0));
+   ligninFraction = param1 + (param2 * (weather.precipitation.at(parameter.day - 1) / 10.0));
 
    double lowerLimit = 0.02 / 365.0;
    double upperLimit = 0.5 / 365.0;
@@ -248,11 +576,13 @@ double SOIL::adjustLigninContentOfStructuralLitter(UTILS utils, double fractionO
    {
       carbonFlux = carbonContent_surfaceGreenLitterPool + carbonContent_surfaceBrownLitterPool;
       carbonPool = carbonContent_surfaceStructuralLitterPool;
+      ligninContent = ligninContent_surfaceStructuralLitterPool;
    }
    else if (typeOfPool == "soil")
    {
       carbonFlux = carbonContent_soilRootLitterPool + carbonContent_soilSeedLitterPool;
       carbonPool = carbonContent_soilStructuralLitterPool;
+      ligninContent = ligninContent_soilStructuralLitterPool;
    }
 
    adjustedFractionOfLignin = fractionOfLignin / (carbonAddedToStructuralLitter / carbonFlux);
@@ -286,7 +616,8 @@ void SOIL::processLitterFluxes(UTILS utils, double dirabs, double carbonAddedToS
    nitrogenContent_soilMineralPoolPerSoilLayer.at(0) -= dirabs;
    if (nitrogenContent_soilMineralPoolPerSoilLayer.at(0) + tolerance < 0.0)
    {
-      utils.handleError("Plants do not have access to soil nitrogen or soil nitrogen pool is negative!");
+      nitrogenContent_soilMineralPoolPerSoilLayer.at(0) = 0;
+      // utils.handleError("Plants do not have access to soil nitrogen or soil nitrogen pool is negative!");
    }
 }
 
@@ -487,7 +818,8 @@ void SOIL::calculateDecisiveCarbonNitrogenRatiosForDecomposition(UTILS utils, st
 double SOIL::calculateTemperatureAndWaterEffectsOnDecomposition(UTILS utils, PARAMETER parameter)
 
 {
-   if (snowContent > 0.0)
+   // TODO: move somewhere else??
+   if (solidSnowContent > 0.0)
    {
       soilTemperature = 0.0;
    }
@@ -598,10 +930,12 @@ bool SOIL::decompose(UTILS utils, double carbonFlux, double ligninContent, std::
 
          // subtract carbon respiration from carbon flux
          // calculate respiratory nitrogen flow proportional to carbon respiration (based on actual CN ratio of origin pool)
-         calculateRespirationOfDecomposition(utils, transferFromPool, transferToPool);
+         calculateCarbonRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 
          // determine nitrogen flux proportional to remaining carbon flux (based on actual CN ratio of origin pool)
          determineNitrogenFlux(utils, transferFromPool, transferToPool);
+
+         calculateNitrogenRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 
          // save nitrogen flux in extra state variable for storage (as nitrogenFlux will be changed in case of mineralization)
          nitrogenFlow_surfaceStructuralLitterPool_to_soilSlowPool = nitrogenFlux_surfaceStructuralLitterPool_to_soilSlowPool;
@@ -615,10 +949,12 @@ bool SOIL::decompose(UTILS utils, double carbonFlux, double ligninContent, std::
          // respiration_decompositionCarbon_surfaceStructuralLitterPool_soilSlowPool has already been subtracted from carbonFlux_surfaceStructuralLitterPool_to_soilSlowPool in previous call of calculateRespirationOfDecomposition
          // therefore, it needs to be accounted here to calculate the remaining carbon flux transferred to the microbes pool
          carbonFlux_surfaceStructuralLitterPool_to_soilMicrobesPool = carbonFlux - (carbonFlux_surfaceStructuralLitterPool_to_soilSlowPool + respiration_decompositionCarbon_surfaceStructuralLitterPool_soilSlowPool);
-         calculateRespirationOfDecomposition(utils, transferFromPool, transferToPool);
+         calculateCarbonRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 
          // proportional nitrogen flow from litter to soil microbial pool
          determineNitrogenFlux(utils, transferFromPool, transferToPool);
+         calculateNitrogenRespirationOfDecomposition(utils, transferFromPool, transferToPool);
+
          nitrogenFlow_surfaceStructuralLitterPool_to_soilMicrobesPool = nitrogenFlux_surfaceStructuralLitterPool_to_soilMicrobesPool;
          immobilizeOrMineralizeNitrogen(utils, carbonFlux_surfaceStructuralLitterPool_to_soilMicrobesPool,
                                         nitrogenFlow_surfaceStructuralLitterPool_to_soilMicrobesPool, decisiveCNRatio_surfaceStructuralLitterPool_soilMicrobesPool,
@@ -631,10 +967,12 @@ bool SOIL::decompose(UTILS utils, double carbonFlux, double ligninContent, std::
          //*** to slow soil pool ****
          transferToPool = "slow";
          carbonFlux_soilStructuralLitterPool_to_soilSlowPool = carbonFlux * ligninContent;
-         calculateRespirationOfDecomposition(utils, transferFromPool, transferToPool);
+         calculateCarbonRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 
          // proportional nitrogen flow from litter to soil slow pool
          determineNitrogenFlux(utils, transferFromPool, transferToPool);
+
+         calculateNitrogenRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 
          nitrogenFlow_soilStructuralLitterPool_to_soilSlowPool = nitrogenFlux_soilStructuralLitterPool_to_soilSlowPool;
          immobilizeOrMineralizeNitrogen(utils, carbonFlux_soilStructuralLitterPool_to_soilSlowPool,
@@ -645,10 +983,12 @@ bool SOIL::decompose(UTILS utils, double carbonFlux, double ligninContent, std::
          transferToPool = "active";
          carbonFlux_soilStructuralLitterPool_to_soilActivePool =
              carbonFlux - carbonFlux_soilStructuralLitterPool_to_soilSlowPool - respiration_decompositionCarbon_soilStructuralLitterPool_soilSlowPool;
-         calculateRespirationOfDecomposition(utils, transferFromPool, transferToPool);
+         calculateCarbonRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 
          // proportional nitrogen flow from litter to soil active pool
          determineNitrogenFlux(utils, transferFromPool, transferToPool);
+
+         calculateNitrogenRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 
          nitrogenFlow_soilStructuralLitterPool_to_soilActivePool = nitrogenFlux_soilStructuralLitterPool_to_soilActivePool;
          immobilizeOrMineralizeNitrogen(utils, carbonFlux_soilStructuralLitterPool_to_soilActivePool,
@@ -661,10 +1001,12 @@ bool SOIL::decompose(UTILS utils, double carbonFlux, double ligninContent, std::
       {
          transferToPool = "microbes";
          carbonFlux_surfaceMetabolicLitterPool_to_soilMicrobesPool = std::min(carbonFlux, carbonContent_surfaceMetabolicLitterPool);
-         calculateRespirationOfDecomposition(utils, transferFromPool, transferToPool);
+         calculateCarbonRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 
          // proportional nitrogen flow from litter to microbial pool
          determineNitrogenFlux(utils, transferFromPool, transferToPool);
+
+         calculateNitrogenRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 
          nitrogenFlow_surfaceMetabolicLitterPool_to_soilMicrobesPool = nitrogenFlux_surfaceMetabolicLitterPool_to_soilMicrobesPool;
          immobilizeOrMineralizeNitrogen(utils, carbonFlux_surfaceMetabolicLitterPool_to_soilMicrobesPool,
@@ -677,10 +1019,12 @@ bool SOIL::decompose(UTILS utils, double carbonFlux, double ligninContent, std::
       {
          transferToPool = "active";
          carbonFlux_soilMetabolicLitterPool_to_soilActivePool = std::min(carbonFlux, carbonContent_soilMetabolicLitterPool);
-         calculateRespirationOfDecomposition(utils, transferFromPool, transferToPool);
+         calculateCarbonRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 
          // proportional nitrogen flow from litter to soil active pool
          determineNitrogenFlux(utils, transferFromPool, transferToPool);
+
+         calculateNitrogenRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 
          nitrogenFlow_soilMetabolicLitterPool_to_soilActivePool = nitrogenFlux_soilMetabolicLitterPool_to_soilActivePool;
          immobilizeOrMineralizeNitrogen(utils, carbonFlux_soilMetabolicLitterPool_to_soilActivePool,
@@ -693,10 +1037,11 @@ bool SOIL::decompose(UTILS utils, double carbonFlux, double ligninContent, std::
       {
          transferToPool = "slow";
          carbonFlux_soilMicrobesPool_to_soilSlowPool = carbonFlux;
-         calculateRespirationOfDecomposition(utils, transferFromPool, transferToPool);
+         calculateCarbonRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 
          // proportional nitrogen flow from microbes to soil slow pool
          determineNitrogenFlux(utils, transferFromPool, transferToPool);
+         calculateNitrogenRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 
          nitrogenFlow_soilMicrobesPool_to_soilSlowPool = nitrogenFlux_soilMicrobesPool_to_soilSlowPool;
          immobilizeOrMineralizeNitrogen(utils, carbonFlux_soilMicrobesPool_to_soilSlowPool,
@@ -709,14 +1054,15 @@ bool SOIL::decompose(UTILS utils, double carbonFlux, double ligninContent, std::
       {
          transferToPool = "slow_passive";
          carbonFlux_soilActivePool_to_soilPassiveAndSlowPool = carbonFlux;
-         calculateRespirationOfDecomposition(utils, transferFromPool, transferToPool);
+         calculateCarbonRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 
          // -------------- flux to passive soil pool incl. leaching
          transferToPool = "passive";
          carbonFlux_soilActivePool_to_soilPassivePool = carbonFlux_soilActivePool_to_soilPassiveAndSlowPool * (0.003 + 0.032 * clayContent);
 
-         // proportional nitrogen flow from microbes to soil slow pool
+         // proportional nitrogen flow from active to soil passive pool
          determineNitrogenFlux(utils, transferFromPool, transferToPool);
+         calculateNitrogenRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 
          nitrogenFlow_soilActivePool_to_soilPassivePool = nitrogenFlux_soilActivePool_to_soilPassivePool;
          immobilizeOrMineralizeNitrogen(utils, carbonFlux_soilActivePool_to_soilPassivePool,
@@ -729,9 +1075,10 @@ bool SOIL::decompose(UTILS utils, double carbonFlux, double ligninContent, std::
          // -------------- flux to slow soil pool
          transferToPool = "slow";
          carbonFlux_soilActivePool_to_soilSlowPool = carbonFlux_soilActivePool_to_soilPassiveAndSlowPool - respiration_decompositionCarbon_soilActivePool_soilPassiveAndSlowPool -
-                                                     carbonFlux_soilActivePool_to_soilPassivePool - carbonLeaching;
+                                                     carbonFlux_soilActivePool_to_soilPassivePool - leachingCarbon;
 
          determineNitrogenFlux(utils, transferFromPool, transferToPool);
+         calculateNitrogenRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 
          nitrogenFlow_soilActivePool_to_soilSlowPool = nitrogenFlux_soilActivePool_to_soilSlowPool;
          immobilizeOrMineralizeNitrogen(utils, carbonFlux_soilActivePool_to_soilSlowPool,
@@ -744,7 +1091,7 @@ bool SOIL::decompose(UTILS utils, double carbonFlux, double ligninContent, std::
       {
          transferToPool = "active_passive";
          carbonFlux_soilSlowPool_to_soilPassiveAndActivePool = carbonFlux;
-         calculateRespirationOfDecomposition(utils, transferFromPool, transferToPool);
+         calculateCarbonRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 
          // --------- to passive pool
          transferToPool = "passive";
@@ -752,6 +1099,7 @@ bool SOIL::decompose(UTILS utils, double carbonFlux, double ligninContent, std::
 
          // proportional nitrogen flow from soil slow pool to passive pool
          determineNitrogenFlux(utils, transferFromPool, transferToPool);
+         calculateNitrogenRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 
          nitrogenFlow_soilSlowPool_to_soilPassivePool = nitrogenFlux_soilSlowPool_to_soilPassivePool;
          immobilizeOrMineralizeNitrogen(utils, carbonFlux_soilSlowPool_to_soilPassivePool,
@@ -765,6 +1113,7 @@ bool SOIL::decompose(UTILS utils, double carbonFlux, double ligninContent, std::
              carbonFlux_soilSlowPool_to_soilPassiveAndActivePool - respiration_decompositionCarbon_soilSlowPool_soilPassiveAndActivePool - carbonFlux_soilSlowPool_to_soilPassivePool;
 
          determineNitrogenFlux(utils, transferFromPool, transferToPool);
+         calculateNitrogenRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 
          nitrogenFlow_soilSlowPool_to_soilActivePool = nitrogenFlux_soilSlowPool_to_soilActivePool;
          immobilizeOrMineralizeNitrogen(utils, carbonFlux_soilSlowPool_to_soilActivePool,
@@ -777,10 +1126,12 @@ bool SOIL::decompose(UTILS utils, double carbonFlux, double ligninContent, std::
       {
          transferToPool = "active";
          carbonFlux_soilPassivePool_to_soilActivePool = carbonFlux;
-         calculateRespirationOfDecomposition(utils, transferFromPool, transferToPool);
+         calculateCarbonRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 
          // proportional nitrogen flow from soil passive pool to active pool
          determineNitrogenFlux(utils, transferFromPool, transferToPool);
+
+         calculateNitrogenRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 
          nitrogenFlow_soilPassivePool_to_soilActivePool = nitrogenFlux_soilPassivePool_to_soilActivePool;
          immobilizeOrMineralizeNitrogen(utils, carbonFlux_soilPassivePool_to_soilActivePool,
@@ -789,15 +1140,6 @@ bool SOIL::decompose(UTILS utils, double carbonFlux, double ligninContent, std::
       }
    }
    return false;
-}
-
-void SOIL::calculateRespirationOfDecomposition(UTILS utils, std::string transferFromPool, std::string transferToPool)
-{
-   // carbon respiration asscociated with decomposition
-   calculateCarbonRespirationOfDecomposition(utils, transferFromPool, transferToPool);
-
-   // nitrogen flow asscociated with carbon respiration of decomposition (proportional to CN ratio of origin pool)
-   calculateNitrogenRespirationOfDecomposition(utils, transferFromPool, transferToPool);
 }
 
 /**
@@ -852,6 +1194,7 @@ void SOIL::calculateCarbonRespirationOfDecomposition(UTILS utils, std::string tr
    {
       if (transferToPool == "slow")
       {
+
          respiration_decompositionCarbon_soilMicrobesPool_soilSlowPool = carbonFlux_soilMicrobesPool_to_soilSlowPool * 0.6;
          carbonFlux_soilMicrobesPool_to_soilSlowPool -= respiration_decompositionCarbon_soilMicrobesPool_soilSlowPool;
       }
@@ -891,92 +1234,181 @@ void SOIL::calculateNitrogenRespirationOfDecomposition(UTILS utils, std::string 
 
    if (transferPoolFrom == "surface_structural")
    {
-      actualCNRatioOfPool = (nitrogenContent_surfaceStructuralLitterPool / carbonContent_surfaceStructuralLitterPool);
+      if (carbonContent_surfaceStructuralLitterPool > 0)
+      {
+         actualCNRatioOfPool = (nitrogenContent_surfaceStructuralLitterPool / carbonContent_surfaceStructuralLitterPool);
 
-      if (transferPoolTo == "slow")
-      {
-         respiration_decompositionNitrogen_surfaceStructuralLitterPool_soilSlowPool = respiration_decompositionCarbon_surfaceStructuralLitterPool_soilSlowPool * actualCNRatioOfPool;
-         respirationNitrogen = respiration_decompositionNitrogen_surfaceStructuralLitterPool_soilSlowPool;
+         if (transferPoolTo == "slow")
+         {
+            respiration_decompositionNitrogen_surfaceStructuralLitterPool_soilSlowPool = respiration_decompositionCarbon_surfaceStructuralLitterPool_soilSlowPool * actualCNRatioOfPool;
+            respirationNitrogen = respiration_decompositionNitrogen_surfaceStructuralLitterPool_soilSlowPool;
+         }
+         else if (transferPoolTo == "microbes")
+         {
+            respiration_decompositionNitrogen_surfaceStructuralLitterPool_soilMicrobesPool = respiration_decompositionCarbon_surfaceStructuralLitterPool_soilMicrobesPool * actualCNRatioOfPool;
+            respirationNitrogen = respiration_decompositionNitrogen_surfaceStructuralLitterPool_soilMicrobesPool;
+         }
       }
-      else if (transferPoolTo == "microbes")
+      else
       {
-         respiration_decompositionNitrogen_surfaceStructuralLitterPool_soilMicrobesPool = respiration_decompositionCarbon_surfaceStructuralLitterPool_soilMicrobesPool * actualCNRatioOfPool;
-         respirationNitrogen = respiration_decompositionNitrogen_surfaceStructuralLitterPool_soilMicrobesPool;
+         if (transferPoolTo == "slow")
+         {
+            respiration_decompositionNitrogen_surfaceStructuralLitterPool_soilSlowPool = 0;
+            respirationNitrogen = 0;
+         }
+         else if (transferPoolTo == "microbes")
+         {
+            respiration_decompositionNitrogen_surfaceStructuralLitterPool_soilMicrobesPool = 0;
+            respirationNitrogen = 0;
+         }
       }
    }
    else if (transferPoolFrom == "soil_structural")
    {
-      actualCNRatioOfPool = (nitrogenContent_soilStructuralLitterPool / carbonContent_soilStructuralLitterPool);
+      if (carbonContent_soilStructuralLitterPool > 0)
+      {
+         actualCNRatioOfPool = (nitrogenContent_soilStructuralLitterPool / carbonContent_soilStructuralLitterPool);
 
-      if (transferPoolTo == "slow")
-      {
-         respiration_decompositionNitrogen_soilStructuralLitterPool_soilSlowPool = respiration_decompositionCarbon_soilStructuralLitterPool_soilSlowPool * actualCNRatioOfPool;
-         respirationNitrogen = respiration_decompositionNitrogen_soilStructuralLitterPool_soilSlowPool;
+         if (transferPoolTo == "slow")
+         {
+            respiration_decompositionNitrogen_soilStructuralLitterPool_soilSlowPool = respiration_decompositionCarbon_soilStructuralLitterPool_soilSlowPool * actualCNRatioOfPool;
+            respirationNitrogen = respiration_decompositionNitrogen_soilStructuralLitterPool_soilSlowPool;
+         }
+         else if (transferPoolTo == "active")
+         {
+            respiration_decompositionNitrogen_soilStructuralLitterPool_soilActivePool = respiration_decompositionCarbon_soilStructuralLitterPool_soilActivePool * actualCNRatioOfPool;
+            respirationNitrogen = respiration_decompositionNitrogen_soilStructuralLitterPool_soilActivePool;
+         }
       }
-      else if (transferPoolTo == "active")
+      else
       {
-         respiration_decompositionNitrogen_soilStructuralLitterPool_soilActivePool = respiration_decompositionCarbon_soilStructuralLitterPool_soilActivePool * actualCNRatioOfPool;
-         respirationNitrogen = respiration_decompositionNitrogen_soilStructuralLitterPool_soilActivePool;
+         if (transferPoolTo == "slow")
+         {
+            respiration_decompositionNitrogen_soilStructuralLitterPool_soilSlowPool = 0;
+            respirationNitrogen = 0;
+         }
+         else if (transferPoolTo == "active")
+         {
+            respiration_decompositionNitrogen_soilStructuralLitterPool_soilActivePool = 0;
+            respirationNitrogen = 0;
+         }
       }
    }
    else if (transferPoolFrom == "surface_metabolic")
    {
-      actualCNRatioOfPool = (nitrogenContent_surfaceMetabolicLitterPool / carbonContent_surfaceMetabolicLitterPool);
-
-      if (transferPoolTo == "microbes")
+      if (carbonContent_surfaceMetabolicLitterPool > 0)
       {
-         respiration_decompositionNitrogen_surfaceMetabolicLitterPool_soilMicrobesPool = respiration_decompositionCarbon_surfaceMetabolicLitterPool_soilMicrobesPool * actualCNRatioOfPool;
-         respirationNitrogen = respiration_decompositionNitrogen_surfaceMetabolicLitterPool_soilMicrobesPool;
+         actualCNRatioOfPool = (nitrogenContent_surfaceMetabolicLitterPool / carbonContent_surfaceMetabolicLitterPool);
+
+         if (transferPoolTo == "microbes")
+         {
+            respiration_decompositionNitrogen_surfaceMetabolicLitterPool_soilMicrobesPool = respiration_decompositionCarbon_surfaceMetabolicLitterPool_soilMicrobesPool * actualCNRatioOfPool;
+            respirationNitrogen = respiration_decompositionNitrogen_surfaceMetabolicLitterPool_soilMicrobesPool;
+         }
+      }
+      else
+      {
+         if (transferPoolTo == "microbes")
+         {
+            respiration_decompositionNitrogen_surfaceMetabolicLitterPool_soilMicrobesPool = 0;
+            respirationNitrogen = 0;
+         }
       }
    }
    else if (transferPoolFrom == "soil_metabolic")
    {
-      actualCNRatioOfPool = (nitrogenContent_soilMetabolicLitterPool / carbonContent_soilMetabolicLitterPool);
-
-      if (transferPoolTo == "active")
+      if (carbonContent_soilMetabolicLitterPool > 0)
       {
-         respiration_decompositionNitrogen_soilMetabolicLitterPool_soilActivePool = respiration_decompositionCarbon_soilMetabolicLitterPool_soilActivePool * actualCNRatioOfPool;
-         respirationNitrogen = respiration_decompositionNitrogen_soilMetabolicLitterPool_soilActivePool;
+         actualCNRatioOfPool = (nitrogenContent_soilMetabolicLitterPool / carbonContent_soilMetabolicLitterPool);
+
+         if (transferPoolTo == "active")
+         {
+            respiration_decompositionNitrogen_soilMetabolicLitterPool_soilActivePool = respiration_decompositionCarbon_soilMetabolicLitterPool_soilActivePool * actualCNRatioOfPool;
+            respirationNitrogen = respiration_decompositionNitrogen_soilMetabolicLitterPool_soilActivePool;
+         }
+      }
+      else
+      {
+         if (transferPoolTo == "active")
+         {
+            respiration_decompositionNitrogen_soilMetabolicLitterPool_soilActivePool = 0;
+            respirationNitrogen = 0;
+         }
       }
    }
    else if (transferPoolFrom == "microbes")
    {
-      actualCNRatioOfPool = (nitrogenContent_soilMicrobesPool / carbonContent_soilMicrobesPool);
-
-      if (transferPoolTo == "slow")
+      if (carbonContent_soilMicrobesPool > 0)
       {
-         respiration_decompositionNitrogen_soilMicrobesPool_soilSlowPool = respiration_decompositionCarbon_soilMicrobesPool_soilSlowPool * actualCNRatioOfPool;
-         respirationNitrogen = respiration_decompositionNitrogen_soilMicrobesPool_soilSlowPool;
+         actualCNRatioOfPool = (nitrogenContent_soilMicrobesPool / carbonContent_soilMicrobesPool);
+
+         if (transferPoolTo == "slow")
+         {
+            respiration_decompositionNitrogen_soilMicrobesPool_soilSlowPool = respiration_decompositionCarbon_soilMicrobesPool_soilSlowPool * actualCNRatioOfPool;
+            respirationNitrogen = respiration_decompositionNitrogen_soilMicrobesPool_soilSlowPool;
+         }
+      }
+      else
+      {
+         if (transferPoolTo == "slow")
+         {
+            respiration_decompositionNitrogen_soilMicrobesPool_soilSlowPool = 0;
+            respirationNitrogen = 0;
+         }
       }
    }
    else if (transferPoolFrom == "active")
    {
       if (transferPoolTo == "slow_passive")
       {
-         actualCNRatioOfPool = (nitrogenContent_soilActivePool / carbonContent_soilActivePool);
+         if (carbonContent_soilActivePool > 0)
+         {
+            actualCNRatioOfPool = (nitrogenContent_soilActivePool / carbonContent_soilActivePool);
 
-         respiration_decompositionNitrogen_soilActivePool_soilPassiveAndSlowPool = respiration_decompositionCarbon_soilActivePool_soilPassiveAndSlowPool * actualCNRatioOfPool;
-         respirationNitrogen = respiration_decompositionNitrogen_soilActivePool_soilPassiveAndSlowPool;
+            respiration_decompositionNitrogen_soilActivePool_soilPassiveAndSlowPool = respiration_decompositionCarbon_soilActivePool_soilPassiveAndSlowPool * actualCNRatioOfPool;
+            respirationNitrogen = respiration_decompositionNitrogen_soilActivePool_soilPassiveAndSlowPool;
+         }
+         else
+         {
+            respiration_decompositionNitrogen_soilActivePool_soilPassiveAndSlowPool = 0;
+            respirationNitrogen = 0;
+         }
       }
    }
    else if (transferPoolFrom == "slow")
    {
       if (transferPoolTo == "active_passive")
       {
-         actualCNRatioOfPool = (nitrogenContent_soilSlowPool / carbonContent_soilSlowPool);
+         if (carbonContent_soilSlowPool > 0)
+         {
+            actualCNRatioOfPool = (nitrogenContent_soilSlowPool / carbonContent_soilSlowPool);
 
-         respiration_decompositionNitrogen_soilSlowPool_soilPassiveAndActivePool = respiration_decompositionCarbon_soilSlowPool_soilPassiveAndActivePool * actualCNRatioOfPool;
-         respirationNitrogen = respiration_decompositionNitrogen_soilSlowPool_soilPassiveAndActivePool;
+            respiration_decompositionNitrogen_soilSlowPool_soilPassiveAndActivePool = respiration_decompositionCarbon_soilSlowPool_soilPassiveAndActivePool * actualCNRatioOfPool;
+            respirationNitrogen = respiration_decompositionNitrogen_soilSlowPool_soilPassiveAndActivePool;
+         }
+         else
+         {
+            respiration_decompositionNitrogen_soilSlowPool_soilPassiveAndActivePool = 0;
+            respirationNitrogen = 0;
+         }
       }
    }
    else if (transferPoolFrom == "passive")
    {
       if (transferPoolTo == "active")
       {
-         actualCNRatioOfPool = (nitrogenContent_soilPassivePool / carbonContent_soilPassivePool);
+         if (carbonContent_soilPassivePool > 0)
+         {
+            actualCNRatioOfPool = (nitrogenContent_soilPassivePool / carbonContent_soilPassivePool);
 
-         respiration_decompositionNitrogen_soilPassivePool_soilActivePool = respiration_decompositionCarbon_soilPassivePool_soilActivePool * actualCNRatioOfPool;
-         respirationNitrogen = respiration_decompositionNitrogen_soilPassivePool_soilActivePool;
+            respiration_decompositionNitrogen_soilPassivePool_soilActivePool = respiration_decompositionCarbon_soilPassivePool_soilActivePool * actualCNRatioOfPool;
+            respirationNitrogen = respiration_decompositionNitrogen_soilPassivePool_soilActivePool;
+         }
+         else
+         {
+            respiration_decompositionNitrogen_soilPassivePool_soilActivePool = 0;
+            respirationNitrogen = 0;
+         }
       }
    }
 
@@ -994,72 +1426,156 @@ void SOIL::determineNitrogenFlux(UTILS utils, std::string transferFromPool, std:
    {
       if (transferToPool == "microbes")
       {
-         nitrogenFlux_surfaceStructuralLitterPool_to_soilMicrobesPool = nitrogenContent_surfaceStructuralLitterPool * (carbonFlux_surfaceStructuralLitterPool_to_soilMicrobesPool / carbonContent_surfaceStructuralLitterPool);
+         if (carbonContent_surfaceStructuralLitterPool > 0.0)
+         {
+            nitrogenFlux_surfaceStructuralLitterPool_to_soilMicrobesPool = nitrogenContent_surfaceStructuralLitterPool * (carbonFlux_surfaceStructuralLitterPool_to_soilMicrobesPool / carbonContent_surfaceStructuralLitterPool);
+         }
+         else
+         {
+            nitrogenFlux_surfaceStructuralLitterPool_to_soilMicrobesPool = 0.0;
+         }
       }
       if (transferToPool == "slow")
       {
-         nitrogenFlux_surfaceStructuralLitterPool_to_soilSlowPool = nitrogenContent_surfaceStructuralLitterPool * (carbonFlux_surfaceStructuralLitterPool_to_soilSlowPool / carbonContent_surfaceStructuralLitterPool);
+         if (carbonContent_surfaceStructuralLitterPool > 0.0)
+         {
+            nitrogenFlux_surfaceStructuralLitterPool_to_soilSlowPool = nitrogenContent_surfaceStructuralLitterPool * (carbonFlux_surfaceStructuralLitterPool_to_soilSlowPool / carbonContent_surfaceStructuralLitterPool);
+         }
+         else
+         {
+            nitrogenFlux_surfaceStructuralLitterPool_to_soilSlowPool = 0.0;
+         }
       }
    }
    else if (transferFromPool == "soil_structural")
    {
       if (transferToPool == "active")
       {
-         nitrogenFlux_soilStructuralLitterPool_to_soilActivePool = nitrogenContent_soilStructuralLitterPool * (carbonFlux_soilStructuralLitterPool_to_soilActivePool / carbonContent_soilStructuralLitterPool);
+         if (carbonContent_soilStructuralLitterPool > 0.0)
+         {
+            nitrogenFlux_soilStructuralLitterPool_to_soilActivePool = nitrogenContent_soilStructuralLitterPool * (carbonFlux_soilStructuralLitterPool_to_soilActivePool / carbonContent_soilStructuralLitterPool);
+         }
+         else
+         {
+            nitrogenFlux_soilStructuralLitterPool_to_soilActivePool = 0.0;
+         }
       }
       if (transferToPool == "slow")
       {
-         nitrogenFlux_soilStructuralLitterPool_to_soilSlowPool = nitrogenContent_soilStructuralLitterPool * (carbonFlux_soilStructuralLitterPool_to_soilSlowPool / carbonContent_soilStructuralLitterPool);
+         if (carbonContent_soilStructuralLitterPool > 0.0)
+         {
+            nitrogenFlux_soilStructuralLitterPool_to_soilSlowPool = nitrogenContent_soilStructuralLitterPool * (carbonFlux_soilStructuralLitterPool_to_soilSlowPool / carbonContent_soilStructuralLitterPool);
+         }
+         else
+         {
+            nitrogenFlux_soilStructuralLitterPool_to_soilSlowPool = 0.0;
+         }
       }
    }
    else if (transferFromPool == "surface_metabolic")
    {
       if (transferToPool == "microbes")
       {
-         nitrogenFlux_surfaceMetabolicLitterPool_to_soilMicrobesPool = nitrogenContent_surfaceMetabolicLitterPool * (carbonFlux_surfaceMetabolicLitterPool_to_soilMicrobesPool / carbonContent_surfaceMetabolicLitterPool);
+         if (carbonContent_surfaceMetabolicLitterPool > 0.0)
+         {
+            nitrogenFlux_surfaceMetabolicLitterPool_to_soilMicrobesPool = nitrogenContent_surfaceMetabolicLitterPool * (carbonFlux_surfaceMetabolicLitterPool_to_soilMicrobesPool / carbonContent_surfaceMetabolicLitterPool);
+         }
+         else
+         {
+            nitrogenFlux_surfaceMetabolicLitterPool_to_soilMicrobesPool = 0.0;
+         }
       }
    }
    else if (transferFromPool == "soil_metabolic")
    {
       if (transferToPool == "active")
       {
-         nitrogenFlux_soilMetabolicLitterPool_to_soilActivePool = nitrogenContent_soilMetabolicLitterPool * (carbonFlux_soilMetabolicLitterPool_to_soilActivePool / carbonContent_soilMetabolicLitterPool);
+         if (carbonContent_soilMetabolicLitterPool > 0.0)
+         {
+            nitrogenFlux_soilMetabolicLitterPool_to_soilActivePool = nitrogenContent_soilMetabolicLitterPool * (carbonFlux_soilMetabolicLitterPool_to_soilActivePool / carbonContent_soilMetabolicLitterPool);
+         }
+         else
+         {
+            nitrogenFlux_soilMetabolicLitterPool_to_soilActivePool = 0.0;
+         }
       }
    }
    else if (transferFromPool == "microbes")
    {
       if (transferToPool == "slow")
       {
-         nitrogenFlux_soilMicrobesPool_to_soilSlowPool = nitrogenContent_soilMicrobesPool * (carbonFlux_soilMicrobesPool_to_soilSlowPool / carbonContent_soilMicrobesPool);
+         if (carbonContent_soilMicrobesPool > 0.0)
+         {
+            nitrogenFlux_soilMicrobesPool_to_soilSlowPool = nitrogenContent_soilMicrobesPool * (carbonFlux_soilMicrobesPool_to_soilSlowPool / carbonContent_soilMicrobesPool);
+         }
+         else
+         {
+            nitrogenFlux_soilMicrobesPool_to_soilSlowPool = 0.0;
+         }
       }
    }
    else if (transferFromPool == "active")
    {
       if (transferToPool == "slow")
       {
-         nitrogenFlux_soilActivePool_to_soilSlowPool = nitrogenContent_soilActivePool * (carbonFlux_soilActivePool_to_soilSlowPool / carbonContent_soilActivePool);
+         if (carbonContent_soilActivePool > 0.0)
+         {
+            nitrogenFlux_soilActivePool_to_soilSlowPool = nitrogenContent_soilActivePool * (carbonFlux_soilActivePool_to_soilSlowPool / carbonContent_soilActivePool);
+         }
+         else
+         {
+            nitrogenFlux_soilActivePool_to_soilSlowPool = 0.0;
+         }
       }
       if (transferToPool == "passive")
       {
-         nitrogenFlux_soilActivePool_to_soilPassivePool = nitrogenContent_soilActivePool * (carbonFlux_soilActivePool_to_soilPassivePool / carbonContent_soilActivePool);
+         if (carbonContent_soilActivePool > 0.0)
+         {
+            nitrogenFlux_soilActivePool_to_soilPassivePool = nitrogenContent_soilActivePool * (carbonFlux_soilActivePool_to_soilPassivePool / carbonContent_soilActivePool);
+         }
+         else
+         {
+            nitrogenFlux_soilActivePool_to_soilPassivePool = 0.0;
+         }
       }
    }
    else if (transferFromPool == "slow")
    {
       if (transferToPool == "active")
       {
-         nitrogenFlux_soilSlowPool_to_soilActivePool = nitrogenContent_soilSlowPool * (carbonFlux_soilSlowPool_to_soilActivePool / carbonContent_soilSlowPool);
+         if (carbonContent_soilSlowPool > 0.0)
+         {
+            nitrogenFlux_soilSlowPool_to_soilActivePool = nitrogenContent_soilSlowPool * (carbonFlux_soilSlowPool_to_soilActivePool / carbonContent_soilSlowPool);
+         }
+         else
+         {
+            nitrogenFlux_soilSlowPool_to_soilActivePool = 0.0;
+         }
       }
       if (transferToPool == "passive")
       {
-         nitrogenFlux_soilSlowPool_to_soilPassivePool = nitrogenContent_soilSlowPool * (carbonFlux_soilSlowPool_to_soilPassivePool / carbonContent_soilSlowPool);
+         if (carbonContent_soilSlowPool > 0.0)
+         {
+            nitrogenFlux_soilSlowPool_to_soilPassivePool = nitrogenContent_soilSlowPool * (carbonFlux_soilSlowPool_to_soilPassivePool / carbonContent_soilSlowPool);
+         }
+         else
+         {
+            nitrogenFlux_soilSlowPool_to_soilPassivePool = 0.0;
+         }
       }
    }
    else if (transferFromPool == "passive")
    {
       if (transferToPool == "active")
       {
-         nitrogenFlux_soilPassivePool_to_soilActivePool = nitrogenContent_soilPassivePool * (carbonFlux_soilPassivePool_to_soilActivePool / carbonContent_soilPassivePool);
+         if (carbonContent_soilPassivePool > 0.0)
+         {
+            nitrogenFlux_soilPassivePool_to_soilActivePool = nitrogenContent_soilPassivePool * (carbonFlux_soilPassivePool_to_soilActivePool / carbonContent_soilPassivePool);
+         }
+         else
+         {
+            nitrogenFlux_soilPassivePool_to_soilActivePool = 0.0;
+         }
       }
    }
 }
@@ -1084,10 +1600,6 @@ void SOIL::immobilizeOrMineralizeNitrogen(UTILS utils, double carbonFlux, double
          // nitrogen surplus will be added to soil mineral nitrogen pool
          mineralizeNitrogen(utils, transferFromPool, transferToPool, decisiveCNratio, nitrogenFlow);
       }
-   }
-   else
-   {
-      utils.handleError("Carbon or nitrogen fluxes are negative! No CN ratio can be calculated for deciding on immobilization or mineralization.");
    }
 }
 
@@ -1349,6 +1861,7 @@ void SOIL::updateSoilPoolsByRespirationAndFluxes(UTILS utils)
 
    nitrogenContent_soilMineralPoolPerSoilLayer.at(0) += (respiration_decompositionNitrogen_soilActivePool_soilPassiveAndSlowPool + respiration_decompositionNitrogen_soilMicrobesPool_soilSlowPool +
                                                          respiration_decompositionNitrogen_soilSlowPool_soilPassiveAndActivePool + respiration_decompositionNitrogen_soilPassivePool_soilActivePool);
+
    nitrogenContent_soilActivePool -= respiration_decompositionNitrogen_soilActivePool_soilPassiveAndSlowPool;
    nitrogenContent_soilMicrobesPool -= respiration_decompositionNitrogen_soilMicrobesPool_soilSlowPool;
    nitrogenContent_soilSlowPool -= respiration_decompositionNitrogen_soilSlowPool_soilPassiveAndActivePool;
@@ -1372,11 +1885,11 @@ void SOIL::updateSoilPoolsByRespirationAndFluxes(UTILS utils)
    carbonContent_soilPassivePool -= carbonFlux_soilPassivePool_to_soilActivePool;
 
    carbonContent_soilActivePool += (carbonFlux_soilSlowPool_to_soilActivePool + carbonFlux_soilPassivePool_to_soilActivePool);
-   carbonContent_soilActivePool -= (carbonFlux_soilActivePool_to_soilSlowPool + carbonFlux_soilActivePool_to_soilPassivePool + carbonLeaching);
+   carbonContent_soilActivePool -= (carbonFlux_soilActivePool_to_soilSlowPool + carbonFlux_soilActivePool_to_soilPassivePool + leachingCarbon);
 
    carbonContent_soilMicrobesPool -= carbonFlux_soilMicrobesPool_to_soilSlowPool;
 
-   LeachingC += carbonLeaching;
+   carbonContent_leachedFromSoil += leachingCarbon;
 
    // nitrogen fluxes: added and subtracted to/from pools
    // nitrogenFlow is subtracted from pools (contains nitrogenFlux + mineralizableNitrogen in case of mineralization; in case of immobilization nitrogenFlow = nitrogenFlux)
@@ -1395,12 +1908,12 @@ void SOIL::updateSoilPoolsByRespirationAndFluxes(UTILS utils)
 
    nitrogenContent_soilActivePool += (nitrogenFlux_soilStructuralLitterPool_to_soilActivePool + nitrogenFlux_soilMetabolicLitterPool_to_soilActivePool);
    nitrogenContent_soilActivePool += (nitrogenFlux_soilSlowPool_to_soilActivePool + nitrogenFlux_soilPassivePool_to_soilActivePool);
-   nitrogenContent_soilActivePool -= (nitrogenFlow_soilActivePool_to_soilSlowPool + nitrogenFlow_soilActivePool_to_soilPassivePool + NLeach);
+   nitrogenContent_soilActivePool -= (nitrogenFlow_soilActivePool_to_soilSlowPool + nitrogenFlow_soilActivePool_to_soilPassivePool + leachingNitrogen);
 
    nitrogenContent_soilMicrobesPool += (nitrogenFlux_surfaceStructuralLitterPool_to_soilMicrobesPool + nitrogenFlux_surfaceMetabolicLitterPool_to_soilMicrobesPool);
    nitrogenContent_soilMicrobesPool -= nitrogenFlow_soilMicrobesPool_to_soilSlowPool;
 
-   LeachingN += NLeach;
+   nitrogenContent_leachedFromSoil += leachingNitrogen;
 
    // ############## Immobilization/Mineralization ####################
    // either immobilization or mineralization occurs per soil pool flux
@@ -1440,7 +1953,7 @@ void SOIL::calculateNonsymbioticNitrogenFixationAndAthmosphericDeposition(UTILS 
    double athomsphericDeposition;
 
    nonsymbioticNitrogenFixation = 0;
-   athomsphericDeposition = 0.01 * (weather.potEvapoTranspiration.at(parameter.day) - (30.0 / 365.0));
+   athomsphericDeposition = 0.01 * (weather.potEvapoTranspiration.at(parameter.day - 1) - (30.0 / 365.0));
    athomsphericDeposition = std::max(athomsphericDeposition, 0.0);
 
    nitrogenContent_soilMineralPoolPerSoilLayer.at(0) += (athomsphericDeposition + nonsymbioticNitrogenFixation);
@@ -1449,7 +1962,7 @@ void SOIL::calculateNonsymbioticNitrogenFixationAndAthmosphericDeposition(UTILS 
    if (nitrogenContent_soilMineralPoolPerSoilLayer.at(0) + tolerance < 0.0)
    {
       nitrogenContent_soilMineralPoolPerSoilLayer.at(0) = 0.0;
-      utils.handleError("Soil mineral nitrogen in the top soil layer is negative!");
+      // utils.handleError("Soil mineral nitrogen in the top soil layer is negative!");
    }
 }
 
@@ -1465,11 +1978,26 @@ void SOIL::calculateNitrogenLossByVolatilization(UTILS utils)
    if (nitrogenContent_soilMineralPoolPerSoilLayer.at(0) + tolerance < 0.0)
    {
       nitrogenContent_soilMineralPoolPerSoilLayer.at(0) = 0.0;
-      utils.handleError("Soil mineral nitrogen in the top soil layer is negative!");
+      // utils.handleError("Soil mineral nitrogen in the top soil layer is negative!");
    }
 }
 
 void SOIL::doLeaching(UTILS utils)
 {
-   //....
+   // leaching of organics
+   // only occurs if water flow out of water layer 2 exceeds a critical value
+   // uses the same C/N ratio as for the flow to passive soil pool
+
+   leachingCarbon = 0.0;
+   leachingNitrogen = 0.0;
+
+   if (waterContent_soilWaterPoolPerLayer.at(1) > 0.0)
+   {
+      double soilWaterFactor = std::max(1.0, 1.0 - (1.9 - (waterContent_soilWaterPoolPerLayer.at(1) / 10.0)) / 1.9);
+      double soilTypeFactor = (0.05 + 0.15 * sandContent);
+      double carbonNitrogenRatioOfActivePool = carbonContent_soilActivePool / nitrogenContent_soilActivePool;
+
+      leachingCarbon = carbonFlux_soilActivePool_to_soilPassiveAndSlowPool * soilTypeFactor * soilWaterFactor;
+      leachingNitrogen = leachingCarbon / carbonNitrogenRatioOfActivePool;
+   }
 }

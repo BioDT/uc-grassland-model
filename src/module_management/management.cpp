@@ -3,11 +3,20 @@
 MANAGEMENT::MANAGEMENT() {};
 MANAGEMENT::~MANAGEMENT() {};
 
-void MANAGEMENT::applyManagementRegime(UTILS utils, COMMUNITY &community, ALLOMETRY allometry, PARAMETER parameter)
+void MANAGEMENT::applyManagementRegime(UTILS utils, COMMUNITY &community, ALLOMETRY allometry, PARAMETER parameter, SOIL &soil)
 {
    /* mowing events */
    initializeYieldVariables(community, parameter);
    checkIfTodayAndDoMowing(utils, community, allometry, parameter);
+
+   /* fertilization events */
+   checkIfTodayAndDoFertilization(utils, parameter, soil);
+
+   /* irrigation events */
+   checkIfTodayAndDoFertilization(utils, parameter, soil);
+
+   /* seed (re-)sowing */
+   // is captured within recruitment.cpp, see getIncomingSeedsBySowing()
 }
 
 void MANAGEMENT::initializeYieldVariables(COMMUNITY &community, PARAMETER parameter)
@@ -84,5 +93,44 @@ void MANAGEMENT::cutPlantsAndTrackYieldAndUpdatePlantAttributes(UTILS utils, COM
                                                                                            community.allPlants[cohortIndex]->coveredArea, parameter.plantSpecificLeafArea[pft]);
          community.allPlants[cohortIndex]->lai = community.allPlants[cohortIndex]->laiGreen + community.allPlants[cohortIndex]->laiBrown;
       }
+   }
+}
+
+void MANAGEMENT::checkIfTodayAndDoFertilization(UTILS utils, PARAMETER parameter, SOIL &soil)
+{
+   soil.addedMineralNitrogenToSoilByFertilization = 0.0;
+
+   // scan through all fertilization dates from the management file to check if today is an event
+   int index = 0;
+   for (auto day : fertilizationDate)
+   {
+      if (parameter.day == day)
+      {
+         double amountOfMineralFertilizer = fertilizerAmount.at(index);
+         soil.nitrogenContent_soilMineralPoolPerSoilLayer.at(0) += amountOfMineralFertilizer;
+         soil.addedMineralNitrogenToSoilByFertilization += amountOfMineralFertilizer;
+
+         double amountOfOrganicFertilizer = 0.0; // TODO: add organic fertilizer option to management file
+         soil.nitrogenContent_surfaceMetabolicLitterPool += amountOfOrganicFertilizer;
+      }
+      index++;
+   }
+}
+
+void MANAGEMENT::checkIfTodayAndDoIrrigation(UTILS utils, PARAMETER parameter, SOIL &soil)
+{
+   soil.addedWaterToSoilByIrrigation = 0.0;
+
+   // scan through all irrigation dates from the management file to check if today is an event
+   int index = 0;
+   for (auto day : irrigationDate)
+   {
+      if (parameter.day == day)
+      {
+         double amountOfWater = irrigationAmount.at(index);
+         soil.waterContent_soilWaterPoolPerLayer.at(0) += amountOfWater;
+         soil.addedWaterToSoilByIrrigation += amountOfWater;
+      }
+      index++;
    }
 }

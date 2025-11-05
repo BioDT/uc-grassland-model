@@ -2,8 +2,6 @@
 #include "../module_parameter/parameter.h"
 #include "../module_plant/community.h"
 #include "../module_weather/weather.h"
-#include "../module_soil/soil.h"
-#include "../module_management/management.h"
 #include "../utils/utils.h"
 #include <vector>
 #include <iostream>
@@ -24,7 +22,7 @@ public:
    std::vector<double> LAIwithLightExtinction;
    std::vector<double> weightsForPlantContributionToHeightLayer;
 
-   void getEnvironmentalConditionsOfDay(WEATHER weather, SOIL soil, MANAGEMENT management, int day);
+   void getEnvironmentalConditionsOfDay(WEATHER weather, int day);
    void calculateLightAttenuationAndAvailabilityForPlants(UTILS utils, PARAMETER parameter, COMMUNITY &community, double fullSunLight);
 
    void calculateNumberOfHeightLayersFromLargestPlant(UTILS utils, COMMUNITY &community);

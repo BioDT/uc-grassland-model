@@ -3,6 +3,7 @@
 #include "../module_parameter/parameter.h"
 #include "../module_weather/weather.h"
 #include "../module_interaction/interaction.h"
+#include "../module_soil/soil.h"
 #include "../module_plant/allometry.h"
 #include "../utils/utils.h"
 

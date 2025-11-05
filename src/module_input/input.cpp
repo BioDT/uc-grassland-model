@@ -12,9 +12,13 @@ std::map<std::string, std::string> INPUT::configParString;
 void INPUT::getInputData(std::string path, UTILS utils, PARAMETER &parameter, WEATHER &weather, SOIL &soil, MANAGEMENT &management)
 {
    openAndReadConfigurationFile(path, utils, parameter);
+
    openAndReadPlantTraitsFile(path, utils, parameter);
+
    openAndReadWeatherFile(path, utils, parameter, weather);
+
    openAndReadSoilFile(path, utils, parameter, soil);
+
    openAndReadManagementFile(path, utils, parameter, management);
 }
 

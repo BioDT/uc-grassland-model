@@ -20,7 +20,7 @@ void INTERACTION::calculateLightAttenuationAndAvailabilityForPlants(UTILS utils,
 
 void INTERACTION::calculateNumberOfHeightLayersFromLargestPlant(UTILS utils, COMMUNITY &community)
 {
-   /// maximumHeightOfAllPlants is initialized (with 0) in every day step in initAndResetProcessVariables()
+   // maximumHeightOfAllPlants is initialized (with 0) in every day step in initAndResetProcessVariables()
    for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
    {
       if (community.allPlants[cohortindex]->height > community.maximumHeightOfAllPlants)
@@ -161,7 +161,7 @@ double INTERACTION::getRadiationByLightExtinctionLaw(double cumulativeLAIAboveAn
    return radiationByExtinction;
 }
 
-void INTERACTION::getEnvironmentalConditionsOfDay(WEATHER weather, SOIL soil, MANAGEMENT management, int day)
+void INTERACTION::getEnvironmentalConditionsOfDay(WEATHER weather, int day)
 {
    fullSunLight = weather.photosyntheticPhotonFluxDensity.at(day - 1); // parameter.day starts at 1, but vectors start with index 0
    dayLength = weather.dayLength.at(day - 1);
