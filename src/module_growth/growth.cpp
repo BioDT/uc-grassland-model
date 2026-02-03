@@ -11,7 +11,7 @@ GROWTH::~GROWTH() {};
 void GROWTH::doPlantGrowth(UTILS utils, PARAMETER parameter, WEATHER weather, COMMUNITY &community, INTERACTION interaction, ALLOMETRY allometry, SOIL &soil)
 {
     /* Plant GPP (gross primary productivity) */
-    doPlantPhotosynthesis(parameter, community, interaction);
+    doPlantPhotosynthesis(utils, parameter, community, interaction);
 
     /* Plant soil water demand, uptake and limitation of plant GPP by unfavorable soil water conditions */
     soil.doPlantSoilWaterUptakeAndGppLimitationBySoilWaterConditions(utils, parameter, weather, community);
@@ -52,71 +52,83 @@ void GROWTH::doPlantGrowth(UTILS utils, PARAMETER parameter, WEATHER weather, CO
  * @see calculateEffectOfAirTemperatureOnGPP()
  * @cite Concept of plant photosynthesis is based on the forest model FORMIND (www.formind.org)
  */
-void GROWTH::doPlantPhotosynthesis(PARAMETER parameter, COMMUNITY &community, INTERACTION interaction)
+void GROWTH::doPlantPhotosynthesis(UTILS utils, PARAMETER parameter, COMMUNITY &community, INTERACTION interaction)
 {
-    if (parameter.communityShadingInGppCalculation)
+    double CO2UptakePerSecondAndSquareMeter = 0.0;
+
+    for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
     {
-        // gppPerDay = formind->calcGppCommunityShading(&plant, &patch, day, dayLength);
-    }
-    else
-    {
-        for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
+        int pft = community.allPlants.at(cohortindex)->pft;
+        double plantLAI = community.allPlants.at(cohortindex)->laiGreen;
+        double plantHeight = community.allPlants.at(cohortindex)->height;
+        double plantCoveredArea = community.allPlants.at(cohortindex)->coveredArea;
+        double effectOfDayTimeTemperature = calculateEffectOfAirTemperatureOnGPP(interaction.dayTimeAirTemperature);
+
+        if (parameter.communityShadingInGppCalculation)
         {
-            int pft = community.allPlants.at(cohortindex)->pft;
-            double plantLAI = community.allPlants.at(cohortindex)->laiGreen;
-            double plantCoveredArea = community.allPlants.at(cohortindex)->coveredArea;
-
-            double plantRadiation = (24.0 / interaction.dayLength) * community.allPlants.at(cohortindex)->availableRadiation; // correct mean daily radiation by daylength hours for photosynthesis
-            double effectOfDayTimeTemperature = calculateEffectOfAirTemperatureOnGPP(interaction.dayTimeAirTemperature);
-
-            community.allPlants.at(cohortindex)->gpp = effectOfDayTimeTemperature * calculateGPPOfPlant(parameter, pft, plantLAI, plantCoveredArea, plantRadiation, interaction.dayLength);
+            CO2UptakePerSecondAndSquareMeter = calculateGPPOfPlantWithCommunityShading(utils, interaction, parameter, pft, plantHeight, plantLAI);
         }
+        else
+        {
+            double plantRadiation = (24.0 / interaction.dayLength) * community.allPlants.at(cohortindex)->availableRadiation; // correct mean daily radiation by daylength hours for photosynthesis
+            CO2UptakePerSecondAndSquareMeter = calculateCO2UptakePerSecondAndSquareMeter(parameter, pft, plantRadiation, plantLAI);
+        }
+        // conversion
+        double OdmUptakePerSecondAndSquareMeter = CO2UptakePerSecondAndSquareMeter * CO2ConversionToOdm * molarMassOfCO2; // conversion from CO2 to Odm
+        double OdmUptakePerSecondAndSquareCentimeter = OdmUptakePerSecondAndSquareMeter / (100.0 * 100.0);
+        double secondsPerDay = interaction.dayLength * 60 * 60;                                                      // scaling from seconds to day
+        double plantPhotosynthesisPerDay = OdmUptakePerSecondAndSquareCentimeter * secondsPerDay * plantCoveredArea; // scaling to plant
+
+        community.allPlants.at(cohortindex)->gpp = effectOfDayTimeTemperature * plantPhotosynthesisPerDay; // g ODM per day and plant
     }
 }
 
-/**
- * @brief Calculates the daily gross primary productivity (GPP) for a single plant.
- *
- * This function estimates the amount of organic dry matter (ODM) produced via
- * photosynthesis based on radiation, plant traits (e.g. LAI, covered area),
- * and environmental conditions such as day length.
- *
- * The calculation involves:
- * - Estimating CO₂ uptake per second and square meter of leaf area.
- * - Converting CO₂ to organic dry matter using stoichiometric factors.
- * - Scaling uptake from square meters to the plant's actual covered area.
- * - Integrating uptake over the length of the day (in seconds).
- *
- * If plant radiation is zero, the function immediately returns zero.
- *
- * @param parameter             Struct with plant functional type-specific parameters.
- * @param pft                   Index of the plant functional type (PFT).
- * @param plantLAI              Leaf area index of the plant.
- * @param plantCoveredArea      Ground area covered by the plant (in cm²).
- * @param plantRadiation        Available radiation for the plant (in µmol(photons)/m²).
- * @param dayLength             Length of the day in hours.
- *
- * @return Gross primary productivity (GPP) in grams of organic dry matter (ODM) per day.
- *
- * @see calculateCO2UptakePerSecondAndSquareMeter()
- * @cite Concept of plant photosynthesis is based on the forest model FORMIND (www.formind.org)
- */
-double GROWTH::calculateGPPOfPlant(PARAMETER parameter, int pft, double plantLAI, double plantCoveredArea, double plantRadiation, double dayLength)
+double GROWTH::calculateGPPOfPlantWithCommunityShading(UTILS utils, INTERACTION interaction, PARAMETER parameter, int pft, double plantHeight, double plantLAI)
 {
-    if (plantRadiation == 0)
-    {
-        return 0;
-    }
-    else
-    {
-        double CO2UptakePerSecondAndSquareMeter = calculateCO2UptakePerSecondAndSquareMeter(parameter, pft, plantRadiation, plantLAI);
-        double OdmUptakePerSecondAndSquareMeter = CO2UptakePerSecondAndSquareMeter * CO2ConversionToOdm * molarMassOfCO2; // conversion from CO2 to Odm
-        double OdmUptakePerSecondAndSquareCentimeter = OdmUptakePerSecondAndSquareMeter / (100.0 * 100.0);
-        double secondsPerDay = dayLength * 60 * 60;                                                                  // scaling from seconds to day
-        double plantPhotosynthesisPerDay = OdmUptakePerSecondAndSquareCentimeter * secondsPerDay * plantCoveredArea; // scaling to plant
+    double CO2UptakePerSecondAndSquareMeter = 0.0;
 
-        return plantPhotosynthesisPerDay; // g ODM per day and plant
+    int up = (int)floor(plantHeight / heightLayerWidth + tolerance);
+    int down = 0;
+
+    for (int heightLayer = down; heightLayer <= up; heightLayer++)
+    {
+        // TODO: clarify suitable naming
+        double leafAreIndexAboveBottomOfHeightLayer = interaction.LAIwithLightExtinction.at(heightLayer + 1);
+        double incomingRadiationTopOfHeightLayer = interaction.getRadiationByLightExtinctionLaw(leafAreIndexAboveBottomOfHeightLayer, interaction.fullSunLight);
+        incomingRadiationTopOfHeightLayer *= (24.0 / interaction.dayLength);
+
+        // remove this part as it is only for the output but less meaningful here
+        /*if (heightLayer == up)
+        {
+            community.allPlants.at(cohortindex)->incomingRadiation = incomingRadiationTopOfHeightLayer;
+            // relevant for output: plant->limitingFactorLightShading (now with different (less useful) meaning)
+        }*/
+
+        double plantGreenLaiContributionToLayer;
+        if (heightLayer == up)
+        {
+            plantGreenLaiContributionToLayer = plantLAI / plantHeight * (plantHeight - up * heightLayerWidth);
+        }
+        else
+        {
+            plantGreenLaiContributionToLayer = plantLAI / plantHeight * heightLayerWidth;
+        }
+
+        double communityLightExtinctionInLayer = interaction.LAIwithLightExtinction.at(heightLayer) - interaction.LAIwithLightExtinction.at(heightLayer + 1);
+        if (!(plantHeight - heightLayer * heightLayerWidth < tolerance))
+        {
+            if (communityLightExtinctionInLayer == 0)
+            {
+                utils.handleError("Light extinction is zero while plant LAI is not!");
+            }
+
+            // calculate photosynthesis [mumolCO2 s-1 m-2]
+            CO2UptakePerSecondAndSquareMeter += calculateCO2UptakePerSecondAndSquareMeterWithCommunityShading(parameter, pft, communityLightExtinctionInLayer, plantGreenLaiContributionToLayer,
+                                                                                                              incomingRadiationTopOfHeightLayer);
+        }
     }
+
+    return CO2UptakePerSecondAndSquareMeter;
 }
 
 /**
@@ -144,15 +156,42 @@ double GROWTH::calculateGPPOfPlant(PARAMETER parameter, int pft, double plantLAI
  */
 double GROWTH::calculateCO2UptakePerSecondAndSquareMeter(PARAMETER parameter, int pft, double plantRadiation, double plantLAI)
 {
-    const double alpha = parameter.initialSlopeOfLightResponseCurve.at(pft);
-    const double k = parameter.lightExtinctionCoefficients.at(pft);
-    const double pmax = parameter.maximumGrossLeafPhotosynthesisRate.at(pft);
+    if (plantRadiation == 0)
+    {
+        return 0;
+    }
+    else
+    {
+        const double alpha = parameter.initialSlopeOfLightResponseCurve.at(pft);
+        const double k = parameter.lightExtinctionCoefficients.at(pft);
+        const double pmax = parameter.maximumGrossLeafPhotosynthesisRate.at(pft);
 
-    const double calcPart1 = alpha * k * plantRadiation;
-    const double calcPart2 = pmax * (1 - lightTransmissionCoefficient);
+        const double calcPart1 = alpha * k * plantRadiation;
+        const double calcPart2 = pmax * (1 - lightTransmissionCoefficient);
 
-    double CO2UptakePerSecondsAndSquareMeter = ((pmax / k) * log((calcPart1 + calcPart2) / (calcPart1 * exp(-k * plantLAI) + calcPart2)));
-    return (CO2UptakePerSecondsAndSquareMeter);
+        double CO2UptakePerSecondsAndSquareMeter = ((pmax / k) * log((calcPart1 + calcPart2) / (calcPart1 * exp(-k * plantLAI) + calcPart2)));
+        return (CO2UptakePerSecondsAndSquareMeter);
+    }
+}
+
+double GROWTH::calculateCO2UptakePerSecondAndSquareMeterWithCommunityShading(PARAMETER parameter, int pft, double lightExtinction, double photoactiveLai, double plantRadiation)
+{
+    if (plantRadiation == 0)
+    {
+        return 0;
+    }
+    else
+    {
+        const double alpha = parameter.initialSlopeOfLightResponseCurve.at(pft);
+        const double k = parameter.lightExtinctionCoefficients.at(pft);
+        const double pmax = parameter.maximumGrossLeafPhotosynthesisRate.at(pft);
+
+        const double calcPart1 = alpha * k * plantRadiation;
+        const double calcPart2 = pmax * (1 - lightTransmissionCoefficient);
+        double CO2UptakePerSecondsAndSquareMeter = (photoactiveLai / lightExtinction * pmax * log((calcPart1 + calcPart2) / (calcPart1 * exp(-lightExtinction) + calcPart2)));
+
+        return CO2UptakePerSecondsAndSquareMeter;
+    }
 }
 
 /**

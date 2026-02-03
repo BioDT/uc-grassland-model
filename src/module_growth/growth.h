@@ -16,9 +16,10 @@ public:
 
     void doPlantGrowth(UTILS utils, PARAMETER parameter, WEATHER weather, COMMUNITY &community, INTERACTION interaction, ALLOMETRY allometry, SOIL &soil);
 
-    void doPlantPhotosynthesis(PARAMETER parameter, COMMUNITY &community, INTERACTION interaction);
-    double calculateGPPOfPlant(PARAMETER parameter, int pft, double plantLAI, double plantCoveredAre, double plantRadiation, double dayLength);
+    void doPlantPhotosynthesis(UTILS utils, PARAMETER parameter, COMMUNITY &community, INTERACTION interaction);
     double calculateCO2UptakePerSecondAndSquareMeter(PARAMETER parameter, int pft, double plantRadiation, double plantLAI);
+    double calculateGPPOfPlantWithCommunityShading(UTILS utils, INTERACTION interaction, PARAMETER parameter, int pft, double plantHeight, double plantLAI);
+    double calculateCO2UptakePerSecondAndSquareMeterWithCommunityShading(PARAMETER parameter, int pft, double lightExtinction, double photoactiveLai, double plantRadiation);
 
     void doPlantRespiration(COMMUNITY &community, PARAMETER parameter, INTERACTION interaction);
     void calculatePlantNPPFromGPPAndRespiration(COMMUNITY &community, PARAMETER parameter);
