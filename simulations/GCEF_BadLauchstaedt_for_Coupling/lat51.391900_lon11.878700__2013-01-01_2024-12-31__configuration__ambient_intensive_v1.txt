@@ -21,13 +21,12 @@ longitude	11.878700
 # =============================================================================
 # 		Simulation Time	
 # =============================================================================
-
 firstYear	2013
 \datatype:integer
 \unit:year
 \description:Year at which the simulation starts (1st January)
 
-lastYear	2023
+lastYear	2024
 \datatype:integer
 \unit:year
 \description:Year at which the simulation ends (31th December)
@@ -36,30 +35,37 @@ lastYear	2023
 # 		Input files for model simulation  
 # =============================================================================	
 
-weatherFile	lat51.391900_lon11.878700__2013-01-01_2023-12-31__weather.txt
+##### Environmental data files (Drivers) #######  
+
+weatherFile	lat51.391900_lon11.878700__2013-01-01_2024-12-31__weather_ambient_intensive_plotmean.txt
 \datatype:string
 \description:File name of daily weather data 
 
-soilFile	lat51.391900_lon11.878700__2020__soil.txt
+soilFile	lat51.391900_lon11.878700__2013__soil_ambient_intensive.txt
 \datatype:string
-\description:File name of soil properties and parameters (internal soil module only)
+\description:File name of soil property data
 
-managementFile	lat51.391900_lon11.878700__2013-01-01_2023-12-31__management__GER_Schwieder.txt
+managementFile	lat51.391900_lon11.878700__2013-01-01_2024-12-31_management_ambient_intensive.txt
 \datatype:string
 \description:File name of management actions (sowing, mowing, fertilization, irrigation)
 	
-plantTraitsFile	BioDT-generic/plant_traits__generic_v1.txt
-\datatype:string
-\description:File name of model parameters for plant traits (species or plant functional types) 
+##### Parameter files #######  
 
-processSetupFile	BioDT-generic/process_setup__generic_v1.txt
+plantTraitsFile	GCEF_BadLauchstaedt_for_Coupling/plant_traits__ambient_intensive_v1.txt
+\datatype:string
+\description:File name of model parameters for plant processes (traits of species or plant functional types) 
+
+soilParametersFile	GCEF_BadLauchstaedt_for_Coupling/soil_parameters__ambient_intensive_v1.txt
+\datatype:string
+\description:File name of model parameters for soil processes (internal soil module only)
+
+processSetupFile	GCEF_BadLauchstaedt_for_Coupling/process_setup__ambient_intensive_v1.txt
 \datatype:string
 \description:File name of model parameters for activating or deactivating model processes
 
 # =============================================================================
 # 		Output files of simulation results (and settings)  
 # =============================================================================	
-
 outputFile	true
 \datatype:boolean
 \description:Select if the output file is written to the created output folder
@@ -74,7 +80,7 @@ clippingHeightOfBiomassMeasurement 3
 \description:height at which vegetation is clipped for biomass measurements in the field
 \details:should be higher than or equal to 3 cm?
 
-randomNumberGeneratorSeed	0
+randomNumberGeneratorSeed	3
 \datatype:integer
 \description:Initializer for the random number generator
 \details:if set to NaN, the seed will be drawn from machine time and stored to the outputfile  

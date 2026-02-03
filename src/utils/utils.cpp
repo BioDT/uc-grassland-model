@@ -14,18 +14,18 @@ UTILS::~UTILS() {};
  */
 void UTILS::splitString(std::string str, char separator)
 {
-   int startIndex = 0, endIndex = 0;
-   for (int it = 0; it <= str.size(); it++)
-   {
-      if (str[it] == separator || it == str.size())
-      {
-         endIndex = it;
-         std::string temp;
-         temp.append(str, startIndex, endIndex - startIndex);
-         strings.push_back(temp);
-         startIndex = endIndex + 1;
-      }
-   }
+    int startIndex = 0, endIndex = 0;
+    for (int it = 0; it <= str.size(); it++)
+    {
+        if (str[it] == separator || it == str.size())
+        {
+            endIndex = it;
+            std::string temp;
+            temp.append(str, startIndex, endIndex - startIndex);
+            strings.push_back(temp);
+            startIndex = endIndex + 1;
+        }
+    }
 }
 
 /**
@@ -44,26 +44,26 @@ void UTILS::splitString(std::string str, char separator)
  */
 bool UTILS::stringToBool(const std::string &str)
 {
-   // Convert to lower case letters
-   std::string lowercaseStr;
-   for (char c : str)
-   {
-      lowercaseStr += std::tolower(c);
-   }
+    // Convert to lower case letters
+    std::string lowercaseStr;
+    for (char c : str)
+    {
+        lowercaseStr += std::tolower(c);
+    }
 
-   // Check if string is true or false
-   if (lowercaseStr == "true" || lowercaseStr == "1")
-   {
-      return true;
-   }
-   else if (lowercaseStr == "false" || lowercaseStr == "0")
-   {
-      return false;
-   }
-   else
-   {
-      throw std::invalid_argument("Invalid boolean value: " + str);
-   }
+    // Check if string is true or false
+    if (lowercaseStr == "true" || lowercaseStr == "1")
+    {
+        return true;
+    }
+    else if (lowercaseStr == "false" || lowercaseStr == "0")
+    {
+        return false;
+    }
+    else
+    {
+        throw std::invalid_argument("Invalid boolean value: " + str);
+    }
 }
 
 /**
@@ -76,14 +76,14 @@ bool UTILS::stringToBool(const std::string &str)
  */
 void UTILS::handleError(std::string errorString)
 {
-   try
-   {
-      throw std::runtime_error(errorString);
-   }
-   catch (const std::runtime_error &e)
-   {
-      std::cerr << e.what() << std::endl;
-   }
+    try
+    {
+        throw std::runtime_error(errorString);
+    }
+    catch (const std::runtime_error &e)
+    {
+        std::cerr << e.what() << std::endl;
+    }
 }
 
 /**
@@ -96,7 +96,7 @@ void UTILS::handleError(std::string errorString)
  */
 void UTILS::handleWarning(std::string warnString)
 {
-   std::cerr << warnString << std::endl;
+    std::cerr << warnString << std::endl;
 }
 
 /**
@@ -113,25 +113,25 @@ void UTILS::handleWarning(std::string warnString)
  */
 std::string UTILS::getFileEnding(std::string file)
 {
-   std::string fileEnding = "";
-   strings.clear();
-   splitString(file, '.'); // split string based on dot
-   if (strings.size() > 1)
-   {
-      fileEnding = strings.at(strings.size() - 1);
-      strings.clear();
-      splitString(fileEnding, ' '); // remove any spaces after file-ending
-      if (strings.size() > 0)
-      {
-         fileEnding = strings.at(0);
-      }
-   }
-   else
-   {
-      handleError("String does not contain a dot to be splitted by.");
-   }
+    std::string fileEnding = "";
+    strings.clear();
+    splitString(file, '.'); // split string based on dot
+    if (strings.size() > 1)
+    {
+        fileEnding = strings.at(strings.size() - 1);
+        strings.clear();
+        splitString(fileEnding, ' '); // remove any spaces after file-ending
+        if (strings.size() > 0)
+        {
+            fileEnding = strings.at(0);
+        }
+    }
+    else
+    {
+        handleError("String does not contain a dot to be splitted by.");
+    }
 
-   return (fileEnding);
+    return (fileEnding);
 }
 
 /**
@@ -148,12 +148,12 @@ std::string UTILS::getFileEnding(std::string file)
  */
 int UTILS::calculateJulianDayFromDate(int day, int month, int year)
 {
-   int a = (14 - month) / 12;
-   int y = year + 4800 - a;
-   int m = month + 12 * a - 3;
+    int a = (14 - month) / 12;
+    int y = year + 4800 - a;
+    int m = month + 12 * a - 3;
 
-   int julianDay = day + (153 * m + 2) / 5 + y * 365 + y / 4 - y / 100 + y / 400 - 32045;
-   return julianDay;
+    int julianDay = day + (153 * m + 2) / 5 + y * 365 + y / 4 - y / 100 + y / 400 - 32045;
+    return julianDay;
 }
 
 /**
@@ -170,8 +170,8 @@ int UTILS::calculateJulianDayFromDate(int day, int month, int year)
  */
 int UTILS::calculateDayCountFromDate(int day, int month, int year, int startDay)
 {
-   int dayCount = calculateJulianDayFromDate(day, month, year) - startDay + 1;
-   return dayCount;
+    int dayCount = calculateJulianDayFromDate(day, month, year) - startDay + 1;
+    return dayCount;
 }
 
 /**
@@ -192,33 +192,33 @@ int UTILS::calculateDayCountFromDate(int day, int month, int year, int startDay)
  */
 int UTILS::calculateDateFromDayCount(UTILS utils, int dayCount, int startDay, std::string keywordForReturn)
 {
-   int a = dayCount + startDay - 1 + 32044;
-   int b = (4 * a + 3) / 146097;
-   int c = a - (146097 * b) / 4;
-   int d = (4 * c + 3) / 1461;
-   int e = c - (1461 * d) / 4;
-   int m = (5 * e + 2) / 153;
+    int a = dayCount + startDay - 1 + 32044;
+    int b = (4 * a + 3) / 146097;
+    int c = a - (146097 * b) / 4;
+    int d = (4 * c + 3) / 1461;
+    int e = c - (1461 * d) / 4;
+    int m = (5 * e + 2) / 153;
 
-   int day = e - (153 * m + 2) / 5 + 1;
-   int month = m + 3 - 12 * (m / 10);
-   int year = 100 * b + d - 4800 + (m / 10);
+    int day = e - (153 * m + 2) / 5 + 1;
+    int month = m + 3 - 12 * (m / 10);
+    int year = 100 * b + d - 4800 + (m / 10);
 
-   if (keywordForReturn == "day" || keywordForReturn == "Day" || keywordForReturn == "DAY")
-   {
-      return day;
-   }
-   else if (keywordForReturn == "month" || keywordForReturn == "Month" || keywordForReturn == "MONTH")
-   {
-      return month;
-   }
-   else if (keywordForReturn == "year" || keywordForReturn == "Year" || keywordForReturn == "YEAR")
-   {
-      return year;
-   }
-   else
-   {
-      utils.handleError("The keyword for the return value" + keywordForReturn + "does not match any of the options day, month or year.");
-   }
+    if (keywordForReturn == "day" || keywordForReturn == "Day" || keywordForReturn == "DAY")
+    {
+        return day;
+    }
+    else if (keywordForReturn == "month" || keywordForReturn == "Month" || keywordForReturn == "MONTH")
+    {
+        return month;
+    }
+    else if (keywordForReturn == "year" || keywordForReturn == "Year" || keywordForReturn == "YEAR")
+    {
+        return year;
+    }
+    else
+    {
+        utils.handleError("The keyword for the return value" + keywordForReturn + "does not match any of the options day, month or year.");
+    }
 }
 
 /**
@@ -236,27 +236,27 @@ int UTILS::calculateDateFromDayCount(UTILS utils, int dayCount, int startDay, st
  */
 double UTILS::parseDoubleOrNaN(const std::string &str)
 {
-   std::stringstream ss(str);
-   double value;
+    std::stringstream ss(str);
+    double value;
 
-   // convert the string into a number
-   if (ss >> value)
-   {
-      return value;
-   }
-   else
-   {
-      // check if the string is "NaN"
-      if (str == "NaN" || str == "nan" || str == "NAN")
-      {
-         return std::numeric_limits<double>::quiet_NaN();
-      }
-      else
-      {
-         // string is no number and not NaN
-         throw std::invalid_argument("Invalid input: " + str);
-      }
-   }
+    // convert the string into a number
+    if (ss >> value)
+    {
+        return value;
+    }
+    else
+    {
+        // check if the string is "NaN"
+        if (str == "NaN" || str == "nan" || str == "NAN")
+        {
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+        else
+        {
+            // string is no number and not NaN
+            throw std::invalid_argument("Invalid input: " + str);
+        }
+    }
 }
 
 /**
@@ -274,25 +274,38 @@ double UTILS::parseDoubleOrNaN(const std::string &str)
  */
 int UTILS::parseIntegerOrNaN(const std::string &str)
 {
-   std::stringstream ss(str);
-   int value;
+    std::stringstream ss(str);
+    int value;
 
-   // convert the string into a number
-   if (ss >> value)
-   {
-      return value;
-   }
-   else
-   {
-      // check if the string is "NaN"
-      if (str == "NaN" || str == "nan" || str == "NAN")
-      {
-         return std::numeric_limits<int>::min();
-      }
-      else
-      {
-         // string is no number and not NaN
-         throw std::invalid_argument("Invalid input: " + str);
-      }
-   }
+    // convert the string into a number
+    if (ss >> value)
+    {
+        return value;
+    }
+    else
+    {
+        // check if the string is "NaN"
+        if (str == "NaN" || str == "nan" || str == "NAN")
+        {
+            return std::numeric_limits<int>::min();
+        }
+        else
+        {
+            // string is no number and not NaN
+            throw std::invalid_argument("Invalid input: " + str);
+        }
+    }
+}
+
+void UTILS::checkForNegativeValue(double valueToCheck, const std::string context)
+{
+    if (valueToCheck < -tolerance)
+    {
+        handleError(context + "is negative!");
+    }
+
+    if (valueToCheck < 0)
+    {
+        valueToCheck = 0;
+    }
 }

@@ -20,7 +20,7 @@ externalSeedInfluxActivated	1
 \datatype:boolean
 \description:de-/activation of global seed influx from outside the area
 
-dayOfExternalSeedInfluxStart	2013-05-01
+dayOfExternalSeedInfluxStart	2013-01-01
 \datatype:date
 \description:date (month-day) when external seed influx starts 
 
@@ -148,6 +148,11 @@ plantShootOverlapFactors	1.0	1.0	1.0
 # 		Plant GPP, respiration and NPP allocation  
 # =============================================================================
 
+communityShadingInGppCalculation	0
+\datatype:boolean
+\description:de-/activation of community shading in the calculation of GPP
+
+
 maximumGrossLeafPhotosynthesisRate	14.47	17.51	33.5
 \datatype:float-array
 \unit:mikromol(CO2) m-2 s-1
@@ -225,14 +230,14 @@ plantCNRatioExudates	15.0	15.0	15.0
 \unit:g(C) g(N)-1
 \description:ratio of carbon (C) and nitrogen (N) in exudates
 
-nitrogenFixationAbility	0	0	1
+symbioticNitrogenFixationFraction	0	0	1
 \datatype:boolean-array
 \description:nitrogen fixation ability
 
-plantCostRhizobiaSymbiosis	0.15
+rhizobiaExchangeRateCToN	0.15
 \datatype:float
-\description:fraction of NPP used for nitrogen fixation (cost for rhizobia symbiosis)
-\details:only relevant for those plants with a nitrogen fixation ability (1)
+\description: Exchange rate of plant carbon (from NPP) to Nitrogen supply by rhizobia symbiosis
+\details:only relevant for those plants with a nitrogen fixation ability (>0)
 
 # =============================================================================
 # 		Soil water demand and limitation  

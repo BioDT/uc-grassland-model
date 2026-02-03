@@ -19,63 +19,62 @@ OUTPUT::~OUTPUT() {};
  */
 void OUTPUT::updateVegetationStateVariablesForOutput(PARAMETER parameter, COMMUNITY &community, SOIL soil, MANAGEMENT management, RECRUITMENT recruitment)
 {
-   // Summing up plant-specific variables for population- and community-based variables
-   if (community.allPlants.size() > 0)
-   {
-      for (int cohortindex = 0; cohortindex < community.allPlants.size(); cohortindex++)
-      {
-         // PFT-specific calculations
-         community.pftComposition[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->amount;
-         community.numberOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->amount;
-         community.coveredAreaOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->coveredArea * community.allPlants[cohortindex]->amount;
-         community.shootBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->shootBiomass * community.allPlants[cohortindex]->amount;
-         community.greenShootBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->shootBiomassGreenLeaves * community.allPlants[cohortindex]->amount;
-         community.brownShootBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->shootBiomassBrownLeaves * community.allPlants[cohortindex]->amount;
+    // Summing up plant-specific variables for population- and community-based variables
+    if (community.allPlants.size() > 0)
+    {
+        for (int cohortindex = 0; cohortindex < community.allPlants.size(); cohortindex++)
+        {
+            // PFT-specific calculations
+            community.pftComposition[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->amount;
+            community.numberOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->amount;
+            community.coveredAreaOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->coveredArea * community.allPlants[cohortindex]->amount;
+            community.shootBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->shootBiomass * community.allPlants[cohortindex]->amount;
+            community.greenShootBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->shootBiomassGreenLeaves * community.allPlants[cohortindex]->amount;
+            community.brownShootBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->shootBiomassBrownLeaves * community.allPlants[cohortindex]->amount;
 
-         if (community.allPlants.at(cohortindex)->height > parameter.clippingHeightOfBiomassMeasurement)
-         {
-            community.allPlants.at(cohortindex)->shootBiomassAboveClippingHeight =
-                ((community.allPlants.at(cohortindex)->height - parameter.clippingHeightOfBiomassMeasurement) / community.allPlants.at(cohortindex)->height) * community.allPlants.at(cohortindex)->shootBiomass;
-            community.clippedShootBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->shootBiomassAboveClippingHeight * community.allPlants[cohortindex]->amount;
-         }
+            if (community.allPlants.at(cohortindex)->height > parameter.clippingHeightOfBiomassMeasurement)
+            {
+                community.allPlants.at(cohortindex)->shootBiomassAboveClippingHeight =
+                    ((community.allPlants.at(cohortindex)->height - parameter.clippingHeightOfBiomassMeasurement) / community.allPlants.at(cohortindex)->height) * community.allPlants.at(cohortindex)->shootBiomass;
+                community.clippedShootBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->shootBiomassAboveClippingHeight * community.allPlants[cohortindex]->amount;
+            }
 
-         community.rootBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->rootBiomass * community.allPlants[cohortindex]->amount;
-         community.recruitmentBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->recruitmentBiomass * community.allPlants[cohortindex]->amount;
-         community.exudationBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->exudationBiomass * community.allPlants[cohortindex]->amount;
+            community.rootBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->rootBiomass * community.allPlants[cohortindex]->amount;
+            community.recruitmentBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->recruitmentBiomass * community.allPlants[cohortindex]->amount;
+            community.exudationBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->exudationBiomass * community.allPlants[cohortindex]->amount;
 
-         community.gppOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->gpp * community.allPlants[cohortindex]->amount;
-         community.nppOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->npp * community.allPlants[cohortindex]->amount;
-         community.carbonRespirationOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->totalRespiration * community.allPlants[cohortindex]->amount;
+            community.gppOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->gpp * community.allPlants[cohortindex]->amount;
+            community.nppOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->npp * community.allPlants[cohortindex]->amount;
+            community.carbonRespirationOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->totalRespiration * community.allPlants[cohortindex]->amount;
 
-         // Community-wide calculations
-         community.totalNumberOfPlantsInCommunity += community.allPlants[cohortindex]->amount;
-         community.coveredAreaOfAllPlants += community.allPlants[cohortindex]->coveredArea * parameter.plantShootOverlapFactors[community.allPlants[cohortindex]->pft];
-         community.carbonRespirationOfAllPlants += community.allPlants[cohortindex]->totalRespiration * community.allPlants[cohortindex]->amount * carbonContentOdm;
-         community.carbonNPPOfAllPlants += community.allPlants[cohortindex]->npp * community.allPlants[cohortindex]->amount * carbonContentOdm;
-      }
+            // Community-wide calculations
+            community.totalNumberOfPlantsInCommunity += community.allPlants[cohortindex]->amount;
+            community.coveredAreaOfAllPlants += community.allPlants[cohortindex]->coveredArea * parameter.plantShootOverlapFactors[community.allPlants[cohortindex]->pft];
+            community.carbonRespirationOfAllPlants += community.allPlants[cohortindex]->totalRespiration * community.allPlants[cohortindex]->amount * carbonContentOdm;
+            community.carbonNPPOfAllPlants += community.allPlants[cohortindex]->npp * community.allPlants[cohortindex]->amount * carbonContentOdm;
+        }
 
-      // Normalizations
-      if (community.totalNumberOfPlantsInCommunity > 0)
-      {
-         for (int pft = 0; pft < parameter.pftCount; pft++)
-         {
-            community.pftComposition[pft] *= 100.0 / community.totalNumberOfPlantsInCommunity;
-         }
-      }
-   }
+        // Normalizations
+        if (community.totalNumberOfPlantsInCommunity > 0)
+        {
+            for (int pft = 0; pft < parameter.pftCount; pft++)
+            {
+                community.pftComposition[pft] *= 100.0 / community.totalNumberOfPlantsInCommunity;
+            }
+        }
+    }
 
-   // Summing up PFT-specific variables for community-based variables
-   for (int pft = 0; pft < parameter.pftCount; pft++)
-   {
-      community.carbonSeedlingIngrowthOfAllPlants += recruitment.successfullGerminatedSeeds.at(pft) * parameter.seedMasses[pft] * carbonContentOdm;
-   }
+    // Summing up PFT-specific variables for community-based variables
+    for (int pft = 0; pft < parameter.pftCount; pft++)
+    {
+        community.carbonSeedlingIngrowthOfAllPlants += recruitment.successfullGerminatedSeeds.at(pft) * parameter.seedMasses[pft] * carbonContentOdm;
+    }
 
-   // Summing up community-specific variables for ecosystem-based variables
-   community.ecosystemNitrogenBalance = soil.nitrogenNetMineralization - soil.nitrogenVolatilization + soil.nitrogenFixationToSoil + soil.addedMineralNitrogenToSoilByFertilization;
-   community.ecosystemCarbonRespiration = soil.respirationCarbon_litter + soil.respirationCarbon_soilpools + community.carbonRespirationOfAllPlants;
-   community.ecosystemCarbonBalance = community.carbonNPPOfAllPlants + community.carbonSeedlingIngrowthOfAllPlants - community.ecosystemCarbonRespiration - soil.carbonContent_leachedFromSoil - (carbonContentOdm * community.biomassYield);
+    // Summing up community-specific variables for ecosystem-based variables
+    community.ecosystemNitrogenBalance = soil.nitrogenNetMineralization - soil.nitrogenVolatilization + soil.nitrogenFixationToSoil + soil.addedMineralNitrogenToSoilByFertilization;
+    community.ecosystemCarbonRespiration = soil.respirationCarbon_litter + soil.respirationCarbon_soilpools + community.carbonRespirationOfAllPlants;
+    community.ecosystemCarbonBalance = community.carbonNPPOfAllPlants + community.carbonSeedlingIngrowthOfAllPlants - community.ecosystemCarbonRespiration - soil.carbonContent_leachedFromSoil - (carbonContentOdm * community.biomassYield);
 }
-
 
 /**
  * @brief Creates the result folder, output file, and its header.
@@ -94,10 +93,10 @@ void OUTPUT::updateVegetationStateVariablesForOutput(PARAMETER parameter, COMMUN
  */
 void OUTPUT::prepareModelOutput(std::string path, UTILS utils, PARAMETER &parameter)
 {
-   createOutputFolder(path, utils);
-   createAndOpenOutputFiles(parameter, utils);
-   writeHeaderInOutputFiles(utils);
-   openAndReadOutputWritingDates(path, utils, parameter);
+    createOutputFolder(path, utils);
+    createAndOpenOutputFiles(parameter, utils);
+    writeHeaderInOutputFiles(utils);
+    openAndReadOutputWritingDates(path, utils, parameter);
 }
 
 /**
@@ -126,38 +125,38 @@ void OUTPUT::prepareModelOutput(std::string path, UTILS utils, PARAMETER &parame
  */
 void OUTPUT::createAndOpenOutputFiles(PARAMETER parameter, UTILS utils)
 {
-   utils.strings.clear();
-   utils.splitString(parameter.plantTraitsFile, '/');
-   std::string endingLocation = "lat" + parameter.latitude + "_lon" + parameter.longitude;
-   std::string endingYears = "__" + std::to_string(parameter.firstYear) + "-01-01_" + std::to_string(parameter.lastYear) + "-12-31";
-   std::string runNumber = (parameter.randomNumberGeneratorSeed < 10) ? ("00" + std::to_string(parameter.randomNumberGeneratorSeed)) : ((parameter.randomNumberGeneratorSeed < 100) ? ("0" + std::to_string(parameter.randomNumberGeneratorSeed)) : (std::to_string(parameter.randomNumberGeneratorSeed)));
-   std::string endingRandomSeed = "__run" + runNumber;
-   std::string plantTraitsFile = utils.strings.at(1);
-   utils.strings.clear();
-   utils.splitString(plantTraitsFile, '_');
-   std::string endingParameter = utils.strings.at(utils.strings.size() - 2) + "_" + utils.strings.at(utils.strings.size() - 1);
+    utils.strings.clear();
+    utils.splitString(parameter.plantTraitsFile, '/');
+    std::string endingLocation = "lat" + parameter.latitude + "_lon" + parameter.longitude;
+    std::string endingYears = "__" + std::to_string(parameter.firstYear) + "-01-01_" + std::to_string(parameter.lastYear) + "-12-31";
+    std::string runNumber = (parameter.randomNumberGeneratorSeed < 10) ? ("00" + std::to_string(parameter.randomNumberGeneratorSeed)) : ((parameter.randomNumberGeneratorSeed < 100) ? ("0" + std::to_string(parameter.randomNumberGeneratorSeed)) : (std::to_string(parameter.randomNumberGeneratorSeed)));
+    std::string endingRandomSeed = "__run" + runNumber;
+    std::string plantTraitsFile = utils.strings.at(1);
+    utils.strings.clear();
+    utils.splitString(plantTraitsFile, '_');
+    std::string endingParameter = utils.strings.at(utils.strings.size() - 2) + "_" + utils.strings.at(utils.strings.size() - 1);
 
-   std::string filenameCommunity = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputCommunity__" + endingParameter;
-   std::string filenamePFTPopulation = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputPFT__" + endingParameter;
-   std::string filenamePlant = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputPlant__" + endingParameter;
+    std::string filenameCommunity = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputCommunity__" + endingParameter;
+    std::string filenamePFTPopulation = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputPFT__" + endingParameter;
+    std::string filenamePlant = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputPlant__" + endingParameter;
 
-   outputCommunity.open(filenameCommunity);
-   if (!outputCommunity.is_open())
-   {
-      utils.handleError("Error writing to the community output file.");
-   }
+    outputCommunity.open(filenameCommunity);
+    if (!outputCommunity.is_open())
+    {
+        utils.handleError("Error writing to the community output file.");
+    }
 
-   outputPFTPopulation.open(filenamePFTPopulation);
-   if (!outputPFTPopulation.is_open())
-   {
-      utils.handleError("Error writing to the PFT population output file.");
-   }
+    outputPFTPopulation.open(filenamePFTPopulation);
+    if (!outputPFTPopulation.is_open())
+    {
+        utils.handleError("Error writing to the PFT population output file.");
+    }
 
-   outputPlant.open(filenamePlant);
-   if (!outputPlant.is_open())
-   {
-      utils.handleError("Error writing to the plant / cohorte output file.");
-   }
+    outputPlant.open(filenamePlant);
+    if (!outputPlant.is_open())
+    {
+        utils.handleError("Error writing to the plant / cohorte output file.");
+    }
 };
 
 /**
@@ -182,44 +181,44 @@ void OUTPUT::createAndOpenOutputFiles(PARAMETER parameter, UTILS utils)
 void OUTPUT::writeHeaderInOutputFiles(UTILS utils)
 {
 
-   if (!outputCommunity.is_open())
-   {
-      utils.handleError("Error writing to the community output file.");
-   }
-   else
-   {
-      outputCommunity << "Date\tDayCount\tNumberPlants\tLeafAreaIndex";
-      outputCommunity << std::endl;
-   }
+    if (!outputCommunity.is_open())
+    {
+        utils.handleError("Error writing to the community output file.");
+    }
+    else
+    {
+        outputCommunity << "Date\tDayCount\tNumberPlants\tNumberCohorts\tLeafAreaIndex\tVegetationHeight\tVegetationCover\tCBalance\tNBalance";
+        outputCommunity << std::endl;
+    }
 
-   if (!outputPFTPopulation.is_open())
-   {
-      utils.handleError("Error writing to the PFT population output file.");
-   }
-   else
-   {
-      outputPFTPopulation << "Date\tDayCount\tPFT\tFraction\tNumberPlants\t";
-      outputPFTPopulation << "CoveredArea\tShootBiomass\tGreenShootBiomass\tBrownShootBiomass\t";
-      outputPFTPopulation << "ClippedShootBiomass\tRootBiomass\tRecruitmentBiomass\tExudationBiomass\t";
-      outputPFTPopulation << "GPP\tNPP\tRespiration";
-      outputPFTPopulation << std::endl;
-   }
+    if (!outputPFTPopulation.is_open())
+    {
+        utils.handleError("Error writing to the PFT population output file.");
+    }
+    else
+    {
+        outputPFTPopulation << "Date\tDayCount\tPFT\tFraction\tNumberPlants\t";
+        outputPFTPopulation << "CoveredArea\tShootBiomass\tGreenShootBiomass\tBrownShootBiomass\t";
+        outputPFTPopulation << "ClippedShootBiomass\tRootBiomass\tRecruitmentBiomass\tExudationBiomass\t";
+        outputPFTPopulation << "GPP\tNPP\tRespiration";
+        outputPFTPopulation << std::endl;
+    }
 
-   if (!outputPlant.is_open())
-   {
-      utils.handleError("Error writing to the plant / cohorte output file.");
-   }
-   else
-   {
-      outputPlant << "Date\tDayCount\tPFT\tAge\tNumberPlants\tHeight\tWidth\tLAI\t";
-      outputPlant << "CoveredArea\tRootDepth\tNumberSoilLayers\t";
-      outputPlant << "ShootBiomass\tGreenShootBiomass\tBrownShootBiomass\t";
-      outputPlant << "ClippedShootBiomass\tRootBiomass\tRecruitmentBiomass\tExudationBiomass\t";
-      outputPlant << "GPP\tNPP\tRespiration\t";
-      outputPlant << "Radiation\tShadingIndicator\tLimitingFactorWater\tLimitingFactorNitrogen\t";
-      outputPlant << "AllocationShoot\tAllocationRoot\tAllocationRecruitment\tAllocationExudation";
-      outputPlant << std::endl;
-   }
+    if (!outputPlant.is_open())
+    {
+        utils.handleError("Error writing to the plant / cohorte output file.");
+    }
+    else
+    {
+        outputPlant << "Date\tDayCount\tPFT\tAge\tNumberPlants\tHeight\tWidth\tLAI\t";
+        outputPlant << "CoveredArea\tRootDepth\tNumberSoilLayers\t";
+        outputPlant << "ShootBiomass\tGreenShootBiomass\tBrownShootBiomass\t";
+        outputPlant << "ClippedShootBiomass\tRootBiomass\tRecruitmentBiomass\tExudationBiomass\t";
+        outputPlant << "GPP\tNPP\tRespiration\t";
+        outputPlant << "Radiation\tShadingIndicator\tLimitingFactorWater\tLimitingFactorNitrogen\t";
+        outputPlant << "AllocationShoot\tAllocationRoot\tAllocationRecruitment\tAllocationExudation";
+        outputPlant << std::endl;
+    }
 }
 
 /**
@@ -236,38 +235,38 @@ void OUTPUT::writeHeaderInOutputFiles(UTILS utils)
  */
 void OUTPUT::writeSimulationResultsToOutputFiles(UTILS utils)
 {
-   if (outputCommunity.is_open())
-   {
-      outputCommunity << bufferCommunity.str();
-      bufferCommunity.str("");
-      bufferCommunity.clear();
-   }
-   else
-   {
-      utils.handleError("The output file of community variables is not open for writing.");
-   }
+    if (outputCommunity.is_open())
+    {
+        outputCommunity << bufferCommunity.str();
+        bufferCommunity.str("");
+        bufferCommunity.clear();
+    }
+    else
+    {
+        utils.handleError("The output file of community variables is not open for writing.");
+    }
 
-   if (outputPFTPopulation.is_open())
-   {
-      outputPFTPopulation << bufferPFTPopulation.str();
-      bufferPFTPopulation.str("");
-      bufferPFTPopulation.clear();
-   }
-   else
-   {
-      utils.handleError("The output file of PFT population variables is not open for writing.");
-   }
+    if (outputPFTPopulation.is_open())
+    {
+        outputPFTPopulation << bufferPFTPopulation.str();
+        bufferPFTPopulation.str("");
+        bufferPFTPopulation.clear();
+    }
+    else
+    {
+        utils.handleError("The output file of PFT population variables is not open for writing.");
+    }
 
-   if (outputPlant.is_open())
-   {
-      outputPlant << bufferPlant.str();
-      bufferPlant.str("");
-      bufferPlant.clear();
-   }
-   else
-   {
-      utils.handleError("The output file of single plant variables / cohorts is not open for writing.");
-   }
+    if (outputPlant.is_open())
+    {
+        outputPlant << bufferPlant.str();
+        bufferPlant.str("");
+        bufferPlant.clear();
+    }
+    else
+    {
+        utils.handleError("The output file of single plant variables / cohorts is not open for writing.");
+    }
 }
 
 /**
@@ -284,32 +283,32 @@ void OUTPUT::writeSimulationResultsToOutputFiles(UTILS utils)
  */
 void OUTPUT::closeOutputFiles(UTILS utils)
 {
-   if (outputCommunity.is_open())
-   {
-      outputCommunity.close();
-   }
-   else
-   {
-      utils.handleError("The output file of community variables is not open.");
-   }
+    if (outputCommunity.is_open())
+    {
+        outputCommunity.close();
+    }
+    else
+    {
+        utils.handleError("The output file of community variables is not open.");
+    }
 
-   if (outputPFTPopulation.is_open())
-   {
-      outputPFTPopulation.close();
-   }
-   else
-   {
-      utils.handleError("The output file of PFT population variables is not open.");
-   }
+    if (outputPFTPopulation.is_open())
+    {
+        outputPFTPopulation.close();
+    }
+    else
+    {
+        utils.handleError("The output file of PFT population variables is not open.");
+    }
 
-   if (outputPlant.is_open())
-   {
-      outputPlant.close();
-   }
-   else
-   {
-      utils.handleError("The output file of single plant variables / cohorts is not open.");
-   }
+    if (outputPlant.is_open())
+    {
+        outputPlant.close();
+    }
+    else
+    {
+        utils.handleError("The output file of single plant variables / cohorts is not open.");
+    }
 }
 
 /**
@@ -330,13 +329,13 @@ void OUTPUT::closeOutputFiles(UTILS utils)
  */
 void OUTPUT::createOutputFolder(std::string path, UTILS utils)
 {
-   char separator = '\\';
-   utils.splitString(path, separator);
-   for (int it = 0; it < utils.strings.size() - 1; it++)
-   {
-      outputDirectory = outputDirectory + utils.strings.at(it) + "\\";
-   }
-   outputDirectory = outputDirectory + "output\\";
+    char separator = '\\';
+    utils.splitString(path, separator);
+    for (int it = 0; it < utils.strings.size() - 1; it++)
+    {
+        outputDirectory = outputDirectory + utils.strings.at(it) + "\\";
+    }
+    outputDirectory = outputDirectory + "output\\";
 }
 
 /**
@@ -359,44 +358,44 @@ void OUTPUT::createOutputFolder(std::string path, UTILS utils)
  */
 void OUTPUT::openAndReadOutputWritingDates(std::string path, UTILS utils, PARAMETER &parameter)
 {
-   char separator = '\\';
-   utils.splitString(path, separator);
-   for (int it = 0; it < utils.strings.size() - 1; it++)
-   {
-      fileDirectory = fileDirectory + utils.strings.at(it) + "\\";
-   }
-   fileDirectory = fileDirectory + parameter.outputWritingDatesFile;
+    char separator = '\\';
+    utils.splitString(path, separator);
+    for (int it = 0; it < utils.strings.size() - 1; it++)
+    {
+        fileDirectory = fileDirectory + utils.strings.at(it) + "\\";
+    }
+    fileDirectory = fileDirectory + parameter.outputWritingDatesFile;
 
-   const char *filename = fileDirectory.c_str();
-   std::ifstream file(filename);
+    const char *filename = fileDirectory.c_str();
+    std::ifstream file(filename);
 
-   std::string line; // current line text in parser
-   int m = 0;        // current line number in parser
-   outputWritingDates.clear();
+    std::string line; // current line text in parser
+    int m = 0;        // current line number in parser
+    outputWritingDates.clear();
 
-   outputWritingDatesFileOpened = false;
-   if (file.is_open())
-   {
-      outputWritingDatesFileOpened = true;
-      while (std::getline(file, line))
-      {
-         m++;
-         if (m > 1)
-         { // skip header line
-            utils.strings.clear();
-            utils.splitString(line, '-');
-            int day = std::stoi(utils.strings.at(2).c_str());
-            int month = std::stoi(utils.strings.at(1).c_str());
-            int year = std::stoi(utils.strings.at(0).c_str());
-            outputWritingDates.push_back(utils.calculateDayCountFromDate(day, month, year, parameter.referenceJulianDayStart));
-         }
-      }
-      file.close();
-   }
-   else
-   {
-      utils.handleWarning("No OutputWritingDates file has been opened. Simulation results will then be written at a daily resolution.");
-   }
+    outputWritingDatesFileOpened = false;
+    if (file.is_open())
+    {
+        outputWritingDatesFileOpened = true;
+        while (std::getline(file, line))
+        {
+            m++;
+            if (m > 1)
+            { // skip header line
+                utils.strings.clear();
+                utils.splitString(line, '-');
+                int day = std::stoi(utils.strings.at(2).c_str());
+                int month = std::stoi(utils.strings.at(1).c_str());
+                int year = std::stoi(utils.strings.at(0).c_str());
+                outputWritingDates.push_back(utils.calculateDayCountFromDate(day, month, year, parameter.referenceJulianDayStart));
+            }
+        }
+        file.close();
+    }
+    else
+    {
+        utils.handleWarning("No OutputWritingDates file has been opened. Simulation results will then be written at a daily resolution.");
+    }
 }
 
 /**
@@ -418,72 +417,72 @@ void OUTPUT::openAndReadOutputWritingDates(std::string path, UTILS utils, PARAME
 void OUTPUT::printSimulationSettingsToConsole(PARAMETER parameter, INPUT input)
 {
 
-   std::cout << "*******************************************" << std::endl;
-   std::cout << "******* Grassland site simulation *********" << std::endl;
-   std::cout << "*******************************************" << std::endl
-             << std::endl;
+    std::cout << "*******************************************" << std::endl;
+    std::cout << "******* Grassland site simulation *********" << std::endl;
+    std::cout << "*******************************************" << std::endl
+              << std::endl;
 
-   std::cout << "DEIMS.id = " << parameter.deimsID << std::endl;
-   std::cout << "Latitude = " << parameter.latitude << std::endl;
-   std::cout << "Longitude = " << parameter.longitude << std::endl;
-   std::cout << "First year = " << parameter.firstYear << std::endl;
-   std::cout << "Last year = " << parameter.lastYear << std::endl
-             << std::endl;
+    std::cout << "DEIMS.id = " << parameter.deimsID << std::endl;
+    std::cout << "Latitude = " << parameter.latitude << std::endl;
+    std::cout << "Longitude = " << parameter.longitude << std::endl;
+    std::cout << "First year = " << parameter.firstYear << std::endl;
+    std::cout << "Last year = " << parameter.lastYear << std::endl
+              << std::endl;
 
-   std::cout << "******* Input files *********" << std::endl
-             << std::endl;
+    std::cout << "******* Input files *********" << std::endl
+              << std::endl;
 
-   std::cout << "Weather data: " << parameter.weatherFile << std::endl;
-   if (!input.weatherFileOpened)
-   {
-      std::cout << "File failed to be opened!" << std::endl
-                << std::endl;
-   }
-   std::cout << "Soil data: " << parameter.soilFile << std::endl;
-   if (!input.soilFileOpened)
-   {
-      std::cout << "File failed to be opened!" << std::endl
-                << std::endl;
-   }
-   std::cout << "Management data: " << parameter.managementFile << std::endl;
-   if (!input.managementFileOpened)
-   {
-      std::cout << "File failed to be opened!" << std::endl
-                << std::endl;
-   }
-   std::cout << "Plant traits: " << parameter.plantTraitsFile << std::endl
-             << std::endl;
-   if (!input.plantTraitsFileOpened)
-   {
-      std::cout << "File failed to be opened!" << std::endl
-                << std::endl;
-   }
+    std::cout << "Weather data: " << parameter.weatherFile << std::endl;
+    if (!input.weatherFileOpened)
+    {
+        std::cout << "File failed to be opened!" << std::endl
+                  << std::endl;
+    }
+    std::cout << "Soil data: " << parameter.soilFile << std::endl;
+    if (!input.soilFileOpened)
+    {
+        std::cout << "File failed to be opened!" << std::endl
+                  << std::endl;
+    }
+    std::cout << "Management data: " << parameter.managementFile << std::endl;
+    if (!input.managementFileOpened)
+    {
+        std::cout << "File failed to be opened!" << std::endl
+                  << std::endl;
+    }
+    std::cout << "Plant traits: " << parameter.plantTraitsFile << std::endl
+              << std::endl;
+    if (!input.plantTraitsFileOpened)
+    {
+        std::cout << "File failed to be opened!" << std::endl
+                  << std::endl;
+    }
 
-   std::cout << "******* Simulation output writing *********" << std::endl
-             << std::endl;
+    std::cout << "******* Simulation output writing *********" << std::endl
+              << std::endl;
 
-   std::cout << "Seed of random number generator to reproduce simulation output: " << std::to_string(parameter.randomNumberGeneratorSeed) << std::endl
-             << std::endl;
+    std::cout << "Seed of random number generator to reproduce simulation output: " << std::to_string(parameter.randomNumberGeneratorSeed) << std::endl
+              << std::endl;
 
-   std::string dates = "daily";
-   if (outputWritingDatesFileOpened == true)
-   {
-      dates = "at dates provided in " + parameter.outputWritingDatesFile;
-   }
-   std::cout << "Simulation output is written: " << dates << std::endl;
-   if (!outputWritingDatesFileOpened)
-   {
-      if (parameter.outputWritingDatesFile != "NaN" && parameter.outputWritingDatesFile != "")
-      {
-         std::cout << "File on OutputWritingDates failed to be opened!" << std::endl
-                   << std::endl;
-      }
-      else
-      {
-         std::cout << "File on OutputWritingDates was not included as parameter!" << std::endl
-                   << std::endl;
-      }
-   }
+    std::string dates = "daily";
+    if (outputWritingDatesFileOpened == true)
+    {
+        dates = "at dates provided in " + parameter.outputWritingDatesFile;
+    }
+    std::cout << "Simulation output is written: " << dates << std::endl;
+    if (!outputWritingDatesFileOpened)
+    {
+        if (parameter.outputWritingDatesFile != "NaN" && parameter.outputWritingDatesFile != "")
+        {
+            std::cout << "File on OutputWritingDates failed to be opened!" << std::endl
+                      << std::endl;
+        }
+        else
+        {
+            std::cout << "File on OutputWritingDates was not included as parameter!" << std::endl
+                      << std::endl;
+        }
+    }
 
-   std::cout << std::endl;
+    std::cout << std::endl;
 }

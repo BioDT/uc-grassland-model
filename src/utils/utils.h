@@ -10,6 +10,7 @@
 #include <locale>
 #include <sstream>
 #include <limits>
+#include "../module_init/constants.h"
 
 /**
  * @class UTILS
@@ -22,22 +23,23 @@
 class UTILS
 {
 public:
-   UTILS();
-   ~UTILS();
+    UTILS();
+    ~UTILS();
 
-   /**
-    * @brief Vector to store strings resulting from splitting a string.
-    */
-   std::vector<std::string> strings;
+    /**
+     * @brief Vector to store strings resulting from splitting a string.
+     */
+    std::vector<std::string> strings;
 
-   void splitString(std::string str, char separator);
-   bool stringToBool(const std::string &str);
-   void handleError(std::string errorString);
-   void handleWarning(std::string warnString);
-   std::string getFileEnding(std::string file);
-   int calculateJulianDayFromDate(int day, int month, int year);
-   int calculateDayCountFromDate(int day, int month, int year, int startDay);
-   int calculateDateFromDayCount(UTILS utils, int dayCount, int startDay, std::string keywordForReturn);
-   double parseDoubleOrNaN(const std::string &str);
-   int parseIntegerOrNaN(const std::string &str);
+    void splitString(std::string str, char separator);
+    bool stringToBool(const std::string &str);
+    void checkForNegativeValue(double valueToCheck, const std::string context);
+    void handleError(std::string errorString);
+    void handleWarning(std::string warnString);
+    std::string getFileEnding(std::string file);
+    int calculateJulianDayFromDate(int day, int month, int year);
+    int calculateDayCountFromDate(int day, int month, int year, int startDay);
+    int calculateDateFromDayCount(UTILS utils, int dayCount, int startDay, std::string keywordForReturn);
+    double parseDoubleOrNaN(const std::string &str);
+    int parseIntegerOrNaN(const std::string &str);
 };

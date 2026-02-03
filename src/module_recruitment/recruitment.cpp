@@ -32,19 +32,19 @@ RECRUITMENT::~RECRUITMENT() {};
  */
 void RECRUITMENT::doPlantRecruitment(UTILS utils, PARAMETER parameter, ALLOMETRY allometry, COMMUNITY &community, MANAGEMENT management, SOIL &soil)
 {
-   // 1. seed influx by different seed sources
-   getIncomingSeedsByPlantReproduction(parameter, community);
-   getIncomingSeedsBySowing(parameter, management);
-   getIncomingSeedsByExternalInflux(parameter);
+    // 1. seed influx by different seed sources
+    getIncomingSeedsByPlantReproduction(parameter, community);
+    getIncomingSeedsBySowing(parameter, management);
+    getIncomingSeedsByExternalInflux(parameter);
 
-   // 2. storage of seed influx to local seed pool
-   saveIncomingSeedsInSeedPool(parameter);
+    // 2. storage of seed influx to local seed pool
+    saveIncomingSeedsInSeedPool(parameter);
 
-   // 3. seed germination from seed pool accounting for germination times and rates
-   calculateSeedGerminationToSeedlings(utils, parameter, allometry, community, soil);
+    // 3. seed germination from seed pool accounting for germination times and rates
+    calculateSeedGerminationToSeedlings(utils, parameter, allometry, community, soil);
 
-   // 4. Update number of cohorts in allPlants-vector
-   community.totalNumberOfCohortsInCommunity = community.allPlants.size();
+    // 4. Update number of cohorts in allPlants-vector
+    community.totalNumberOfCohortsInCommunity = community.allPlants.size();
 }
 
 /**
@@ -69,13 +69,13 @@ void RECRUITMENT::doPlantRecruitment(UTILS utils, PARAMETER parameter, ALLOMETRY
  */
 void RECRUITMENT::getIncomingSeedsByExternalInflux(PARAMETER parameter)
 {
-   if (parameter.externalSeedInfluxActivated && parameter.day >= parameter.dayOfExternalSeedInfluxStart)
-   {
-      for (int pft = 0; pft < parameter.pftCount; pft++)
-      {
-         incomingSeeds[pft] += parameter.externalSeedInfluxNumber[pft];
-      }
-   }
+    if (parameter.externalSeedInfluxActivated && parameter.day >= parameter.dayOfExternalSeedInfluxStart)
+    {
+        for (int pft = 0; pft < parameter.pftCount; pft++)
+        {
+            incomingSeeds[pft] += parameter.externalSeedInfluxNumber[pft];
+        }
+    }
 }
 
 /**
@@ -103,21 +103,21 @@ void RECRUITMENT::getIncomingSeedsByExternalInflux(PARAMETER parameter)
  */
 void RECRUITMENT::getIncomingSeedsBySowing(PARAMETER parameter, MANAGEMENT management)
 {
-   if (management.sowingDate.size() > 0)
-   {
-      /* for each sowing day from the management file */
-      for (int sowingDayIndex = 0; sowingDayIndex < management.sowingDate.size(); sowingDayIndex++)
-      {
-         /* if the current day is exactly a sowing day */
-         if (parameter.day == management.sowingDate[sowingDayIndex])
-         {
-            for (int pft = 0; pft < parameter.pftCount; pft++)
+    if (management.sowingDate.size() > 0)
+    {
+        /* for each sowing day from the management file */
+        for (int sowingDayIndex = 0; sowingDayIndex < management.sowingDate.size(); sowingDayIndex++)
+        {
+            /* if the current day is exactly a sowing day */
+            if (parameter.day == management.sowingDate[sowingDayIndex])
             {
-               incomingSeeds[pft] += management.amountOfSownSeeds[pft][sowingDayIndex];
+                for (int pft = 0; pft < parameter.pftCount; pft++)
+                {
+                    incomingSeeds[pft] += management.amountOfSownSeeds[pft][sowingDayIndex];
+                }
             }
-         }
-      }
-   }
+        }
+    }
 }
 
 /**
@@ -147,35 +147,35 @@ void RECRUITMENT::getIncomingSeedsBySowing(PARAMETER parameter, MANAGEMENT manag
  */
 void RECRUITMENT::getIncomingSeedsByPlantReproduction(PARAMETER parameter, COMMUNITY &community)
 {
-   int pft, numberOfSeeds;
+    int pft, numberOfSeeds;
 
-   for (int cohortIndex = 0; cohortIndex < community.totalNumberOfCohortsInCommunity; cohortIndex++)
-   {
-      /* new plant cohorts are stored at the end of the community vector */
-      pft = community.allPlants[cohortIndex]->pft;
+    for (int cohortIndex = 0; cohortIndex < community.totalNumberOfCohortsInCommunity; cohortIndex++)
+    {
+        /* new plant cohorts are stored at the end of the community vector */
+        pft = community.allPlants[cohortIndex]->pft;
 
-      /* if plants have reached maturity, their recruitment biomass pool is used for seed production (based on PFT-specific seed mass) */
-      if (community.allPlants[cohortIndex]->height >= parameter.maturityHeights[pft])
-      {
-         if (community.allPlants[cohortIndex]->recruitmentBiomass > 0)
-         {
-            numberOfSeeds = (int)floor((community.allPlants[cohortIndex]->recruitmentBiomass / parameter.seedMasses[pft]) + 0.5);
-            if (parameter.seedsFromMaturePlantsActivated)
+        /* if plants have reached maturity, their recruitment biomass pool is used for seed production (based on PFT-specific seed mass) */
+        if (community.allPlants[cohortIndex]->height >= parameter.maturityHeights[pft])
+        {
+            if (community.allPlants[cohortIndex]->recruitmentBiomass > 0)
             {
-               incomingSeeds[pft] += numberOfSeeds;
-               outgoingSeeds[pft] += 0;
+                numberOfSeeds = (int)floor((community.allPlants[cohortIndex]->recruitmentBiomass / parameter.seedMasses[pft]) + 0.5);
+                if (parameter.seedsFromMaturePlantsActivated)
+                {
+                    incomingSeeds[pft] += numberOfSeeds;
+                    outgoingSeeds[pft] += 0;
+                }
+                else
+                {
+                    incomingSeeds[pft] += 0;
+                    outgoingSeeds[pft] += numberOfSeeds;
+                }
+                community.allPlants[cohortIndex]->recruitmentBiomass = 0;
+                community.allPlants[cohortIndex]->recruitmentCarbon = 0;
+                community.allPlants[cohortIndex]->recruitmentNitrogen = 0;
             }
-            else
-            {
-               incomingSeeds[pft] += 0;
-               outgoingSeeds[pft] += numberOfSeeds;
-            }
-            community.allPlants[cohortIndex]->recruitmentBiomass = 0;
-            community.allPlants[cohortIndex]->recruitmentCarbon = 0;
-            community.allPlants[cohortIndex]->recruitmentNitrogen = 0;
-         }
-      }
-   }
+        }
+    }
 }
 
 /**
@@ -201,14 +201,14 @@ void RECRUITMENT::getIncomingSeedsByPlantReproduction(PARAMETER parameter, COMMU
  */
 void RECRUITMENT::saveIncomingSeedsInSeedPool(PARAMETER parameter)
 {
-   for (int pft = 0; pft < parameter.pftCount; pft++)
-   {
-      if (incomingSeeds[pft] > 0)
-      {
-         seedPool[pft].push_back(incomingSeeds[pft]);
-         seedGerminationTimeCounter[pft].push_back(parameter.seedGerminationTimes[pft]);
-      }
-   }
+    for (int pft = 0; pft < parameter.pftCount; pft++)
+    {
+        if (incomingSeeds[pft] > 0)
+        {
+            seedPool[pft].push_back(incomingSeeds[pft]);
+            seedGerminationTimeCounter[pft].push_back(parameter.seedGerminationTimes[pft]);
+        }
+    }
 }
 
 /**
@@ -247,35 +247,34 @@ void RECRUITMENT::saveIncomingSeedsInSeedPool(PARAMETER parameter)
  */
 void RECRUITMENT::calculateSeedGerminationToSeedlings(UTILS utils, PARAMETER parameter, ALLOMETRY allometry, COMMUNITY &community, SOIL &soil)
 {
-   for (int pft = 0; pft < parameter.pftCount; pft++)
-   {
-      for (int cohortindex = 0; cohortindex < seedGerminationTimeCounter[pft].size(); cohortindex++)
-      {
-         seedGerminationTimeCounter[pft].at(cohortindex) -= 1;     // account for this day for germination by decreasing counter by one
-         if (seedGerminationTimeCounter[pft].at(cohortindex) == 0) /* only if counter is 0 seeds are now ready to germinate as seedlings */
-         {
-            // calculate number of successful germinated seeds from seedpool
-            calculateNumberOfGerminatingSeeds(utils, parameter, community, pft, cohortindex);
-
-            // check if there is enough space left for all seedlings to establish
-
-            if (parameter.crowdingMortalityActivated)
+    for (int pft = 0; pft < parameter.pftCount; pft++)
+    {
+        for (int cohortindex = 0; cohortindex < seedGerminationTimeCounter[pft].size(); cohortindex++)
+        {
+            seedGerminationTimeCounter[pft].at(cohortindex) -= 1;     // account for this day for germination by decreasing counter by one
+            if (seedGerminationTimeCounter[pft].at(cohortindex) == 0) /* only if counter is 0 seeds are now ready to germinate as seedlings */
             {
-               if ((community.coveredAreaOfAllPlants > 1.0))
-               {
-                  seedlingCrowdingMortality(utils, parameter, community, allometry);
-               }
+                // calculate number of successful germinated seeds from seedpool
+                calculateNumberOfGerminatingSeeds(utils, parameter, community, pft, cohortindex);
+                // check if there is enough space left for all seedlings to establish
+
+                if (parameter.crowdingMortalityActivated)
+                {
+                    if ((community.coveredAreaOfAllPlants > 1.0))
+                    {
+                        seedlingCrowdingMortality(utils, parameter, community, allometry);
+                    }
+                }
+                addGerminatedSeedlingsToCommunity(utils, parameter, community, allometry, pft);
+
+                // calculate number of failed germinated seeds from seedpool and transfer to litter pool
+                transferFailedToGerminateSeedsToLitterPool(utils, parameter, soil, pft, cohortindex);
+
+                // update seed pool after germination
+                updateSeedPool(pft, cohortindex);
             }
-            addGerminatedSeedlingsToCommunity(utils, parameter, community, allometry, pft);
-
-            // calculate number of failed germinated seeds from seedpool and transfer to litter pool
-            transferFailedToGerminateSeedsToLitterPool(utils, parameter, soil, pft, cohortindex);
-
-            // update seed pool after germination
-            updateSeedPool(pft, cohortindex);
-         }
-      }
-   }
+        }
+    }
 }
 
 /**
@@ -304,68 +303,68 @@ void RECRUITMENT::calculateSeedGerminationToSeedlings(UTILS utils, PARAMETER par
  */
 void RECRUITMENT::calculateNumberOfGerminatingSeeds(UTILS utils, PARAMETER parameter, COMMUNITY &community, int pft, int cohortindex)
 {
-   int integerPartOfCalculatedNumberOfSeeds;
-   double calculatedNumberOfSeeds;
-   calculatedNumberOfSeeds = seedPool[pft].at(cohortindex) * parameter.seedGerminationRates[pft];
-   integerPartOfCalculatedNumberOfSeeds = std::floor(calculatedNumberOfSeeds);
+    int integerPartOfCalculatedNumberOfSeeds;
+    double calculatedNumberOfSeeds;
+    calculatedNumberOfSeeds = seedPool[pft].at(cohortindex) * parameter.seedGerminationRates[pft];
+    integerPartOfCalculatedNumberOfSeeds = std::floor(calculatedNumberOfSeeds);
 
-   double randomNumber = -1;
-   community.randomNumberIndex++;
+    double randomNumber = -1;
+    community.randomNumberIndex++;
 
-   // stochasticity in ceiling or flooring of the calculated number of germinating seeds if not integer
-   if ((calculatedNumberOfSeeds - integerPartOfCalculatedNumberOfSeeds) > 0)
-   {
-      std::uniform_real_distribution<> dis(0.0, 1.0);
-      std::mt19937 gen(community.randomNumberIndex); // generator initialized with the incremental variable
-      randomNumber = dis(gen);
-      if (randomNumber <= (calculatedNumberOfSeeds - integerPartOfCalculatedNumberOfSeeds))
-      {
-         successfullGerminatedSeeds.at(pft) = integerPartOfCalculatedNumberOfSeeds + 1;
-      }
-      else
-      {
-         successfullGerminatedSeeds.at(pft) = integerPartOfCalculatedNumberOfSeeds;
-      }
-   }
-   else
-   {
-      successfullGerminatedSeeds.at(pft) = integerPartOfCalculatedNumberOfSeeds;
-   }
+    // stochasticity in ceiling or flooring of the calculated number of germinating seeds if not integer
+    if ((calculatedNumberOfSeeds - integerPartOfCalculatedNumberOfSeeds) > 0)
+    {
+        std::uniform_real_distribution<> dis(0.0, 1.0);
+        std::mt19937 gen(community.randomNumberIndex); // generator initialized with the incremental variable
+        randomNumber = dis(gen);
+        if (randomNumber <= (calculatedNumberOfSeeds - integerPartOfCalculatedNumberOfSeeds))
+        {
+            successfullGerminatedSeeds.at(pft) = integerPartOfCalculatedNumberOfSeeds + 1;
+        }
+        else
+        {
+            successfullGerminatedSeeds.at(pft) = integerPartOfCalculatedNumberOfSeeds;
+        }
+    }
+    else
+    {
+        successfullGerminatedSeeds.at(pft) = integerPartOfCalculatedNumberOfSeeds;
+    }
 
-   if (successfullGerminatedSeeds.at(pft) < 0)
-   {
-      utils.handleError("Calculation of germinating seeds return a negative value!");
-   }
+    if (successfullGerminatedSeeds.at(pft) < 0)
+    {
+        utils.handleError("Calculation of germinating seeds return a negative value!");
+    }
 }
 
 void RECRUITMENT::seedlingCrowdingMortality(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry)
 {
-   double requiredSpaceForNewSeedlings = 0.0;
-   double newCoveredAreaOfAllPlants = 0.0;
-   double availableSpaceForNewSeedlings = 0.0;
-   double reductionOfNewSeedlingsByCrowding = 1.0;
+    double requiredSpaceForNewSeedlings = 0.0;
+    double newCoveredAreaOfAllPlants = 0.0;
+    double availableSpaceForNewSeedlings = 0.0;
+    double reductionOfNewSeedlingsByCrowding = 1.0;
 
-   for (int pft = 0; pft < parameter.pftCount; pft++)
-   {
-      double seedlingHeight = allometry.heightFromPlantBiomassShootCorrectionAndByRatios(utils, parameter.seedMasses[pft], parameter.plantHeightToWidthRatio[pft], parameter.plantShootCorrectionFactor[pft], parameter.plantShootRootRatio[pft]);
-      double seedlingWidth = allometry.widthFromHeightByRatio(utils, seedlingHeight, parameter.plantHeightToWidthRatio[pft]);
-      double seedlingCoveredArea = allometry.areaFromWidth(seedlingWidth);
+    for (int pft = 0; pft < parameter.pftCount; pft++)
+    {
+        double seedlingHeight = allometry.heightFromPlantBiomassShootCorrectionAndByRatios(utils, parameter.seedMasses[pft], parameter.plantHeightToWidthRatio[pft], parameter.plantShootCorrectionFactor[pft], parameter.plantShootRootRatio[pft]);
+        double seedlingWidth = allometry.widthFromHeightByRatio(utils, seedlingHeight, parameter.plantHeightToWidthRatio[pft]);
+        double seedlingCoveredArea = allometry.areaFromWidth(seedlingWidth);
 
-      requiredSpaceForNewSeedlings += (successfullGerminatedSeeds.at(pft) * parameter.plantShootOverlapFactors[pft] * seedlingCoveredArea);
-   }
+        requiredSpaceForNewSeedlings += (successfullGerminatedSeeds.at(pft) * parameter.plantShootOverlapFactors[pft] * seedlingCoveredArea);
+    }
 
-   newCoveredAreaOfAllPlants = community.coveredAreaOfAllPlants + requiredSpaceForNewSeedlings;
+    newCoveredAreaOfAllPlants = community.coveredAreaOfAllPlants + requiredSpaceForNewSeedlings;
 
-   if (newCoveredAreaOfAllPlants > 1.0)
-   {
-      availableSpaceForNewSeedlings = std::max(1.0 - community.coveredAreaOfAllPlants, 0.0);
-      reductionOfNewSeedlingsByCrowding = availableSpaceForNewSeedlings / requiredSpaceForNewSeedlings;
+    if (newCoveredAreaOfAllPlants > 1.0)
+    {
+        availableSpaceForNewSeedlings = std::max(1.0 - community.coveredAreaOfAllPlants, 0.0);
+        reductionOfNewSeedlingsByCrowding = availableSpaceForNewSeedlings / requiredSpaceForNewSeedlings;
 
-      for (int pft = 0; pft < parameter.pftCount; pft++)
-      {
-         successfullGerminatedSeeds.at(pft) = std::floor(successfullGerminatedSeeds.at(pft) * reductionOfNewSeedlingsByCrowding);
-      }
-   }
+        for (int pft = 0; pft < parameter.pftCount; pft++)
+        {
+            successfullGerminatedSeeds.at(pft) = std::floor(successfullGerminatedSeeds.at(pft) * reductionOfNewSeedlingsByCrowding);
+        }
+    }
 }
 
 /**
@@ -401,18 +400,18 @@ void RECRUITMENT::seedlingCrowdingMortality(UTILS utils, PARAMETER parameter, CO
  */
 void RECRUITMENT::transferFailedToGerminateSeedsToLitterPool(UTILS utils, PARAMETER parameter, SOIL &soil, int pft, int cohortindex)
 {
-   /* calculate number of failed germinated seeds from seedpool */
-   int failedToGerminateSeeds;
-   failedToGerminateSeeds = seedPool[pft].at(cohortindex) - successfullGerminatedSeeds.at(pft);
+    /* calculate number of failed germinated seeds from seedpool */
+    int failedToGerminateSeeds;
+    failedToGerminateSeeds = seedPool[pft].at(cohortindex) - successfullGerminatedSeeds.at(pft);
 
-   /* check for consistency */
-   if (std::abs((successfullGerminatedSeeds.at(pft) + failedToGerminateSeeds) - seedPool[pft].at(cohortindex)) >= tolerance)
-   {
-      utils.handleWarning("There is more numerical variation in the rounding of germinated / non-germinated seeds than expected.");
-   }
+    /* check for consistency */
+    if (std::abs((successfullGerminatedSeeds.at(pft) + failedToGerminateSeeds) - seedPool[pft].at(cohortindex)) >= tolerance)
+    {
+        utils.handleWarning("There is more numerical variation in the rounding of germinated / non-germinated seeds than expected.");
+    }
 
-   /* transfer carbon and nitrogen content of failed seeds to the respective litter pools for decomposition */
-   soil.transferDyingPlantPartsToLitterPools(utils, parameter, failedToGerminateSeeds, parameter.seedMasses[pft], "soil_seed", pft);
+    /* transfer carbon and nitrogen content of failed seeds to the respective litter pools for decomposition */
+    soil.transferDyingPlantPartsToLitterPools(utils, parameter, failedToGerminateSeeds, parameter.seedMasses[pft], "soil_seed", pft);
 }
 
 /**
@@ -431,9 +430,9 @@ void RECRUITMENT::transferFailedToGerminateSeedsToLitterPool(UTILS utils, PARAME
  */
 void RECRUITMENT::updateSeedPool(int pft, int cohortindex)
 {
-   // delete entry in both vectors (as germination process is now completed for those seeds from the seedpool)
-   seedGerminationTimeCounter[pft].erase(seedGerminationTimeCounter[pft].begin() + cohortindex);
-   seedPool[pft].erase(seedPool[pft].begin() + cohortindex);
+    // delete entry in both vectors (as germination process is now completed for those seeds from the seedpool)
+    seedGerminationTimeCounter[pft].erase(seedGerminationTimeCounter[pft].begin() + cohortindex);
+    seedPool[pft].erase(seedPool[pft].begin() + cohortindex);
 }
 
 /**
@@ -458,8 +457,8 @@ void RECRUITMENT::updateSeedPool(int pft, int cohortindex)
  */
 void RECRUITMENT::addGerminatedSeedlingsToCommunity(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry, int pft)
 {
-   if (successfullGerminatedSeeds.at(pft) > 0)
-   {
-      community.allPlants.emplace_back(std::make_shared<PLANT>(utils, parameter, allometry, pft, successfullGerminatedSeeds.at(pft)));
-   }
+    if (successfullGerminatedSeeds.at(pft) > 0)
+    {
+        community.allPlants.emplace_back(std::make_shared<PLANT>(utils, parameter, allometry, pft, successfullGerminatedSeeds.at(pft)));
+        }
 }
