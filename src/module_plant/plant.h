@@ -84,7 +84,7 @@ public:
 
         /* root architecture */
         rootingDepth = allometry.rootDepthFromRootBiomassParametersRatioAndShootCorrection(utils, rootBiomass, parameter.plantRootDepthParamIntercept[pft], parameter.plantRootDepthParamExponent[pft], parameter.plantShootRootRatio[pft], parameter.plantShootCorrectionFactor[pft]);
-        numberOfSoilLayersRooting = std::ceil(rootingDepth / soilLayerWidth);
+        numberOfSoilLayersRooting = allometry.calculateNumberOfRootingSoillayer(parameter.soilLayerWidth, rootingDepth);
 
         /* leaf area and structure */
         laiGreen = allometry.laiFromShootBiomassAreaSla(utils, shootBiomassGreenLeaves, coveredArea, parameter.plantSpecificLeafArea[pft]);
@@ -132,7 +132,7 @@ public:
         soilWaterUptake = 0.0;
         soilWaterDemandPerSoilLayer.clear();
         soilWaterUptakePerSoilLayer.clear();
-        for (int soilLayer = 0; soilLayer < maximumSoilLayer; soilLayer++)
+        for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
         {
             soilWaterDemandPerSoilLayer.push_back(0.0);
             soilWaterUptakePerSoilLayer.push_back(0.0);
@@ -157,7 +157,7 @@ public:
         totalSoilNitrogenUptake = 0.0;
         soilNitrogenDemandPerSoilLayer.clear();
         soilNitrogenUptakePerSoilLayer.clear();
-        for (int soilLayer = 0; soilLayer < maximumSoilLayer; soilLayer++)
+        for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
         {
             soilNitrogenDemandPerSoilLayer.push_back(0.0);
             soilNitrogenUptakePerSoilLayer.push_back(0.0);

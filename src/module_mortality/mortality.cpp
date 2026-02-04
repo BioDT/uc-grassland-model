@@ -30,12 +30,18 @@ void MORTALITY::doPlantMortality(UTILS utils, PARAMETER parameter, COMMUNITY &co
         // 2. Crowding mortality
         if (parameter.crowdingMortalityActivated)
         {
-            community.randomNumberIndex++;
+            if (parameter.stochasticSimulation)
+            {
+                community.randomNumberIndex++;
+            }
             doPlantCrowding(parameter, utils, soil, community, cohortIndex, pft);
         }
 
         // 3. Basic mortality
-        community.randomNumberIndex++;
+        if (parameter.stochasticSimulation)
+        {
+            community.randomNumberIndex++;
+        }
         doBasicMortality(utils, parameter, soil, community, cohortIndex, pft);
     }
 
@@ -168,17 +174,24 @@ void MORTALITY::doPlantCrowding(PARAMETER parameter, UTILS utils, SOIL &soil, CO
     {
         if (community.coveredAreaOfAllPlants > 1.0)
         {
-            std::uniform_real_distribution<> dis(0.0, 1.0);
-            std::mt19937 gen(community.randomNumberIndex); // generator initialized with the incremental variable
-            double randomNumber = dis(gen);
-
+            /* amount of plants that shall die due to crowding */
             double amountOfTooManyPlants = community.allPlants[cohortIndex]->amount * (1.0 - (1.0 / community.coveredAreaOfAllPlants));
-            double letAnotherPlantDy = amountOfTooManyPlants - int(amountOfTooManyPlants);
-            if (randomNumber <= letAnotherPlantDy)
+
+            /* decide if either stochastic or deterministic mortality */
+            if (parameter.stochasticSimulation)
             {
-                amountOfTooManyPlants += 1.0;
+                std::uniform_real_distribution<> dis(0.0, 1.0);
+                std::mt19937 gen(community.randomNumberIndex); // generator initialized with the incremental variable
+                double randomNumber = dis(gen);
+
+                double letAnotherPlantDy = amountOfTooManyPlants - int(amountOfTooManyPlants);
+                if (randomNumber <= letAnotherPlantDy)
+                {
+                    amountOfTooManyPlants += 1.0;
+                }
             }
 
+            /* let plants die due to crowding */
             if (community.allPlants[cohortIndex]->amount - amountOfTooManyPlants >= 0)
             {
                 soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfTooManyPlants, community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves, "surface_green", pft);
@@ -220,28 +233,42 @@ void MORTALITY::doBasicMortality(UTILS utils, PARAMETER parameter, SOIL &soil, C
 {
     double mortalityProbability = getPlantMortalityProbability(parameter, community, cohortIndex, pft);
 
-    for (int plantIndex = 0; plantIndex < community.allPlants[cohortIndex]->amount; plantIndex++)
+    if (parameter.stochasticSimulation)
     {
-        if (community.allPlants[cohortIndex]->amount > 0)
+        /* stochastic basic mortality */
+        for (int plantIndex = 0; plantIndex < community.allPlants[cohortIndex]->amount; plantIndex++)
         {
-            std::uniform_real_distribution<> dis(0.0, 1.0);
-            std::mt19937 gen(community.randomNumberIndex); // generator initialized with the incremental variable
-            double randomNumber = dis(gen);
-
-            /* let plants die according to the mortality probability */
-            if (randomNumber <= mortalityProbability)
+            if (community.allPlants[cohortIndex]->amount > 0)
             {
-                soil.transferDyingPlantPartsToLitterPools(utils, parameter, 1, community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves, "surface_green", pft);
-                soil.transferDyingPlantPartsToLitterPools(utils, parameter, 1, community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves, "surface_brown", pft);
-                soil.transferDyingPlantPartsToLitterPools(utils, parameter, 1, community.allPlants.at(cohortIndex)->rootBiomass, "soil_root", pft);
-                soil.transferDyingPlantPartsToLitterPools(utils, parameter, 1, community.allPlants.at(cohortIndex)->recruitmentBiomass, "soil_seed", pft);
-                community.allPlants[cohortIndex]->amount -= 1;
+                std::uniform_real_distribution<> dis(0.0, 1.0);
+                std::mt19937 gen(community.randomNumberIndex); // generator initialized with the incremental variable
+                double randomNumber = dis(gen);
+
+                /* let plants die according to the mortality probability */
+                if (randomNumber <= mortalityProbability)
+                {
+                    soil.transferDyingPlantPartsToLitterPools(utils, parameter, 1, community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves, "surface_green", pft);
+                    soil.transferDyingPlantPartsToLitterPools(utils, parameter, 1, community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves, "surface_brown", pft);
+                    soil.transferDyingPlantPartsToLitterPools(utils, parameter, 1, community.allPlants.at(cohortIndex)->rootBiomass, "soil_root", pft);
+                    soil.transferDyingPlantPartsToLitterPools(utils, parameter, 1, community.allPlants.at(cohortIndex)->recruitmentBiomass, "soil_seed", pft);
+                    community.allPlants[cohortIndex]->amount -= 1;
+                }
+            }
+            else
+            {
+                utils.handleError("Error (mortality): no more plants available in the cohort to die.");
             }
         }
-        else
-        {
-            utils.handleError("Error (mortality): no more plants available in the cohort to die.");
-        }
+    }
+    else
+    {
+        /* deterministic basic mortality */
+        double amountOfPlantsToDie = std::ceil(community.allPlants[cohortIndex]->amount * mortalityProbability);
+        soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfPlantsToDie, community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves, "surface_green", pft);
+        soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfPlantsToDie, community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves, "surface_brown", pft);
+        soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfPlantsToDie, community.allPlants.at(cohortIndex)->rootBiomass, "soil_root", pft);
+        soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfPlantsToDie, community.allPlants.at(cohortIndex)->recruitmentBiomass, "soil_seed", pft);
+        community.allPlants[cohortIndex]->amount -= amountOfPlantsToDie;
     }
 }
 

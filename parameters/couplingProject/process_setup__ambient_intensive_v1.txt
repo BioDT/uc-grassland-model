@@ -1,0 +1,37 @@
+# =============================================================================
+#
+#  Activation or deactivation of model processes (modules) within GRASSMIND
+#
+# =============================================================================
+
+# =============================================================================
+#  Stochasticity
+# =============================================================================
+
+stochasticSimulation	false
+\datatype:boolean
+\description:de-/activation of stochasticity in the model (use of random number generator)
+
+
+# =============================================================================
+#  Soil modules 
+# =============================================================================
+
+useInternalSoilModule	true
+\datatype:boolean
+\description:de-/activation of the soil dynamics calculated internally
+
+useExternalSoilModule_BODIUM	false
+\datatype:boolean
+\description:de-/activation of birdirectional coupling to the soil model BODIUM
+
+useExternalSoilModule_selfCoupled_getVariables	false
+\datatype:boolean
+\description:de-/activation of a self-coupling test framework for getting interface variables
+
+
+useExternalSoilModule_selfCoupled_setVariables	false
+\datatype:boolean
+\description:de-/activation of a self-coupling test framework for setting interface variables
+
+

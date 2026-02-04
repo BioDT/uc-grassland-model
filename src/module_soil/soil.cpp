@@ -97,10 +97,10 @@ void SOIL::calculateSoilWaterDynamics(UTILS utils, PARAMETER parameter, WEATHER 
     if (parameter.useInternalSoilModule || parameter.useExternalSoilModule_selfCoupled_setVariables)
     {
         // vertical stream of dailyWaterInputToSoil through soil layers
-        soilWaterPercolation(utils, dailyWaterInputToSoil);
+        soilWaterPercolation(utils, parameter, dailyWaterInputToSoil);
 
         // leaching of nitrogen downwards through the soil layers coupled to water fluxes
-        leachingOfNitrogenCoupledToWaterPercolation(utils);
+        leachingOfNitrogenCoupledToWaterPercolation(utils, parameter);
 
         //  evaporation from top soil layer [mm/day]
         evaporationFromTopSoilLayer(utils, parameter, community, remainingDailyPET);
@@ -261,32 +261,32 @@ double SOIL::runOffAtSurface(UTILS utils, PARAMETER parameter, double dailyWater
 /**
  * @cite approach adapted from CENTURY4.0 model
  */
-void SOIL::soilWaterPercolation(UTILS utils, double waterInputToSoil)
+void SOIL::soilWaterPercolation(UTILS utils, PARAMETER parameter, double waterInputToSoil)
 {
     double addWaterExcessToNextSoilLayer = waterInputToSoil;
-    for (int i = 0; i < maximumSoilLayer; i++)
+    for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
     {
         double percolationToNextSoilLayer = 0.0;
 
-        waterContent_soilWaterPoolPerSoilLayer.at(i) += addWaterExcessToNextSoilLayer;
-        double waterContentBeyondSaturatedCapacity = waterContent_soilWaterPoolPerSoilLayer.at(i) - fieldCapacity.at(i);
+        waterContent_soilWaterPoolPerSoilLayer.at(soilLayer) += addWaterExcessToNextSoilLayer;
+        double waterContentBeyondSaturatedCapacity = waterContent_soilWaterPoolPerSoilLayer.at(soilLayer) - fieldCapacity.at(soilLayer);
 
         if (waterContentBeyondSaturatedCapacity > 0.0)
         {
-            double lambda = 0.01 * saturatedHydraulicConductivity.at(i) / (porosity.at(i) - fieldCapacity.at(i));
+            double lambda = 0.01 * saturatedHydraulicConductivity.at(soilLayer) / (porosity.at(soilLayer) - fieldCapacity.at(soilLayer));
             percolationToNextSoilLayer = (lambda * std::pow(waterContentBeyondSaturatedCapacity, 2.0)) / (1.0 + lambda * waterContentBeyondSaturatedCapacity);
         }
 
-        waterContent_soilWaterPoolPerSoilLayer.at(i) -= percolationToNextSoilLayer;
-        soilWaterFluxDownwardsOutOfSoilLayer.at(i) = percolationToNextSoilLayer;
+        waterContent_soilWaterPoolPerSoilLayer.at(soilLayer) -= percolationToNextSoilLayer;
+        soilWaterFluxDownwardsOutOfSoilLayer.at(soilLayer) = percolationToNextSoilLayer;
         addWaterExcessToNextSoilLayer = percolationToNextSoilLayer;
     }
 
     // underground storage of water
-    double stormflow = 0, baseflow = 0;                                                                       // TODO: add values as parameter
-    waterContent_soilWaterPoolPerSoilLayer.at(maximumSoilLayer) += addWaterExcessToNextSoilLayer - stormflow; // runoff into underground storage
-    baseflow = waterContent_soilWaterPoolPerSoilLayer.at(maximumSoilLayer) * 0.0;                             // TODO: add 0 as parameter
-    waterContent_soilWaterPoolPerSoilLayer.at(maximumSoilLayer) -= baseflow;
+    double stormflow = 0, baseflow = 0;                                                                                   // TODO: add values as parameter
+    waterContent_soilWaterPoolPerSoilLayer.at(parameter.numberOfSoilLayers) += addWaterExcessToNextSoilLayer - stormflow; // runoff into underground storage
+    baseflow = waterContent_soilWaterPoolPerSoilLayer.at(parameter.numberOfSoilLayers) * 0.0;                             // TODO: add 0 as parameter
+    waterContent_soilWaterPoolPerSoilLayer.at(parameter.numberOfSoilLayers) -= baseflow;
     soilRunOff = (stormflow + baseflow);
 }
 
@@ -296,7 +296,7 @@ void SOIL::soilWaterPercolation(UTILS utils, double waterInputToSoil)
  * @cite approach adapted from CENTURY4.0 model
  *
  */
-void SOIL::leachingOfNitrogenCoupledToWaterPercolation(UTILS utils)
+void SOIL::leachingOfNitrogenCoupledToWaterPercolation(UTILS utils, PARAMETER parameter)
 {
     double streamOfNitrogen = 0.0; // TODO: no calculation here!
 
@@ -305,34 +305,34 @@ void SOIL::leachingOfNitrogenCoupledToWaterPercolation(UTILS utils)
 
     double soilTypeFactor = (0.6 + 0.4 * sandContent) * 0.95;
 
-    for (int i = 0; i < maximumSoilLayer; i++)
+    for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
     {
         amountOfLeachingNitrogen = 0.0;
-        indexOfNextSoilLayer = i + 1;
+        indexOfNextSoilLayer = soilLayer + 1;
 
         // if there was a saturated water flow out of soil layer i and the mineral nitrogen content > 0
-        if ((soilWaterFluxDownwardsOutOfSoilLayer.at(i) > 0.0) && (nitrogenContent_soilMineralPoolPerSoilLayer.at(i) > 0.0))
+        if ((soilWaterFluxDownwardsOutOfSoilLayer.at(soilLayer) > 0.0) && (nitrogenContent_soilMineralPoolPerSoilLayer.at(soilLayer) > 0.0))
         {
-            double coupledSoilWaterFlux = std::min(1.0 - (2.5 - (soilWaterFluxDownwardsOutOfSoilLayer.at(i) / 10.0)) / 2.5, 1.0);
+            double coupledSoilWaterFlux = std::min(1.0 - (2.5 - (soilWaterFluxDownwardsOutOfSoilLayer.at(soilLayer) / 10.0)) / 2.5, 1.0);
             coupledSoilWaterFlux = std::max(coupledSoilWaterFlux, 0.0);
 
-            amountOfLeachingNitrogen = soilTypeFactor * nitrogenContent_soilMineralPoolPerSoilLayer.at(i) * coupledSoilWaterFlux;
-            amountOfLeachingNitrogen = std::min(amountOfLeachingNitrogen, nitrogenContent_soilMineralPoolPerSoilLayer.at(i));
+            amountOfLeachingNitrogen = soilTypeFactor * nitrogenContent_soilMineralPoolPerSoilLayer.at(soilLayer) * coupledSoilWaterFlux;
+            amountOfLeachingNitrogen = std::min(amountOfLeachingNitrogen, nitrogenContent_soilMineralPoolPerSoilLayer.at(soilLayer));
 
-            // subtract from soil layer 'i'
-            nitrogenContent_soilMineralPoolPerSoilLayer.at(i) -= amountOfLeachingNitrogen;
-            if (nitrogenContent_soilMineralPoolPerSoilLayer.at(i) + tolerance < 0.0)
+            // subtract from soil layer
+            nitrogenContent_soilMineralPoolPerSoilLayer.at(soilLayer) -= amountOfLeachingNitrogen;
+            if (nitrogenContent_soilMineralPoolPerSoilLayer.at(soilLayer) + tolerance < 0.0)
             {
-                nitrogenContent_soilMineralPoolPerSoilLayer.at(i) = 0.0;
+                nitrogenContent_soilMineralPoolPerSoilLayer.at(soilLayer) = 0.0;
                 // utils.handleError("Plants do not have access to soil nitrogen or soil nitrogen pool is negative!");
             }
 
             // add to soil layer 'indexOfNextSoilLayer'
-            if (indexOfNextSoilLayer == maximumSoilLayer)
+            if (indexOfNextSoilLayer == parameter.numberOfSoilLayers)
             {
                 nitrogenContent_leachedFromSoil += amountOfLeachingNitrogen;
             }
-            else if (indexOfNextSoilLayer < maximumSoilLayer)
+            else if (indexOfNextSoilLayer < parameter.numberOfSoilLayers)
             {
                 nitrogenContent_soilMineralPoolPerSoilLayer.at(indexOfNextSoilLayer) += amountOfLeachingNitrogen;
                 if (nitrogenContent_soilMineralPoolPerSoilLayer.at(indexOfNextSoilLayer) + tolerance < 0.0)
@@ -367,8 +367,8 @@ void SOIL::evaporationFromTopSoilLayer(UTILS utils, PARAMETER parameter, COMMUNI
         {
 
             double rk = (waterContent_soilWaterPoolPerSoilLayer.at(i) - permanentWiltingPoint.at(i)) / (fieldCapacity.at(i) - permanentWiltingPoint.at(i));
-            double layer0 = ((double)i) * soilLayerWidth;
-            double layer1 = ((double)(i + 1)) * soilLayerWidth;
+            double layer0 = ((double)i) * parameter.soilLayerWidth.at(i);
+            double layer1 = ((double)(i + 1)) * parameter.soilLayerWidth.at(i + 1);
             double cf = 20.0; // TODO: add parameter.Water_DrainageProportion;
             double h2 = rk * (1. / cf) * 22.7609 * (layer0 - layer1) +
                         9.10436 * ((1. + cf) / (pow(cf, 2.))) * (log(0.4 + cf * layer1) - log(0.4 + cf * layer0));
@@ -464,7 +464,7 @@ void SOIL::calculateSoilWaterUptakeByAvailableSoilWaterContentAndLimitPlantGpp(U
 
         if (parameter.useExternalSoilModule_selfCoupled_getVariables)
         {
-            setSoilParametersAndVariablesToNaN(utils);
+            setSoilParametersAndVariablesToNaN(utils, parameter);
         }
     }
 
@@ -490,11 +490,11 @@ void SOIL::transferSoilParametersAndVariablesFromInterface(UTILS utils)
     */
 }
 
-void SOIL::setSoilParametersAndVariablesToNaN(UTILS utils)
+void SOIL::setSoilParametersAndVariablesToNaN(UTILS utils, PARAMETER parameter)
 {
-    fieldCapacity.insert(fieldCapacity.begin(), maximumSoilLayer, NAN);
-    permanentWiltingPoint.insert(permanentWiltingPoint.begin(), maximumSoilLayer, NAN);
-    waterContent_soilWaterPoolPerSoilLayer.insert(waterContent_soilWaterPoolPerSoilLayer.begin(), maximumSoilLayer, NAN);
+    fieldCapacity.insert(fieldCapacity.begin(), parameter.numberOfSoilLayers, NAN);
+    permanentWiltingPoint.insert(permanentWiltingPoint.begin(), parameter.numberOfSoilLayers, NAN);
+    waterContent_soilWaterPoolPerSoilLayer.insert(waterContent_soilWaterPoolPerSoilLayer.begin(), parameter.numberOfSoilLayers, NAN);
 }
 
 void SOIL::calculateSoilWaterLimitationFactorPerPlant(UTILS utils, PARAMETER parameter, COMMUNITY &community)
@@ -507,28 +507,63 @@ void SOIL::calculateSoilWaterLimitationFactorPerPlant(UTILS utils, PARAMETER par
             double rootingSoilLayers = community.allPlants.at(cohortindex)->numberOfSoilLayersRooting;
 
             /* sum up soil parameters and variables in rooting zone */
-            double soilWaterInRootingZone = 0, pwpInRootingZone = 0, fcInRootingZone = 0;
+            double soilWaterInRootingZone = 0, pwpInRootingZone = 0, fcInRootingZone = 0, porInRootingZone = 0;
             for (int soilLayer = 0; soilLayer < rootingSoilLayers; soilLayer++)
             {
                 soilWaterInRootingZone += waterContent_soilWaterPoolPerSoilLayer.at(soilLayer);
                 pwpInRootingZone += permanentWiltingPoint.at(soilLayer);
                 fcInRootingZone += fieldCapacity.at(soilLayer);
+                porInRootingZone += porosity.at(soilLayer);
             }
 
             /* calculate soil water limitation factor for plant to reduce GPP */
-
-            // pft-specific MSW (relative position btw. PWP and FC (range: 0-1, default: 0.4)
-            // old: rw = (sw - pwp) / (par.Water_MSW[plant->pft] * (fc - pwpInRootingZone));
-            // NEW: parameter MSW is no relative position -> now also a value in V%
-            // linear increase of rw from 0 at PWP to 1 at MSW
-            // max rw = 1 (happens if sw >= msw or msw=0)
-
             double soilWaterLimitationFactor = 0;
-            double minimalTolerableSoilWaterContentWithoutLimitation = parameter.plantMinimalSoilWaterForGppReduction[pft];
-            if (soilWaterInRootingZone > pwpInRootingZone && minimalTolerableSoilWaterContentWithoutLimitation > pwpInRootingZone)
+            if (parameter.plantGppReductionBySoilWaterApproach == "onesided")
             {
-                soilWaterLimitationFactor = (soilWaterInRootingZone - pwpInRootingZone) / (minimalTolerableSoilWaterContentWithoutLimitation - pwpInRootingZone);
-                soilWaterLimitationFactor = std::min(soilWaterLimitationFactor, 1.0);
+                double minimalTolerableSoilWaterContentWithoutLimitation = parameter.lowerSoilWaterFractionForPlantGppReduction[pft] * (fcInRootingZone - pwpInRootingZone) + pwpInRootingZone;
+                if (soilWaterInRootingZone > pwpInRootingZone && minimalTolerableSoilWaterContentWithoutLimitation > pwpInRootingZone)
+                {
+                    soilWaterLimitationFactor = (soilWaterInRootingZone - pwpInRootingZone) / (minimalTolerableSoilWaterContentWithoutLimitation - pwpInRootingZone);
+                    soilWaterLimitationFactor = std::min(soilWaterLimitationFactor, 1.0);
+                }
+            }
+            else if (parameter.plantGppReductionBySoilWaterApproach == "twosided")
+            {
+                double minTolerableSoilWaterContentWithoutLimitation = parameter.lowerSoilWaterContentForPlantGppReduction[pft];
+                double maxTolerableSoilWaterContentWithoutLimitation = parameter.upperSoilWaterContentForPlantGppReduction[pft];
+
+                if (minTolerableSoilWaterContentWithoutLimitation < pwpInRootingZone)
+                {
+                    utils.handleWarning("The minimum tolerable soil water content without limitation is below permanent wilting point for a plant. Adjusting to PWP.");
+                    minTolerableSoilWaterContentWithoutLimitation = pwpInRootingZone;
+                }
+
+                if (maxTolerableSoilWaterContentWithoutLimitation > porInRootingZone)
+                {
+                    utils.handleWarning("The maximum tolerable soil water content without limitation is above soil porosity for a plant. Adjusting to porosity.");
+                    maxTolerableSoilWaterContentWithoutLimitation = porInRootingZone;
+                }
+
+                if (maxTolerableSoilWaterContentWithoutLimitation < minTolerableSoilWaterContentWithoutLimitation)
+                {
+                    utils.handleError("The maximum tolerable soil water content without limitation is below the minimum tolerable soil water content without limitation for a plant. Adjusting maximum to porosity.");
+                    maxTolerableSoilWaterContentWithoutLimitation = porInRootingZone;
+                }
+
+                if (soilWaterInRootingZone < minTolerableSoilWaterContentWithoutLimitation)
+                {
+                    soilWaterLimitationFactor = (soilWaterInRootingZone - pwpInRootingZone) / (minTolerableSoilWaterContentWithoutLimitation - pwpInRootingZone);
+                    soilWaterLimitationFactor = std::min(soilWaterLimitationFactor, 1.0);
+                }
+                else if (soilWaterInRootingZone > maxTolerableSoilWaterContentWithoutLimitation)
+                {
+                    soilWaterLimitationFactor = (porInRootingZone - soilWaterInRootingZone) / (porInRootingZone - maxTolerableSoilWaterContentWithoutLimitation);
+                    soilWaterLimitationFactor = std::min(soilWaterLimitationFactor, 1.0);
+                }
+            }
+            else
+            {
+                utils.handleError("Unknown approach for plant GPP reduction by soil water content. Please check the plant traits file!");
             }
 
             /* save limitation factor in plant-specific variable */
@@ -583,7 +618,7 @@ void SOIL::limitPlantGppAndSoilWaterUptakeByPotentialEvapotranspiration(UTILS ut
 
     /* apply limitation factor to community variables */
     community.totalSoilWaterUptake *= limitationFactorGppPET;
-    for (int soilLayer = 0; soilLayer < maximumSoilLayer; soilLayer++)
+    for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
     {
         community.totalSoilWaterUptakePerSoilLayer.at(soilLayer) *= limitationFactorGppPET;
     }
@@ -595,7 +630,7 @@ void SOIL::limitPlantGppAndSoilWaterUptakeByPotentialEvapotranspiration(UTILS ut
         {
             community.allPlants.at(cohortindex)->gpp *= limitationFactorGppPET;
             community.allPlants.at(cohortindex)->soilWaterUptake *= limitationFactorGppPET;
-            for (int soilLayer = 0; soilLayer < maximumSoilLayer; soilLayer++)
+            for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
             {
                 community.allPlants.at(cohortindex)->soilWaterUptakePerSoilLayer.at(soilLayer) *= limitationFactorGppPET;
             }
@@ -605,13 +640,13 @@ void SOIL::limitPlantGppAndSoilWaterUptakeByPotentialEvapotranspiration(UTILS ut
 
 void SOIL::limitPlantGppAndSoilWaterUptakeByPermanentWiltingPoint(UTILS utils, PARAMETER parameter, COMMUNITY &community)
 {
-    std::vector<double> waterUptakeReductionByAvailableWaterPerLayer(maximumSoilLayer, 0);
+    std::vector<double> waterUptakeReductionByAvailableWaterPerLayer(parameter.numberOfSoilLayers, 0);
 
     if (parameter.useInternalSoilModule || parameter.useExternalSoilModule_selfCoupled_setVariables)
     {
         // current PWP limitation works based on wateramount, in bodium coupling water limitation
         // is based on water potential -> TODO: new PWP limitation criterion?
-        waterUptakeReductionByAvailableWaterPerLayer = limitSoilWaterUptakeByPermanentWiltingPoint(utils, community);
+        waterUptakeReductionByAvailableWaterPerLayer = limitSoilWaterUptakeByPermanentWiltingPoint(utils, parameter, community);
         if (parameter.useExternalSoilModule_selfCoupled_setVariables)
         {
             // landtrans_waterUptakeReductionByAvailableWaterPerLayer = waterUptakeReductionByAvailableWaterPerLayer;
@@ -621,7 +656,7 @@ void SOIL::limitPlantGppAndSoilWaterUptakeByPermanentWiltingPoint(UTILS utils, P
     {
         // waterUptakeReductionByAvailableWaterPerLayer = landtrans_waterUptakeReductionByAvailableWaterPerLayer;
         double newWaterUptake = 0;
-        for (int soilLayer = 0; soilLayer < maximumSoilLayer; soilLayer++)
+        for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
         {
             community.totalSoilWaterUptakePerSoilLayer.at(soilLayer) *= (1 - waterUptakeReductionByAvailableWaterPerLayer.at(soilLayer));
             newWaterUptake += community.totalSoilWaterUptakePerSoilLayer.at(soilLayer);
@@ -636,12 +671,12 @@ void SOIL::limitPlantGppAndSoilWaterUptakeByPermanentWiltingPoint(UTILS utils, P
     // together
 }
 
-std::vector<double> SOIL::limitSoilWaterUptakeByPermanentWiltingPoint(UTILS utils, COMMUNITY &community)
+std::vector<double> SOIL::limitSoilWaterUptakeByPermanentWiltingPoint(UTILS utils, PARAMETER parameter, COMMUNITY &community)
 {
     double limitedTotalSoilWaterUptake = 0;
-    std::vector<double> limitationFactorOfSoilWaterUptakeByPwpPerSoilLayer(maximumSoilLayer, 0); // 1 for full reduction to zero uptake, 0 for no reduction // TODO: remove 1.0 here and in next function?
+    std::vector<double> limitationFactorOfSoilWaterUptakeByPwpPerSoilLayer(parameter.numberOfSoilLayers, 0); // 1 for full reduction to zero uptake, 0 for no reduction // TODO: remove 1.0 here and in next function?
 
-    for (int soilLayer = 0; soilLayer < maximumSoilLayer; soilLayer++)
+    for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
     {
         double pwp = permanentWiltingPoint.at(soilLayer);
         double soilWaterContent = waterContent_soilWaterPoolPerSoilLayer.at(soilLayer);
@@ -706,14 +741,14 @@ void SOIL::subtractPlantWaterUptakeFromSoilWaterPool(UTILS utils, COMMUNITY &com
     if (parameter.useInternalSoilModule || parameter.useExternalSoilModule_selfCoupled_setVariables)
     {
         //  update of soil water content due to water uptake
-        for (int soilLayer = 0; soilLayer < maximumSoilLayer; soilLayer++)
+        for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
         {
             waterContent_soilWaterPoolPerSoilLayer.at(soilLayer) -= community.totalSoilWaterUptakePerSoilLayer.at(soilLayer);
         }
     }
     else if (parameter.useExternalSoilModule_BODIUM || parameter.useExternalSoilModule_selfCoupled_getVariables)
     {
-        for (int soilLayer = 0; soilLayer < maximumSoilLayer; soilLayer++)
+        for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
         {
             // landtrans_soilWaterUptakePerLayer.at(soilLayer) = community.totalSoilWaterUptake.at(soilLayer);
         }
@@ -742,7 +777,7 @@ void SOIL::doPlantSoilNitrogenUptakeAndNppLimitationBySoilNitrogenConditions(UTI
         transferInterfaceVariablesForSelfCoupling_soilNitrogen(utils, parameter);
 
         /* calculation of soil nitrogen uptake per plant */
-        calculateSoilNitrogenUptakePerPlant(utils, community);
+        calculateSoilNitrogenUptakePerPlant(utils, parameter, community);
 
         /* only used in case of model self-coupling */
         resetInterfaceVariablesForSelfCoupling_soilNitrogen(utils, parameter);
@@ -756,10 +791,10 @@ void SOIL::doPlantSoilNitrogenUptakeAndNppLimitationBySoilNitrogenConditions(UTI
 
     if (parameter.useInternalSoilModule || parameter.useExternalSoilModule_selfCoupled_setVariables)
     {
-        summarizeTotalSoilNitrogenUptakeFromAllPlants(utils, community);
+        summarizeTotalSoilNitrogenUptakeFromAllPlants(utils, parameter, community);
 
         // updates soil mineral nitrogen pool for each layer
-        subtractPlantNitrogenUptakeFromSoilMineralNitrogenPool(utils, community);
+        subtractPlantNitrogenUptakeFromSoilMineralNitrogenPool(utils, parameter, community);
     }
 }
 
@@ -779,7 +814,7 @@ void SOIL::resetInterfaceVariablesForSelfCoupling_soilNitrogen(UTILS utils, PARA
 {
     if (parameter.useExternalSoilModule_selfCoupled_getVariables)
     {
-        nitrogenContent_soilMineralPoolPerSoilLayer.insert(nitrogenContent_soilMineralPoolPerSoilLayer.begin(), maximumSoilLayer, NAN); // make sure that variabls aren't used anywhere else
+        nitrogenContent_soilMineralPoolPerSoilLayer.insert(nitrogenContent_soilMineralPoolPerSoilLayer.begin(), parameter.numberOfSoilLayers, NAN); // make sure that variabls aren't used anywhere else
     }
 }
 
@@ -918,11 +953,11 @@ void SOIL::summarizeTotalSoilNitrogenDemandFromAllPlants(UTILS utils, COMMUNITY 
     }
 }
 
-void SOIL::calculateSoilNitrogenUptakePerPlant(UTILS utils, COMMUNITY &community)
+void SOIL::calculateSoilNitrogenUptakePerPlant(UTILS utils, PARAMETER parameter, COMMUNITY &community)
 {
     double maximumNitrogenSupplyPerPlant = 0.0;
 
-    for (int soilLayer = 0; soilLayer < maximumSoilLayer; soilLayer++)
+    for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
     {
         if (community.numberOfPlantsCompetingForSoilNitrogenPerSoilLayer.at(soilLayer) > 0)
         {
@@ -1034,7 +1069,7 @@ void SOIL::updateNitrogenSurplusPoolOfPlant(UTILS utils, COMMUNITY &community, i
     }
 }
 
-void SOIL::summarizeTotalSoilNitrogenUptakeFromAllPlants(UTILS utils, COMMUNITY &community)
+void SOIL::summarizeTotalSoilNitrogenUptakeFromAllPlants(UTILS utils, PARAMETER parameter, COMMUNITY &community)
 {
     for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
     {
@@ -1047,18 +1082,17 @@ void SOIL::summarizeTotalSoilNitrogenUptakeFromAllPlants(UTILS utils, COMMUNITY 
                 community.totalSoilNitrogenUptakePerSoilLayer.at(soilLayer) += (community.allPlants.at(cohortindex)->amount * community.allPlants.at(cohortindex)->soilNitrogenUptakePerSoilLayer.at(soilLayer));
             }
         }
-
-        /* sum up total soil nitrogen uptake across all soil layers */
-        for (int soilLayer = 0; soilLayer < maximumSoilLayer; soilLayer++)
-        {
-            community.totalSoilNitrogenUptake += community.totalSoilNitrogenUptakePerSoilLayer.at(soilLayer);
-        }
+    }
+    /* sum up total soil nitrogen uptake across all soil layers */
+    for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
+    {
+        community.totalSoilNitrogenUptake += community.totalSoilNitrogenUptakePerSoilLayer.at(soilLayer);
     }
 }
 
-void SOIL::subtractPlantNitrogenUptakeFromSoilMineralNitrogenPool(UTILS utils, COMMUNITY &community)
+void SOIL::subtractPlantNitrogenUptakeFromSoilMineralNitrogenPool(UTILS utils, PARAMETER parameter, COMMUNITY &community)
 {
-    for (int soilLayer = 0; soilLayer < maximumSoilLayer; soilLayer++)
+    for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
     {
         /* subtract plant nitrogen uptake from soil mineral nitrogen pool */
         nitrogenContent_soilMineralPoolPerSoilLayer.at(soilLayer) -= community.totalSoilNitrogenUptakePerSoilLayer.at(soilLayer);

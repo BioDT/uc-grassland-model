@@ -265,7 +265,7 @@ void RECRUITMENT::calculateSeedGerminationToSeedlings(UTILS utils, PARAMETER par
                         seedlingCrowdingMortality(utils, parameter, community, allometry);
                     }
                 }
-                addGerminatedSeedlingsToCommunity(utils, parameter, community, allometry, pft);
+                addGerminatedSeedlingsToCommunity(utils, parameter, community, allometry, soil, pft);
 
                 // calculate number of failed germinated seeds from seedpool and transfer to litter pool
                 transferFailedToGerminateSeedsToLitterPool(utils, parameter, soil, pft, cohortindex);
@@ -308,12 +308,12 @@ void RECRUITMENT::calculateNumberOfGerminatingSeeds(UTILS utils, PARAMETER param
     calculatedNumberOfSeeds = seedPool[pft].at(cohortindex) * parameter.seedGerminationRates[pft];
     integerPartOfCalculatedNumberOfSeeds = std::floor(calculatedNumberOfSeeds);
 
-    double randomNumber = -1;
-    community.randomNumberIndex++;
-
     // stochasticity in ceiling or flooring of the calculated number of germinating seeds if not integer
-    if ((calculatedNumberOfSeeds - integerPartOfCalculatedNumberOfSeeds) > 0)
+    if (parameter.stochasticSimulation && ((calculatedNumberOfSeeds - integerPartOfCalculatedNumberOfSeeds) > 0))
     {
+        double randomNumber = -1;
+        community.randomNumberIndex++;
+
         std::uniform_real_distribution<> dis(0.0, 1.0);
         std::mt19937 gen(community.randomNumberIndex); // generator initialized with the incremental variable
         randomNumber = dis(gen);
@@ -455,10 +455,10 @@ void RECRUITMENT::updateSeedPool(int pft, int cohortindex)
  * @param successfullGerminatedSeeds An integer representing the number of
  *                                    successfully germinated seedlings to be added.
  */
-void RECRUITMENT::addGerminatedSeedlingsToCommunity(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry, int pft)
+void RECRUITMENT::addGerminatedSeedlingsToCommunity(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry, SOIL soil, int pft)
 {
     if (successfullGerminatedSeeds.at(pft) > 0)
     {
         community.allPlants.emplace_back(std::make_shared<PLANT>(utils, parameter, allometry, pft, successfullGerminatedSeeds.at(pft)));
-        }
+    }
 }

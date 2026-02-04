@@ -30,7 +30,7 @@ void GROWTH::doPlantGrowth(UTILS utils, PARAMETER parameter, WEATHER weather, CO
     doPlantNPPAllocation(utils, parameter, community, soil);
 
     /* Plant growth in size based on NPP allocation and aging */
-    doPlantGrowthInSizeAndAging(utils, parameter, community, allometry);
+    doPlantGrowthInSizeAndAging(utils, parameter, community, allometry, soil);
 }
 
 /**
@@ -73,6 +73,7 @@ void GROWTH::doPlantPhotosynthesis(UTILS utils, PARAMETER parameter, COMMUNITY &
             double plantRadiation = (24.0 / interaction.dayLength) * community.allPlants.at(cohortindex)->availableRadiation; // correct mean daily radiation by daylength hours for photosynthesis
             CO2UptakePerSecondAndSquareMeter = calculateCO2UptakePerSecondAndSquareMeter(parameter, pft, plantRadiation, plantLAI);
         }
+
         // conversion
         double OdmUptakePerSecondAndSquareMeter = CO2UptakePerSecondAndSquareMeter * CO2ConversionToOdm * molarMassOfCO2; // conversion from CO2 to Odm
         double OdmUptakePerSecondAndSquareCentimeter = OdmUptakePerSecondAndSquareMeter / (100.0 * 100.0);
@@ -437,7 +438,7 @@ void GROWTH::doPlantNPPAllocation(UTILS utils, PARAMETER parameter, COMMUNITY &c
     }
 }
 
-void GROWTH::doPlantGrowthInSizeAndAging(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry)
+void GROWTH::doPlantGrowthInSizeAndAging(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry, SOIL soil)
 {
     for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
     {
@@ -466,10 +467,11 @@ void GROWTH::doPlantGrowthInSizeAndAging(UTILS utils, PARAMETER parameter, COMMU
 
         /// update all other geometric size variables of the plants
         community.allPlants.at(cohortindex)->rootingDepth = allometry.rootDepthFromRootBiomassParametersRatioAndShootCorrection(utils, community.allPlants.at(cohortindex)->rootBiomass, parameter.plantRootDepthParamIntercept[pft], parameter.plantRootDepthParamExponent[pft], parameter.plantShootRootRatio[pft], parameter.plantShootCorrectionFactor[pft]);
-        community.allPlants.at(cohortindex)->numberOfSoilLayersRooting = std::ceil(community.allPlants.at(cohortindex)->rootingDepth / soilLayerWidth);
-        if (community.allPlants.at(cohortindex)->numberOfSoilLayersRooting > maximumSoilLayer)
+        community.allPlants.at(cohortindex)->numberOfSoilLayersRooting = allometry.calculateNumberOfRootingSoillayer(parameter.soilLayerWidth, community.allPlants.at(cohortindex)->rootingDepth);
+
+        if (community.allPlants.at(cohortindex)->numberOfSoilLayersRooting > parameter.numberOfSoilLayers)
         {
-            community.allPlants.at(cohortindex)->numberOfSoilLayersRooting = maximumSoilLayer;
+            community.allPlants.at(cohortindex)->numberOfSoilLayersRooting = parameter.numberOfSoilLayers;
         }
 
         community.allPlants.at(cohortindex)->laiGreen =

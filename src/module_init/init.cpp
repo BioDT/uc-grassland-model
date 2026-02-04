@@ -17,13 +17,13 @@ void INIT::initModelSimulation(UTILS utils, PARAMETER &parameter, COMMUNITY &com
     initVegetationStateVariables(community, parameter, recruitment, soil);
 
     /* init process-specific state variables that will also be reset at each time step again */
-    resetVegetationProcessVariables(parameter, recruitment, community, interaction);
+    resetVegetationProcessVariables(parameter, recruitment, community, interaction, soil);
 
     /* init soil resource state variables (that will change through the process dynamics) */
     initSoilResourceStateVariables(utils, soil, weather, parameter);
 
     /* init process- and flux-specific state variables that will be reset at each time step again */
-    resetSoilResourceProcessAndFluxVariables(soil);
+    resetSoilResourceProcessAndFluxVariables(parameter, soil);
 }
 
 /* initialization of state variables of time */
@@ -72,7 +72,7 @@ void INIT::initVegetationStateVariables(COMMUNITY &community, PARAMETER paramete
     soil.nitrogenContent_soilSeedLitterPool = 0;
 }
 
-void INIT::resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &recruitment, COMMUNITY &community, INTERACTION &interaction)
+void INIT::resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &recruitment, COMMUNITY &community, INTERACTION &interaction, SOIL soil)
 {
     /// Process-related variables
     // 1. Recruitment
@@ -112,7 +112,7 @@ void INIT::resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &rec
     community.totalSoilWaterUptake = 0.0;
     community.totalSoilWaterDemandPerSoilLayer.clear();
     community.totalSoilWaterUptakePerSoilLayer.clear();
-    for (int soilLayer = 0; soilLayer < maximumSoilLayer; soilLayer++)
+    for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
     {
         community.totalSoilWaterDemandPerSoilLayer.push_back(0);
         community.totalSoilWaterUptakePerSoilLayer.push_back(0);
@@ -125,7 +125,7 @@ void INIT::resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &rec
     community.numberOfPlantsCompetingForSoilNitrogenPerSoilLayer.clear();
     community.totalSoilNitrogenDemandPerSoilLayer.clear();
     community.totalSoilNitrogenUptakePerSoilLayer.clear();
-    for (int soilLayer = 0; soilLayer < maximumSoilLayer; soilLayer++)
+    for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
     {
         community.numberOfPlantsCompetingForSoilNitrogenPerSoilLayer.push_back(0);
         community.totalSoilNitrogenDemandPerSoilLayer.push_back(0);
@@ -210,24 +210,24 @@ void INIT::initSoilResourceStateVariables(UTILS utils, SOIL &soil, WEATHER weath
     soil.nitrogenContent_soilPassivePool = soil.carbonContent_soilPassivePool / 8.0;
 
     soil.nitrogenContent_soilMineralPoolPerSoilLayer.clear();
-    for (int i = 0; i < maximumSoilLayer; i++)
+    for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
     {
         soil.nitrogenContent_soilMineralPoolPerSoilLayer.push_back(1.0); // 1 g/m² TODO: add parameter
     }
 
     /* soil water dynamics */
     soil.waterContent_soilWaterPoolPerSoilLayer.clear();
-    for (int i = 0; i < maximumSoilLayer + 1; i++)
+    for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers + 1; soilLayer++)
     {
         if (parameter.useInternalSoilModule || parameter.useExternalSoilModule_selfCoupled_setVariables)
         {
-            if (i < maximumSoilLayer)
+            if (soilLayer < parameter.numberOfSoilLayers)
             {
-                soil.waterContent_soilWaterPoolPerSoilLayer.push_back(soil.fieldCapacity.at(i));
+                soil.waterContent_soilWaterPoolPerSoilLayer.push_back(soil.fieldCapacity.at(soilLayer)); // initialize soil water content at field capacity
             }
-            else if (i == maximumSoilLayer)
+            else if (soilLayer == parameter.numberOfSoilLayers)
             {
-                // groundwater storage at layer i = maximumSoilLayer
+                // groundwater storage at layer 'soilLayer' = parameter.numberOfSoilLayers
                 soil.waterContent_soilWaterPoolPerSoilLayer.push_back(0.0);
             }
         }
@@ -271,7 +271,7 @@ double INIT::calculateInitialCarbonContentOfAllSoilPools(UTILS utils, WEATHER we
     return (initCarbonContentOfSoilPools);
 }
 
-void INIT::resetSoilResourceProcessAndFluxVariables(SOIL &soil)
+void INIT::resetSoilResourceProcessAndFluxVariables(PARAMETER parameter, SOIL &soil)
 {
     /* soil water fluxes */
     soil.interception = 0.0;  // interception [mm/day]
@@ -279,7 +279,7 @@ void INIT::resetSoilResourceProcessAndFluxVariables(SOIL &soil)
     soil.surfaceRunOff = 0.0; // run-off above-ground [mm/day]
     soil.soilRunOff = 0.0;    // run-off below-ground [mm/day]
     soil.soilWaterFluxDownwardsOutOfSoilLayer.clear();
-    for (int i = 0; i < maximumSoilLayer; i++)
+    for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
     {
         soil.soilWaterFluxDownwardsOutOfSoilLayer.push_back(0);
     }

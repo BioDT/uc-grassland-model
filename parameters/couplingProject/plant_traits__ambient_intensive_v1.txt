@@ -16,7 +16,7 @@ pftCount	1
 #  Seed influx from surrounding area
 #  ==========================================================
 
-externalSeedInfluxActivated	0
+externalSeedInfluxActivated	false
 \datatype:boolean
 \description:de-/activation of global seed influx from outside the area
 
@@ -33,14 +33,14 @@ externalSeedInfluxNumber	0
 # 		Seed influx from plants at the area
 #  ==========================================================
 
-seedsFromMaturePlantsActivated	1
+seedsFromMaturePlantsActivated	true
 \datatype:boolean
 \description:de-/activation of seed production by mature plants at the area
 
-maturityHeights	15	15	15
+maturityHeights	0
 \datatype:float-array
 \unit:cm
-\description:minimum height of plants to be mature (and for starting to produce seeds)
+\description:minimum height of plants to be mature (for starting to produce seeds)
 
 #  ==========================================================
 # 		Establishment of seedlings
@@ -78,7 +78,7 @@ seedlingMortalityProbability	0.0
 maturityAges	0
 \datatype:float-array
 \unit:d
-\description:minimum age of plants to be mature (and for starting to produce seeds)
+\description:minimum age of plants to be mature (for changed mortality probability)
 
 plantLifeSpan	perennial
 \datatype:string-array
@@ -99,7 +99,7 @@ brownBiomassFractionFalling	0.0
 \unit:d-1
 \description:fraction of brown biomass that falls to litter surface pool (full N and C)
 
-crowdingMortalityActivated	1
+crowdingMortalityActivated	true
 \datatype:boolean
 \description:de-/activation self-thinning in crowded stand
 
@@ -148,7 +148,7 @@ plantShootOverlapFactors	0.34716036
 # 		Plant GPP, respiration and NPP allocation  
 # =============================================================================
 
-communityShadingInGppCalculation	1
+communityShadingInGppCalculation	true
 \datatype:boolean
 \description:de-/activation of community shading in the calculation of GPP
 
@@ -183,7 +183,7 @@ plantNppAllocationExudation	0.1
 \datatype:float-array
 \description:NPP allocation of a plant to exudates
 
-useStaticShootRootAllocationRates	0
+useStaticShootRootAllocationRates	false
 \datatype:boolean
 \description:calculation of allocation rates to shoot, root and reproduction based on only shoot-root ratio (value 1) or shoot-root ratio and daily GPP (value 0)
 
@@ -229,7 +229,7 @@ plantCNRatioExudates	40.0
 \unit:g(C) g(N)-1
 \description:ratio of carbon (C) and nitrogen (N) in exudates
 
-symbioticNitrogenFixationFraction	0
+symbioticNitrogenFixationFraction	false
 \datatype:boolean-array
 \description:nitrogen fixation ability
 
@@ -247,28 +247,53 @@ plantWaterUseEfficiency	19.10832187
 \unit:g(odm) kg(h2O)-1
 \description:water use efficiency coefficient
 
-plantMinimalSoilWaterForGppReduction	33.4	26.5	19.6
+plantGppReductionBySoilWaterApproach	onesided
+\datatype:string
+\description:choose either onesided or twosided
+\details:onesided uses the parameter as a 
+\details: and twosided
+
+lowerSoilWaterFractionForPlantGppReduction	0.4
 \datatype:float-array
-\unit:d-1
-\description:soil water content threshold below which plant GPP is reduced
+\unit:fraction
+\description:fraction between permanent wilting point and field capacity 
+\details:used as threshold for soil water content below which plant GPP is reduced linearly 
+\details:only used in the onesided approach
 
-plantMaximalSoilWaterForGppReduction	46.0	46.0	40.0
+lowerSoilWaterContentForPlantGppReduction	0.0
 \datatype:float-array
-\unit:d-1
-\description:soil water content threshold above which plant GPP is reduced
+\unit:volume percent
+\description:soil water content threshold below which plant GPP is reduced linearly to permanent wilting point
+\details:only used in the twosided Approach
 
-double par.h2L -80000
-	\d waterpotential maximal uptake low respiration
+upperSoilWaterContentForPlantGppReduction	0.0
+\datatype:float-array
+\unit:volume percent
+\description:soil water content threshold above which plant GPP is reduced linearly to porosity
+\details:only used in the twosided approach
 
-double par.h2H -20000
-	\d waterpotential maximal uptake high respiration
+h2L	-80000
+\datatype:float
+\unit:
+\description:waterpotential maximal uptake low Respiration (only required for BODIUM coupling)
 
-int par.minLayerReductionFactorFromTopLayer 1
-	\d use top layer for calculation and not fullest layer
+h2H	-20000
+\datatype:float
+\unit:
+\description:waterpotential maximal uptake high Respiration (only required for BODIUM coupling)
 
-int par.minLayerReductionFactorFromAverage 0
-	\d use top layer for calculation and not fullest layer
+minLayerReductionFactorFromTopLayer	1
+\datatype:integer
+\unit:
+\description:use top layer for calculation and not fullest layer (only required for BODIUM coupling)
 
-int par.disableRunoff 1
-	\d disable runoff
+minLayerReductionFactorFromAverage	0
+\datatype:integer
+\unit:
+\description:use top layer for calculation and not fullest layer (only required for BODIUM coupling)
+
+disableRunoff	true
+\datatype:boolean
+\unit:
+\description:disable runoff (only required for BODIUM coupling)
 

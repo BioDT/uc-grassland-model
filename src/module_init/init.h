@@ -12,15 +12,15 @@
 class INIT
 {
 public:
-   INIT();
-   ~INIT();
+    INIT();
+    ~INIT();
 
-   void initModelSimulation(UTILS utils, PARAMETER &parameter, COMMUNITY &community, RECRUITMENT &recruitment, SOIL &soil, INTERACTION &interaction, WEATHER weather);
-   void initTimeVariables(PARAMETER &parameter);
-   void initRandomNumberGeneratorSeed(PARAMETER &parameter, COMMUNITY &community);
-   void initVegetationStateVariables(COMMUNITY &community, PARAMETER parameter, RECRUITMENT &recruitment, SOIL &soil);
-   void resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &recruitment, COMMUNITY &community, INTERACTION &interaction);
-   void initSoilResourceStateVariables(UTILS utils, SOIL &soil, WEATHER weather, PARAMETER parameter);
-   double calculateInitialCarbonContentOfAllSoilPools(UTILS utils, WEATHER weather, PARAMETER parameter, SOIL soil);
-   void resetSoilResourceProcessAndFluxVariables(SOIL &soil);
+    void initModelSimulation(UTILS utils, PARAMETER &parameter, COMMUNITY &community, RECRUITMENT &recruitment, SOIL &soil, INTERACTION &interaction, WEATHER weather);
+    void initTimeVariables(PARAMETER &parameter);
+    void initRandomNumberGeneratorSeed(PARAMETER &parameter, COMMUNITY &community);
+    void initVegetationStateVariables(COMMUNITY &community, PARAMETER parameter, RECRUITMENT &recruitment, SOIL &soil);
+    void resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &recruitment, COMMUNITY &community, INTERACTION &interaction, SOIL soil);
+    void initSoilResourceStateVariables(UTILS utils, SOIL &soil, WEATHER weather, PARAMETER parameter);
+    double calculateInitialCarbonContentOfAllSoilPools(UTILS utils, WEATHER weather, PARAMETER parameter, SOIL soil);
+    void resetSoilResourceProcessAndFluxVariables(PARAMETER parameter, SOIL &soil);
 };

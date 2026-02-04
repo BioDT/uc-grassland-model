@@ -13,7 +13,7 @@ void MANAGEMENT::applyManagementRegime(UTILS utils, COMMUNITY &community, ALLOME
     checkIfTodayAndDoFertilization(utils, parameter, soil);
 
     /* irrigation events */
-    checkIfTodayAndDoFertilization(utils, parameter, soil);
+    checkIfTodayAndDoIrrigation(utils, parameter, soil);
 
     /* seed (re-)sowing */
     // is captured within recruitment.cpp, see getIncomingSeedsBySowing()

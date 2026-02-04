@@ -1,7 +1,7 @@
 # =============================================================================
 # 		Simulation location	
 # =============================================================================
-deimsID	102ae489-04e3-481d-97df-45905837dc1a
+deimsID	NaN
 \datatype:string
 \description:DEIMS.ID of the simulated site
 \details:write NaN if not available
@@ -37,7 +37,7 @@ lastYear	2024
 
 ##### Environmental data files (Drivers) #######  
 
-weatherFile	lat51.391900_lon11.878700__2013-01-01_2024-12-31__weather_ambient_intensive_plotmean.txt
+weatherFile	lat51.391900_lon11.878700__2013-01-01_2024-12-31__weather_ambient_intensive.txt
 \datatype:string
 \description:File name of daily weather data 
 
@@ -45,30 +45,46 @@ soilFile	lat51.391900_lon11.878700__2013__soil_ambient_intensive.txt
 \datatype:string
 \description:File name of soil property data
 
-managementFile	lat51.391900_lon11.878700__2013-01-01_2024-12-31_management_ambient_intensive.txt
+managementFile	lat51.391900_lon11.878700__2013-01-01_2024-12-31__management_ambient_intensive.txt
 \datatype:string
 \description:File name of management actions (sowing, mowing, fertilization, irrigation)
 	
 ##### Parameter files #######  
 
-plantTraitsFile	GCEF_BadLauchstaedt_for_Coupling/plant_traits__ambient_intensive_v1.txt
+plantTraitsFile	couplingProject/plant_traits__ambient_intensive_v1.txt
 \datatype:string
 \description:File name of model parameters for plant processes (traits of species or plant functional types) 
 
-soilParametersFile	GCEF_BadLauchstaedt_for_Coupling/soil_parameters__ambient_intensive_v1.txt
-\datatype:string
-\description:File name of model parameters for soil processes (internal soil module only)
-
-processSetupFile	GCEF_BadLauchstaedt_for_Coupling/process_setup__ambient_intensive_v1.txt
+processSetupFile	couplingProject/process_setup__ambient_intensive_v1.txt
 \datatype:string
 \description:File name of model parameters for activating or deactivating model processes
 
 # =============================================================================
 # 		Output files of simulation results (and settings)  
 # =============================================================================	
-outputFile	true
+communityOutputFile	true
 \datatype:boolean
-\description:Select if the output file is written to the created output folder
+\description:results on vegetation state variables aggregated to the community level
+
+pftOutputFile	false
+\datatype:boolean
+\description:results on vegetation state variables aggregated to the PFT level
+
+plantCohortOutputFile	false
+\datatype:boolean
+\description:results on vegetation state variables for each single plant cohort
+
+soilCarbonOutputFile	false
+\datatype:boolean
+\description:results on soil carbon dynamics (state variables and fluxes)
+
+soilNitrogenOutputFile	false
+\datatype:boolean
+\description:results on soil nitrogen dynamics (state variables and fluxes)
+
+soilWaterOutputFile	false
+\datatype:boolean
+\description:results on soil water dynamics (state variables and fluxes)
 
 outputWritingDatesFile	NaN
 \datatype:string
@@ -78,10 +94,11 @@ outputWritingDatesFile	NaN
 clippingHeightOfBiomassMeasurement 3
 \datatype:float
 \description:height at which vegetation is clipped for biomass measurements in the field
-\details:should be higher than or equal to 3 cm?
+\details:relevant for an output variable aimed to be compared to field measurements  
 
 randomNumberGeneratorSeed	3
 \datatype:integer
 \description:Initializer for the random number generator
 \details:if set to NaN, the seed will be drawn from machine time and stored to the outputfile  
 \details:if set to value >= 0, simulation results can be reproduced according to the specific seed
+\details:is only relevant if the parameter stochasticSimulation in the parameters\process_setup.txt file is activated

@@ -94,8 +94,8 @@ void OUTPUT::updateVegetationStateVariablesForOutput(PARAMETER parameter, COMMUN
 void OUTPUT::prepareModelOutput(std::string path, UTILS utils, PARAMETER &parameter)
 {
     createOutputFolder(path, utils);
-    createAndOpenOutputFiles(parameter, utils);
-    writeHeaderInOutputFiles(utils);
+    createAndOpenOutputFiles(utils, parameter);
+    writeHeaderInOutputFiles(utils, parameter);
     openAndReadOutputWritingDates(path, utils, parameter);
 }
 
@@ -123,7 +123,7 @@ void OUTPUT::prepareModelOutput(std::string path, UTILS utils, PARAMETER &parame
  *
  * @throws std::ios_base::failure If the output file cannot be opened.
  */
-void OUTPUT::createAndOpenOutputFiles(PARAMETER parameter, UTILS utils)
+void OUTPUT::createAndOpenOutputFiles(UTILS utils, PARAMETER parameter)
 {
     utils.strings.clear();
     utils.splitString(parameter.plantTraitsFile, '/');
@@ -139,25 +139,64 @@ void OUTPUT::createAndOpenOutputFiles(PARAMETER parameter, UTILS utils)
     std::string filenameCommunity = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputCommunity__" + endingParameter;
     std::string filenamePFTPopulation = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputPFT__" + endingParameter;
     std::string filenamePlant = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputPlant__" + endingParameter;
+    std::string filenameSoilCarbon = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputSoilCarbon__" + endingParameter;
+    std::string filenameSoilNitrogen = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputSoilNitrogen__" + endingParameter;
+    std::string filenameSoilWater = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputSoilWater__" + endingParameter;
 
-    outputCommunity.open(filenameCommunity);
-    if (!outputCommunity.is_open())
+    if (parameter.communityOutputFile)
     {
-        utils.handleError("Error writing to the community output file.");
+        outputCommunity.open(filenameCommunity);
+        if (!outputCommunity.is_open())
+        {
+            utils.handleError("Error writing to the community output file.");
+        }
     }
 
-    outputPFTPopulation.open(filenamePFTPopulation);
-    if (!outputPFTPopulation.is_open())
+    if (parameter.pftOutputFile)
     {
-        utils.handleError("Error writing to the PFT population output file.");
+        outputPFTPopulation.open(filenamePFTPopulation);
+        if (!outputPFTPopulation.is_open())
+        {
+            utils.handleError("Error writing to the PFT population output file.");
+        }
     }
 
-    outputPlant.open(filenamePlant);
-    if (!outputPlant.is_open())
+    if (parameter.plantCohortOutputFile)
     {
-        utils.handleError("Error writing to the plant / cohorte output file.");
+        outputPlant.open(filenamePlant);
+        if (!outputPlant.is_open())
+        {
+            utils.handleError("Error writing to the plant / cohorte output file.");
+        }
     }
-};
+
+    if (parameter.soilCarbonOutputFile)
+    {
+        outputSoilCarbon.open(filenameSoilCarbon);
+        if (!outputSoilCarbon.is_open())
+        {
+            utils.handleError("Error writing to the soil carbon output file.");
+        }
+    }
+
+    if (parameter.soilNitrogenOutputFile)
+    {
+        outputSoilNitrogen.open(filenameSoilNitrogen);
+        if (!outputSoilNitrogen.is_open())
+        {
+            utils.handleError("Error writing to the soil nitrogen output file.");
+        }
+    }
+
+    if (parameter.soilWaterOutputFile)
+    {
+        outputSoilWater.open(filenameSoilWater);
+        if (!outputSoilWater.is_open())
+        {
+            utils.handleError("Error writing to the soil water output file.");
+        }
+    }
+}
 
 /**
  * @brief Writes the header to the output file.
@@ -178,46 +217,94 @@ void OUTPUT::createAndOpenOutputFiles(PARAMETER parameter, UTILS utils)
  *
  * @throws std::ios_base::failure If the output file is not open.
  */
-void OUTPUT::writeHeaderInOutputFiles(UTILS utils)
+void OUTPUT::writeHeaderInOutputFiles(UTILS utils, PARAMETER parameter)
 {
 
-    if (!outputCommunity.is_open())
+    if (parameter.communityOutputFile)
     {
-        utils.handleError("Error writing to the community output file.");
-    }
-    else
-    {
-        outputCommunity << "Date\tDayCount\tNumberPlants\tNumberCohorts\tLeafAreaIndex\tVegetationHeight\tVegetationCover\tCBalance\tNBalance";
-        outputCommunity << std::endl;
-    }
-
-    if (!outputPFTPopulation.is_open())
-    {
-        utils.handleError("Error writing to the PFT population output file.");
-    }
-    else
-    {
-        outputPFTPopulation << "Date\tDayCount\tPFT\tFraction\tNumberPlants\t";
-        outputPFTPopulation << "CoveredArea\tShootBiomass\tGreenShootBiomass\tBrownShootBiomass\t";
-        outputPFTPopulation << "ClippedShootBiomass\tRootBiomass\tRecruitmentBiomass\tExudationBiomass\t";
-        outputPFTPopulation << "GPP\tNPP\tRespiration";
-        outputPFTPopulation << std::endl;
+        if (!outputCommunity.is_open())
+        {
+            utils.handleError("Error writing to the community output file.");
+        }
+        else
+        {
+            outputCommunity << "Date\tDayCount\tNumberPlants\tNumberCohorts\tLeafAreaIndex\tVegetationHeight\tVegetationCover\tCBalance\tNBalance";
+            outputCommunity << std::endl;
+        }
     }
 
-    if (!outputPlant.is_open())
+    if (parameter.pftOutputFile)
     {
-        utils.handleError("Error writing to the plant / cohorte output file.");
+        if (!outputPFTPopulation.is_open())
+        {
+            utils.handleError("Error writing to the PFT population output file.");
+        }
+        else
+        {
+            outputPFTPopulation << "Date\tDayCount\tPFT\tFraction\tNumberPlants\t";
+            outputPFTPopulation << "CoveredArea\tShootBiomass\tGreenShootBiomass\tBrownShootBiomass\t";
+            outputPFTPopulation << "ClippedShootBiomass\tRootBiomass\tRecruitmentBiomass\tExudationBiomass\t";
+            outputPFTPopulation << "GPP\tNPP\tRespiration";
+            outputPFTPopulation << std::endl;
+        }
     }
-    else
+
+    if (parameter.plantCohortOutputFile)
     {
-        outputPlant << "Date\tDayCount\tPFT\tAge\tNumberPlants\tHeight\tWidth\tLAI\t";
-        outputPlant << "CoveredArea\tRootDepth\tNumberSoilLayers\t";
-        outputPlant << "ShootBiomass\tGreenShootBiomass\tBrownShootBiomass\t";
-        outputPlant << "ClippedShootBiomass\tRootBiomass\tRecruitmentBiomass\tExudationBiomass\t";
-        outputPlant << "GPP\tNPP\tRespiration\t";
-        outputPlant << "Radiation\tShadingIndicator\tLimitingFactorWater\tLimitingFactorNitrogen\t";
-        outputPlant << "AllocationShoot\tAllocationRoot\tAllocationRecruitment\tAllocationExudation";
-        outputPlant << std::endl;
+        if (!outputPlant.is_open())
+        {
+            utils.handleError("Error writing to the plant / cohorte output file.");
+        }
+        else
+        {
+            outputPlant << "Date\tDayCount\tPFT\tAge\tNumberPlants\tHeight\tWidth\tLAI\t";
+            outputPlant << "CoveredArea\tRootDepth\tNumberSoilLayers\t";
+            outputPlant << "ShootBiomass\tGreenShootBiomass\tBrownShootBiomass\t";
+            outputPlant << "ClippedShootBiomass\tRootBiomass\tRecruitmentBiomass\tExudationBiomass\t";
+            outputPlant << "GPP\tNPP\tRespiration\t";
+            outputPlant << "Radiation\tShadingIndicator\tLimitingFactorWater\tLimitingFactorNitrogen\t";
+            outputPlant << "AllocationShoot\tAllocationRoot\tAllocationRecruitment\tAllocationExudation";
+            outputPlant << std::endl;
+        }
+    }
+
+    if (parameter.soilCarbonOutputFile)
+    {
+        if (!outputSoilCarbon.is_open())
+        {
+            utils.handleError("Error writing to the soil carbon output file.");
+        }
+        else
+        {
+            outputSoilCarbon << "Date\tDayCount";
+            outputSoilCarbon << std::endl;
+        }
+    }
+
+    if (parameter.soilNitrogenOutputFile)
+    {
+        if (!outputSoilNitrogen.is_open())
+        {
+            utils.handleError("Error writing to the soil nitrogen output file.");
+        }
+        else
+        {
+            outputSoilNitrogen << "Date\tDayCount";
+            outputSoilNitrogen << std::endl;
+        }
+    }
+
+    if (parameter.soilWaterOutputFile)
+    {
+        if (!outputSoilWater.is_open())
+        {
+            utils.handleError("Error writing to the soil water output file.");
+        }
+        else
+        {
+            outputSoilWater << "Date\tDayCount";
+            outputSoilWater << std::endl;
+        }
     }
 }
 
@@ -233,39 +320,90 @@ void OUTPUT::writeHeaderInOutputFiles(UTILS utils)
  *
  * @throws std::ios_base::failure If the output file is not open.
  */
-void OUTPUT::writeSimulationResultsToOutputFiles(UTILS utils)
+void OUTPUT::writeSimulationResultsToOutputFiles(UTILS utils, PARAMETER parameter)
 {
-    if (outputCommunity.is_open())
+    if (parameter.communityOutputFile)
     {
-        outputCommunity << bufferCommunity.str();
-        bufferCommunity.str("");
-        bufferCommunity.clear();
-    }
-    else
-    {
-        utils.handleError("The output file of community variables is not open for writing.");
-    }
-
-    if (outputPFTPopulation.is_open())
-    {
-        outputPFTPopulation << bufferPFTPopulation.str();
-        bufferPFTPopulation.str("");
-        bufferPFTPopulation.clear();
-    }
-    else
-    {
-        utils.handleError("The output file of PFT population variables is not open for writing.");
+        if (outputCommunity.is_open())
+        {
+            outputCommunity << bufferCommunity.str();
+            bufferCommunity.str("");
+            bufferCommunity.clear();
+        }
+        else
+        {
+            utils.handleError("The output file of community variables is not open for writing.");
+        }
     }
 
-    if (outputPlant.is_open())
+    if (parameter.pftOutputFile)
     {
-        outputPlant << bufferPlant.str();
-        bufferPlant.str("");
-        bufferPlant.clear();
+        if (outputPFTPopulation.is_open())
+        {
+            outputPFTPopulation << bufferPFTPopulation.str();
+            bufferPFTPopulation.str("");
+            bufferPFTPopulation.clear();
+        }
+        else
+        {
+            utils.handleError("The output file of PFT population variables is not open for writing.");
+        }
     }
-    else
+
+    if (parameter.plantCohortOutputFile)
     {
-        utils.handleError("The output file of single plant variables / cohorts is not open for writing.");
+        if (outputPlant.is_open())
+        {
+            outputPlant << bufferPlant.str();
+            bufferPlant.str("");
+            bufferPlant.clear();
+        }
+        else
+        {
+            utils.handleError("The output file of single plant variables / cohorts is not open for writing.");
+        }
+    }
+
+    if (parameter.soilCarbonOutputFile)
+    {
+        if (outputSoilCarbon.is_open())
+        {
+            outputSoilCarbon << bufferSoilCarbon.str();
+            bufferSoilCarbon.str("");
+            bufferSoilCarbon.clear();
+        }
+        else
+        {
+            utils.handleError("The output file of soil carbon variables is not open for writing.");
+        }
+    }
+
+    if (parameter.soilNitrogenOutputFile)
+    {
+        if (outputSoilNitrogen.is_open())
+        {
+            outputSoilNitrogen << bufferSoilNitrogen.str();
+            bufferSoilNitrogen.str("");
+            bufferSoilNitrogen.clear();
+        }
+        else
+        {
+            utils.handleError("The output file of soil nitrogen variables is not open for writing.");
+        }
+    }
+
+    if (parameter.soilWaterOutputFile)
+    {
+        if (outputSoilWater.is_open())
+        {
+            outputSoilWater << bufferSoilWater.str();
+            bufferSoilWater.str("");
+            bufferSoilWater.clear();
+        }
+        else
+        {
+            utils.handleError("The output file of soil water variables is not open for writing.");
+        }
     }
 }
 
@@ -281,33 +419,78 @@ void OUTPUT::writeSimulationResultsToOutputFiles(UTILS utils)
  * @throws std::ios_base::failure If the output file is not open when
  *                                  attempting to close it.
  */
-void OUTPUT::closeOutputFiles(UTILS utils)
+void OUTPUT::closeOutputFiles(UTILS utils, PARAMETER parameter)
 {
-    if (outputCommunity.is_open())
+    if (parameter.communityOutputFile)
     {
-        outputCommunity.close();
-    }
-    else
-    {
-        utils.handleError("The output file of community variables is not open.");
-    }
-
-    if (outputPFTPopulation.is_open())
-    {
-        outputPFTPopulation.close();
-    }
-    else
-    {
-        utils.handleError("The output file of PFT population variables is not open.");
+        if (outputCommunity.is_open())
+        {
+            outputCommunity.close();
+        }
+        else
+        {
+            utils.handleError("The output file of community variables is not open.");
+        }
     }
 
-    if (outputPlant.is_open())
+    if (parameter.pftOutputFile)
     {
-        outputPlant.close();
+        if (outputPFTPopulation.is_open())
+        {
+            outputPFTPopulation.close();
+        }
+        else
+        {
+            utils.handleError("The output file of PFT population variables is not open.");
+        }
     }
-    else
+
+    if (parameter.plantCohortOutputFile)
     {
-        utils.handleError("The output file of single plant variables / cohorts is not open.");
+        if (outputPlant.is_open())
+        {
+            outputPlant.close();
+        }
+        else
+        {
+            utils.handleError("The output file of single plant variables / cohorts is not open.");
+        }
+    }
+
+    if (parameter.soilCarbonOutputFile)
+    {
+        if (outputSoilCarbon.is_open())
+        {
+            outputSoilCarbon.close();
+        }
+        else
+        {
+            utils.handleError("The output file of soil carbon variables is not open.");
+        }
+    }
+
+    if (parameter.soilNitrogenOutputFile)
+    {
+        if (outputSoilNitrogen.is_open())
+        {
+            outputSoilNitrogen.close();
+        }
+        else
+        {
+            utils.handleError("The output file of soil nitrogen variables is not open.");
+        }
+    }
+
+    if (parameter.soilWaterOutputFile)
+    {
+        if (outputSoilWater.is_open())
+        {
+            outputSoilWater.close();
+        }
+        else
+        {
+            utils.handleError("The output file of soil water variables is not open.");
+        }
     }
 }
 

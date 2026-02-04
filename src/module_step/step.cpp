@@ -34,8 +34,8 @@ void STEP::runModelSimulation(UTILS utils, PARAMETER &parameter, INIT init, ALLO
         parameter.day = day; // increase day according to for-loop
 
         /* Resetting of process- and flux-specific state variables of the vegetation community and soil resources */
-        init.resetVegetationProcessVariables(parameter, recruitment, community, interaction);
-        init.resetSoilResourceProcessAndFluxVariables(soil);
+        init.resetVegetationProcessVariables(parameter, recruitment, community, interaction, soil);
+        init.resetSoilResourceProcessAndFluxVariables(parameter, soil);
 
         /* Environmental conditions of the day */
         interaction.getEnvironmentalConditionsOfDay(weather, parameter.day);

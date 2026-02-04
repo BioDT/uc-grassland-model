@@ -246,7 +246,7 @@ void INPUT::convertAndCheckAndSetParameterValue(UTILS utils, std::string keyword
         try
         {
             float value = std::stof(keywordLineValues.at(0));
-            if (value < 0)
+            if (value < 0 && keyword != "h2H" && keyword != "h2L")
             {
                 throw std::out_of_range("Value of parameter " + keyword + " is outside the valid range! Value is not allowed to be negative!");
             }
@@ -328,7 +328,7 @@ void INPUT::convertAndCheckAndSetParameterValue(UTILS utils, std::string keyword
                 throw std::out_of_range("Value of parameter " + keyword + " is an invalid string! Please add an existing filename.");
             }
 
-            if (keyword != "deimsID" && keyword != "latitude" && keyword != "longitude")
+            if (keyword != "deimsID" && keyword != "latitude" && keyword != "longitude" && keyword != "plantGppReductionBySoilWaterApproach")
             {
                 if (!(keyword == "outputWritingDatesFile" && keywordLineValues.at(0) == "NaN"))
                 {
@@ -512,6 +512,14 @@ void INPUT::transferConfigParameterValueToModelParameter(PARAMETER &parameter, U
     parameter.plantTraitsFile = configParString["plantTraitsFile"];
     parameter.processSetupFile = configParString["processSetupFile"];
     parameter.soilParametersFile = configParString["soilParametersFile"];
+
+    parameter.communityOutputFile = configParBool["communityOutputFile"];
+    parameter.pftOutputFile = configParBool["pftOutputFile"];
+    parameter.plantCohortOutputFile = configParBool["plantCohortOutputFile"];
+    parameter.soilCarbonOutputFile = configParBool["soilCarbonOutputFile"];
+    parameter.soilNitrogenOutputFile = configParBool["soilNitrogenOutputFile"];
+    parameter.soilWaterOutputFile = configParBool["soilWaterOutputFile"];
+
     parameter.outputWritingDatesFile = configParString["outputWritingDatesFile"];
     parameter.clippingHeightOfBiomassMeasurement = configParFloat["clippingHeightOfBiomassMeasurement"];
     parameter.randomNumberGeneratorSeed = configParInt["randomNumberGeneratorSeed"];
@@ -541,6 +549,14 @@ void INPUT::transferPlantTraitsParameterValueToModelParameter(PARAMETER &paramet
     parameter.growthRespirationFraction = configParFloat["growthRespirationFraction"];
     parameter.maintenanceRespirationRate = configParFloat["maintenanceRespirationRate"];
     parameter.communityShadingInGppCalculation = configParBool["communityShadingInGppCalculation"];
+    parameter.plantGppReductionBySoilWaterApproach = configParString["plantGppReductionBySoilWaterApproach"];
+
+    /* parameter relevant for coupling */
+    parameter.h2L = configParFloat["h2L"];
+    parameter.h2H = configParFloat["h2H"];
+    parameter.minLayerReductionFactorFromTopLayer = configParInt["minLayerReductionFactorFromTopLayer"];
+    parameter.minLayerReductionFactorFromAverage = configParInt["minLayerReductionFactorFromAverage"];
+    parameter.disableRunoff = configParBool["disableRunoff"];
 
     /* parameters dependent on species or PFT */
     for (int pft = 0; pft < parameter.pftCount; pft++)
@@ -577,8 +593,9 @@ void INPUT::transferPlantTraitsParameterValueToModelParameter(PARAMETER &paramet
         parameter.plantCNRatioExudates.push_back(configParFloat["plantCNRatioExudates" + array_pos]);
         parameter.symbioticNitrogenFixationFraction.push_back(configParBool["symbioticNitrogenFixationFraction" + array_pos]);
         parameter.plantWaterUseEfficiency.push_back(configParFloat["plantWaterUseEfficiency" + array_pos]);
-        parameter.plantMinimalSoilWaterForGppReduction.push_back(configParFloat["plantMinimalSoilWaterForGppReduction" + array_pos]);
-        parameter.plantMaximalSoilWaterForGppReduction.push_back(configParFloat["plantMaximalSoilWaterForGppReduction" + array_pos]);
+        parameter.lowerSoilWaterFractionForPlantGppReduction.push_back(configParFloat["lowerSoilWaterFractionForPlantGppReduction" + array_pos]);
+        parameter.lowerSoilWaterContentForPlantGppReduction.push_back(configParFloat["lowerSoilWaterContentForPlantGppReduction" + array_pos]);
+        parameter.upperSoilWaterContentForPlantGppReduction.push_back(configParFloat["upperSoilWaterContentForPlantGppReduction" + array_pos]);
     }
 }
 
@@ -690,6 +707,8 @@ void INPUT::transferProcessSetupParameterValueToModelParameter(PARAMETER &parame
     parameter.useExternalSoilModule_BODIUM = configParBool["useExternalSoilModule_BODIUM"];
     parameter.useExternalSoilModule_selfCoupled_getVariables = configParBool["useExternalSoilModule_selfCoupled_getVariables"];
     parameter.useExternalSoilModule_selfCoupled_setVariables = configParBool["useExternalSoilModule_selfCoupled_setVariables"];
+
+    parameter.stochasticSimulation = configParBool["stochasticSimulation"];
 }
 
 /* read-in weather variables from input file */
@@ -1062,6 +1081,10 @@ void INPUT::openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parame
     soil.sandContent = -1;
     soil.clayContent = -1;
 
+    parameter.soilDepth = 0;
+    parameter.numberOfSoilLayers = 0;
+    parameter.soilLayerWidth.clear();
+
     soil.permanentWiltingPoint.clear();
     soil.fieldCapacity.clear();
     soil.porosity.clear();
@@ -1106,19 +1129,25 @@ void INPUT::openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parame
                 utils.strings.clear();
                 utils.splitString(line, separator);
 
-                if (utils.strings.size() == 5)
+                if (utils.strings.size() == 6)
                 {
-                    // skip layer number in column 1
+                    // skip layer number in column 1 (index 0)
+                    parameter.numberOfSoilLayers += 1;
+
                     value = utils.strings.at(1).c_str();
-                    soil.fieldCapacity.push_back(atof(value));
+                    parameter.soilLayerWidth.push_back(atof(value));
+                    parameter.soilDepth += atof(value);
 
                     value = utils.strings.at(2).c_str();
-                    soil.permanentWiltingPoint.push_back(atof(value));
+                    soil.fieldCapacity.push_back(atof(value));
 
                     value = utils.strings.at(3).c_str();
-                    soil.porosity.push_back(atof(value));
+                    soil.permanentWiltingPoint.push_back(atof(value));
 
                     value = utils.strings.at(4).c_str();
+                    soil.porosity.push_back(atof(value));
+
+                    value = utils.strings.at(5).c_str();
                     soil.saturatedHydraulicConductivity.push_back(atof(value));
 
                     if (soil.fieldCapacity.at(soil.fieldCapacity.size() - 1) < 0 || soil.permanentWiltingPoint.at(soil.permanentWiltingPoint.size() - 1) < 0 ||
@@ -1153,10 +1182,9 @@ void INPUT::openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parame
             utils.handleError("Error (soil input): sand, silt or clay content are out of range. Please check the soil file.");
         }
 
-        int soilLayers = 20;
-        if (soil.permanentWiltingPoint.size() != soilLayers || soil.fieldCapacity.size() != soilLayers || soil.porosity.size() != soilLayers || soil.saturatedHydraulicConductivity.size() != soilLayers)
+        if (soil.permanentWiltingPoint.size() != parameter.numberOfSoilLayers || soil.fieldCapacity.size() != parameter.numberOfSoilLayers || soil.porosity.size() != parameter.numberOfSoilLayers || soil.saturatedHydraulicConductivity.size() != parameter.numberOfSoilLayers)
         {
-            utils.handleError("Error (soil input): there are not enough or too many values for 20 soil layers. Please check the soil file.");
+            utils.handleError("Error (soil input): there are not enough or too many values for " + std::to_string(parameter.numberOfSoilLayers) + " soil layers. Please check the soil file.");
         }
     }
     else

@@ -17,6 +17,7 @@ public:
     double siltContent;
     double sandContent;
     double clayContent;
+
     std::vector<double> permanentWiltingPoint;
     std::vector<double> fieldCapacity;
     std::vector<double> porosity;
@@ -224,10 +225,10 @@ public:
     double evaporationOfSnow(UTILS utils, WEATHER weather, PARAMETER parameter);
     double interceptionByVegetation(UTILS utils, INTERACTION interaction, double dailyWaterInputToSoil, double remainingDailyPET);
     double runOffAtSurface(UTILS utils, PARAMETER parameter, double dailyWaterInputToSoil);
-    void soilWaterPercolation(UTILS utils, double waterInputToSoil);
-    void leachingOfNitrogenCoupledToWaterPercolation(UTILS utils);
+    void soilWaterPercolation(UTILS utils, PARAMETER parameter, double waterInputToSoil);
+    void leachingOfNitrogenCoupledToWaterPercolation(UTILS utils, PARAMETER parameter);
     void evaporationFromTopSoilLayer(UTILS utils, PARAMETER parameter, COMMUNITY &community, double remainingDailyPET);
-    void setSoilParametersAndVariablesToNaN(UTILS utils);
+    void setSoilParametersAndVariablesToNaN(UTILS utils, PARAMETER parameter);
     void transferSoilParametersAndVariablesToInterface(UTILS utils);
     void transferSoilParametersAndVariablesFromInterface(UTILS utils);
 
@@ -239,7 +240,7 @@ public:
     void reducePlantGppBySoilWaterLimitationFactor(UTILS utils, COMMUNITY &community);
     void limitPlantGppAndSoilWaterUptakeByPotentialEvapotranspiration(UTILS utils, PARAMETER parameter, WEATHER weather, COMMUNITY &community);
     void limitPlantGppAndSoilWaterUptakeByPermanentWiltingPoint(UTILS utils, PARAMETER parameter, COMMUNITY &community);
-    std::vector<double> limitSoilWaterUptakeByPermanentWiltingPoint(UTILS utils, COMMUNITY &community);
+    std::vector<double> limitSoilWaterUptakeByPermanentWiltingPoint(UTILS utils, PARAMETER parameter, COMMUNITY &community);
     void reducePlantGppBasedOnLimitationByPermanentWiltingPoint(UTILS utils, COMMUNITY &community, std::vector<double> limitationFactorOfSoilWaterUptakeByPwpPerSoilLayer);
     void subtractPlantWaterUptakeFromSoilWaterPool(UTILS utils, COMMUNITY &community, PARAMETER parameter);
 
@@ -253,12 +254,12 @@ public:
     void summarizeTotalSoilNitrogenDemandFromAllPlants(UTILS utils, COMMUNITY &community);
     void transferInterfaceVariablesForSelfCoupling_soilNitrogen(UTILS utils, PARAMETER parameter);
     void resetInterfaceVariablesForSelfCoupling_soilNitrogen(UTILS utils, PARAMETER parameter);
-    void calculateSoilNitrogenUptakePerPlant(UTILS utils, COMMUNITY &community);
+    void calculateSoilNitrogenUptakePerPlant(UTILS utils, PARAMETER parameter, COMMUNITY &community);
     void calculateNitrogenLimitationFactorPerPlant(UTILS utils, COMMUNITY &community);
     void allocateNitrogenUptakeToPlant(UTILS utils, COMMUNITY &community);
     void updateNitrogenSurplusPoolOfPlant(UTILS utils, COMMUNITY &community, int cohortindex, double allocableNitrogen);
-    void summarizeTotalSoilNitrogenUptakeFromAllPlants(UTILS utils, COMMUNITY &community);
-    void subtractPlantNitrogenUptakeFromSoilMineralNitrogenPool(UTILS utils, COMMUNITY &community);
+    void summarizeTotalSoilNitrogenUptakeFromAllPlants(UTILS utils, PARAMETER parameter, COMMUNITY &community);
+    void subtractPlantNitrogenUptakeFromSoilMineralNitrogenPool(UTILS utils, PARAMETER parameter, COMMUNITY &community);
 
     void calculateSoilCarbonNitrogenDynamics(UTILS utils, PARAMETER parameter, WEATHER weather);
     void splitLitterFluxesToStructuralAndMetabolicLitterPools(UTILS utils, PARAMETER parameter, WEATHER weather);

@@ -13,18 +13,19 @@
 class ALLOMETRY
 {
 public:
-   ALLOMETRY();
-   ~ALLOMETRY();
+    ALLOMETRY();
+    ~ALLOMETRY();
 
-   double laiFromShootBiomassAreaSla(UTILS utils, double shootBiomass, double area, double sla);
-   double areaFromWidth(double width);
-   double heightFromShootBiomassWidthShootCorrection(UTILS utils, double shootBiomass, double width, double shootCorrectionFactor);
-   double heightFromWidthByRatio(double width, double heightWidthRatio);
-   double widthFromHeightByRatio(UTILS utils, double height, double heightWidthRatio);
-   double heightFromShootBiomassByRatioAndShootCorrection(UTILS utils, double shootBiomass, double heightWidthRatio, double shootCorrectionFactor);
-   double widthFromShootBiomassByRatioAndShootCorrection(UTILS utils, double shootBiomass, double heightWidthRatio, double shootCorrectionFactor);
-   double shootBiomassFromHeightWidthShootCorrection(double height, double width, double shootCorrectionFactor);
-   double heightFromPlantBiomassShootCorrectionAndByRatios(UTILS utils, double plantBiomass, double heightWidthRatio, double shootCorrectionFactor, double shootRootRatio);
-   double rootBiomassFromShootBiomass(UTILS utils, double shootBiomass, double shootRootRatio);
-   double rootDepthFromRootBiomassParametersRatioAndShootCorrection(UTILS utils, double rootBiomass, double parameterIntercept, double parameterExponent, double shootRootRatio, double shootCorrectionFactor);
+    double laiFromShootBiomassAreaSla(UTILS utils, double shootBiomass, double area, double sla);
+    double areaFromWidth(double width);
+    double heightFromShootBiomassWidthShootCorrection(UTILS utils, double shootBiomass, double width, double shootCorrectionFactor);
+    double heightFromWidthByRatio(double width, double heightWidthRatio);
+    double widthFromHeightByRatio(UTILS utils, double height, double heightWidthRatio);
+    double heightFromShootBiomassByRatioAndShootCorrection(UTILS utils, double shootBiomass, double heightWidthRatio, double shootCorrectionFactor);
+    double widthFromShootBiomassByRatioAndShootCorrection(UTILS utils, double shootBiomass, double heightWidthRatio, double shootCorrectionFactor);
+    double shootBiomassFromHeightWidthShootCorrection(double height, double width, double shootCorrectionFactor);
+    double heightFromPlantBiomassShootCorrectionAndByRatios(UTILS utils, double plantBiomass, double heightWidthRatio, double shootCorrectionFactor, double shootRootRatio);
+    double rootBiomassFromShootBiomass(UTILS utils, double shootBiomass, double shootRootRatio);
+    double rootDepthFromRootBiomassParametersRatioAndShootCorrection(UTILS utils, double rootBiomass, double parameterIntercept, double parameterExponent, double shootRootRatio, double shootCorrectionFactor);
+    double calculateNumberOfRootingSoillayer(std::vector<double> soilLayerWidth, double plantRootingDepth);
 };

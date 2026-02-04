@@ -29,7 +29,8 @@ public:
     std::vector<std::string> configParameterNames =
         {"deimsID", "latitude", "longitude", "lastYear", "firstYear",
          "weatherFile", "soilFile", "managementFile", "plantTraitsFile", "processSetupFile",
-         "outputFile", "outputWritingDatesFile", "clippingHeightOfBiomassMeasurement",
+         "communityOutputFile", "pftOutputFile", "plantCohortOutputFile", "soilCarbonOutputFile",
+         "soilNitrogenOutputFile", "soilWaterOutputFile", "outputWritingDatesFile", "clippingHeightOfBiomassMeasurement",
          "randomNumberGeneratorSeed"};
 
     std::string deimsID;
@@ -44,7 +45,12 @@ public:
     std::string processSetupFile;
     std::string soilParametersFile;
 
-    bool outputFile;
+    bool communityOutputFile;
+    bool pftOutputFile;
+    bool plantCohortOutputFile;
+    bool soilCarbonOutputFile;
+    bool soilNitrogenOutputFile;
+    bool soilWaterOutputFile;
     std::string outputWritingDatesFile;
     double clippingHeightOfBiomassMeasurement;
     unsigned int randomNumberGeneratorSeed;
@@ -59,8 +65,11 @@ public:
          "seedsFromMaturePlantsActivated", "seedMasses", "maturityAges", "maturityHeights", "externalSeedInfluxActivated", "externalSeedInfluxNumber", "dayOfExternalSeedInfluxStart",
          "communityShadingInGppCalculation", "maximumGrossLeafPhotosynthesisRate", "initialSlopeOfLightResponseCurve", "lightExtinctionCoefficients", "growthRespirationFraction",
          "maintenanceRespirationRate", "plantNppAllocationGrowth", "plantNppAllocationExudation", "useStaticShootRootAllocationRates", "plantCNRatioGreenLeaves", "plantCNRatioBrownLeaves", "plantCNRatioRoots", "plantCNRatioSeeds", "plantCNRatioExudates", "symbioticNitrogenFixationFraction",
-         "rhizobiaExchangeRateCToN", "plantWaterUseEfficiency", "plantMinimalSoilWaterForGppReduction", "plantMaximalSoilWaterForGppReduction",
-         "plantResponseToTemperatureQ10Base", "plantResponseToTemperatureQ10Reference"};
+         "rhizobiaExchangeRateCToN", "plantWaterUseEfficiency",
+         "plantGppReductionBySoilWaterApproach", "lowerSoilWaterFractionForPlantGppReduction",
+         "lowerSoilWaterContentForPlantGppReduction", "upperSoilWaterContentForPlantGppReduction",
+         "plantResponseToTemperatureQ10Base", "plantResponseToTemperatureQ10Reference",
+         "h2L", "h2H", "minLayerReductionFactorFromTopLayer", "minLayerReductionFactorFromAverage", "disableRunoff"};
 
     int pftCount;
     std::vector<double> maximumPlantHeight;
@@ -104,18 +113,37 @@ public:
     std::vector<bool> symbioticNitrogenFixationFraction;
     double rhizobiaExchangeRateCToN;
     std::vector<double> plantWaterUseEfficiency;
-    std::vector<double> plantMinimalSoilWaterForGppReduction;
-    std::vector<double> plantMaximalSoilWaterForGppReduction;
+    std::string plantGppReductionBySoilWaterApproach;
+    std::vector<double> lowerSoilWaterFractionForPlantGppReduction;
+    std::vector<double> lowerSoilWaterContentForPlantGppReduction;
+    std::vector<double> upperSoilWaterContentForPlantGppReduction;
+
     double plantResponseToTemperatureQ10Base;
     double plantResponseToTemperatureQ10Reference;
+
+    /* parameters relevant for coupling */
+    double h2L;
+    double h2H;
+    int minLayerReductionFactorFromTopLayer;
+    int minLayerReductionFactorFromAverage;
+    int disableRunoff;
 
     // **** parameters of the process setup file **** //
     // vector needed to have names as string-keywords for searching parameters in process setup file
     std::vector<std::string> processSetupParameterNames =
-        {"useInternalSoilModule", "useExternalSoilModule_BODIUM", "useExternalSoilModule_selfCoupled_getVariables", "useExternalSoilModule_selfCoupled_setVariables"};
+        {"useInternalSoilModule", "useExternalSoilModule_BODIUM", "useExternalSoilModule_selfCoupled_getVariables", "useExternalSoilModule_selfCoupled_setVariables",
+         "stochasticSimulation"};
 
     bool useInternalSoilModule;
     bool useExternalSoilModule_BODIUM;
     bool useExternalSoilModule_selfCoupled_getVariables;
     bool useExternalSoilModule_selfCoupled_setVariables;
+    bool stochasticSimulation;
+
+    /* parameters derived from other input parameters in the code (not listed in the input files) */
+    // these are derived from the soilFile
+    // they cannot be listed as soil class parameters (due to circular dependency issues)
+    double soilDepth;
+    int numberOfSoilLayers;
+    std::vector<double> soilLayerWidth;
 };

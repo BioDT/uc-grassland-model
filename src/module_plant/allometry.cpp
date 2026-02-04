@@ -13,11 +13,11 @@ ALLOMETRY::~ALLOMETRY() {};
  */
 double ALLOMETRY::laiFromShootBiomassAreaSla(UTILS utils, double shootBiomass, double area, double sla)
 {
-   if (area <= 0.0)
-   {
-      utils.handleError("Error (allometry): division by zero (coveredArea) in function 'laiFromShootBiomassAreaSla'.");
-   }
-   return (shootBiomass * sla / area);
+    if (area <= 0.0)
+    {
+        utils.handleError("Error (allometry): division by zero (coveredArea) in function 'laiFromShootBiomassAreaSla'.");
+    }
+    return (shootBiomass * sla / area);
 }
 
 /**
@@ -28,7 +28,7 @@ double ALLOMETRY::laiFromShootBiomassAreaSla(UTILS utils, double shootBiomass, d
  */
 double ALLOMETRY::areaFromWidth(double width)
 {
-   return ((PI / 4.0) * width * width);
+    return ((PI / 4.0) * width * width);
 }
 
 /**
@@ -44,11 +44,11 @@ double ALLOMETRY::areaFromWidth(double width)
  */
 double ALLOMETRY::heightFromShootBiomassWidthShootCorrection(UTILS utils, double shootBiomass, double width, double shootCorrectionFactor)
 {
-   if (width <= 0.0 || shootCorrectionFactor <= 0.0)
-   {
-      utils.handleError("Error (allometry): division by zero (width or shootCorrectionFactor) in function 'heightFromShootBiomassWidthCorrectionFactor'.");
-   }
-   return ((shootBiomass / areaFromWidth(width)) / shootCorrectionFactor);
+    if (width <= 0.0 || shootCorrectionFactor <= 0.0)
+    {
+        utils.handleError("Error (allometry): division by zero (width or shootCorrectionFactor) in function 'heightFromShootBiomassWidthCorrectionFactor'.");
+    }
+    return ((shootBiomass / areaFromWidth(width)) / shootCorrectionFactor);
 }
 
 /**
@@ -63,7 +63,7 @@ double ALLOMETRY::heightFromShootBiomassWidthShootCorrection(UTILS utils, double
  */
 double ALLOMETRY::heightFromWidthByRatio(double width, double heightWidthRatio)
 {
-   return (width * heightWidthRatio);
+    return (width * heightWidthRatio);
 }
 
 /**
@@ -78,11 +78,11 @@ double ALLOMETRY::heightFromWidthByRatio(double width, double heightWidthRatio)
  */
 double ALLOMETRY::widthFromHeightByRatio(UTILS utils, double height, double heightWidthRatio)
 {
-   if (heightWidthRatio <= 0.0)
-   {
-      utils.handleError("Error (allometry): division by zero (heightWidthRatio) in function 'widthFromHeightByRatio'.");
-   }
-   return (height / heightWidthRatio);
+    if (heightWidthRatio <= 0.0)
+    {
+        utils.handleError("Error (allometry): division by zero (heightWidthRatio) in function 'widthFromHeightByRatio'.");
+    }
+    return (height / heightWidthRatio);
 }
 
 /**
@@ -98,11 +98,11 @@ double ALLOMETRY::widthFromHeightByRatio(UTILS utils, double height, double heig
  */
 double ALLOMETRY::heightFromShootBiomassByRatioAndShootCorrection(UTILS utils, double shootBiomass, double heightWidthRatio, double shootCorrectionFactor)
 {
-   if (shootCorrectionFactor <= 0.0)
-   {
-      utils.handleError("Error (allometry): division by zero (shootCorrectionFactor) in function 'heightFromShootBiomassByRatioAndShootCorrection'.");
-   }
-   return std::pow(shootBiomass * (4.0 / PI) * (heightWidthRatio * heightWidthRatio) / shootCorrectionFactor, 1.0 / 3.0);
+    if (shootCorrectionFactor <= 0.0)
+    {
+        utils.handleError("Error (allometry): division by zero (shootCorrectionFactor) in function 'heightFromShootBiomassByRatioAndShootCorrection'.");
+    }
+    return std::pow(shootBiomass * (4.0 / PI) * (heightWidthRatio * heightWidthRatio) / shootCorrectionFactor, 1.0 / 3.0);
 }
 
 /**
@@ -118,15 +118,15 @@ double ALLOMETRY::heightFromShootBiomassByRatioAndShootCorrection(UTILS utils, d
  */
 double ALLOMETRY::widthFromShootBiomassByRatioAndShootCorrection(UTILS utils, double shootBiomass, double heightWidthRatio, double shootCorrectionFactor)
 {
-   if (heightWidthRatio <= 0.0 || shootCorrectionFactor <= 0.0)
-   {
-      utils.handleError("Error (allometry): division by zero (heightWidthRatio or shootCorrectionFactor) in function 'widthFromShootBiomassByRatioAndShootCorrection'.");
-   }
+    if (heightWidthRatio <= 0.0 || shootCorrectionFactor <= 0.0)
+    {
+        utils.handleError("Error (allometry): division by zero (heightWidthRatio or shootCorrectionFactor) in function 'widthFromShootBiomassByRatioAndShootCorrection'.");
+    }
 
-   double calcPart1 = ((shootBiomass * (4.0 / PI)) / heightWidthRatio);
-   double calcPart2 = calcPart1 / shootCorrectionFactor;
-   double calcPart3 = std::pow(calcPart2, 1.0 / 3.0);
-   return (calcPart3);
+    double calcPart1 = ((shootBiomass * (4.0 / PI)) / heightWidthRatio);
+    double calcPart2 = calcPart1 / shootCorrectionFactor;
+    double calcPart3 = std::pow(calcPart2, 1.0 / 3.0);
+    return (calcPart3);
 }
 
 /**
@@ -142,37 +142,54 @@ double ALLOMETRY::widthFromShootBiomassByRatioAndShootCorrection(UTILS utils, do
  */
 double ALLOMETRY::shootBiomassFromHeightWidthShootCorrection(double height, double width, double shootCorrectionFactor)
 {
-   return areaFromWidth(width) * height * shootCorrectionFactor;
+    return areaFromWidth(width) * height * shootCorrectionFactor;
 }
 
 double ALLOMETRY::heightFromPlantBiomassShootCorrectionAndByRatios(UTILS utils, double plantBiomass, double heightWidthRatio, double shootCorrectionFactor, double shootRootRatio)
 {
 
-   if (shootRootRatio <= 0.0 || shootCorrectionFactor <= 0.0)
-   {
-      utils.handleError("Error (allometry): division by zero (heightWidthRatio or shootCorrectionFactor) in function 'heightFromPlantBiomassShootCorrectionAndByRatios'.");
-   }
-   double calcPart1 = (4.0 / PI) * plantBiomass * std::pow(heightWidthRatio, 2.0) * (1.0 / shootCorrectionFactor) * (1.0 / (1.0 + (1.0 / shootRootRatio)));
-   double calcPart2 = pow(calcPart1, 1.0 / 3.0);
-   return (calcPart2);
+    if (shootRootRatio <= 0.0 || shootCorrectionFactor <= 0.0)
+    {
+        utils.handleError("Error (allometry): division by zero (heightWidthRatio or shootCorrectionFactor) in function 'heightFromPlantBiomassShootCorrectionAndByRatios'.");
+    }
+    double calcPart1 = (4.0 / PI) * plantBiomass * std::pow(heightWidthRatio, 2.0) * (1.0 / shootCorrectionFactor) * (1.0 / (1.0 + (1.0 / shootRootRatio)));
+    double calcPart2 = pow(calcPart1, 1.0 / 3.0);
+    return (calcPart2);
 }
 
 double ALLOMETRY::rootBiomassFromShootBiomass(UTILS utils, double shootBiomass, double shootRootRatio)
 {
-   if (shootRootRatio <= 0.0)
-   {
-      utils.handleError("Error (allometry): division by zero (shootRootRatio) in function 'rootBiomassFromShootBiomass'.");
-   }
-   return (shootBiomass / shootRootRatio);
+    if (shootRootRatio <= 0.0)
+    {
+        utils.handleError("Error (allometry): division by zero (shootRootRatio) in function 'rootBiomassFromShootBiomass'.");
+    }
+    return (shootBiomass / shootRootRatio);
 }
 
 double ALLOMETRY::rootDepthFromRootBiomassParametersRatioAndShootCorrection(UTILS utils, double rootBiomass, double parameterIntercept, double parameterExponent, double shootRootRatio, double shootCorrectionFactor)
 {
-   if (shootCorrectionFactor <= 0.0)
-   {
-      utils.handleError("Error (allometry): division by zero (shootCorrectionFactor) in function 'rootDepthFromRootBiomassParametersRatioAndShootCorrection'.");
-   }
-   double calcPart1 = std::pow((shootRootRatio / shootCorrectionFactor), parameterExponent);
-   double calcPart2 = std::pow(rootBiomass, parameterExponent);
-   return (parameterIntercept * calcPart1 * calcPart2);
+    if (shootCorrectionFactor <= 0.0)
+    {
+        utils.handleError("Error (allometry): division by zero (shootCorrectionFactor) in function 'rootDepthFromRootBiomassParametersRatioAndShootCorrection'.");
+    }
+    double calcPart1 = std::pow((shootRootRatio / shootCorrectionFactor), parameterExponent);
+    double calcPart2 = std::pow(rootBiomass, parameterExponent);
+    return (parameterIntercept * calcPart1 * calcPart2);
+}
+
+double ALLOMETRY::calculateNumberOfRootingSoillayer(std::vector<double> soilLayerWidth, double plantRootingDepth)
+{
+    double cumulativeSoilDepth = 0.0;
+    int numberOfRootingSoilLayers = 1;
+
+    for (int soilLayer = 0; soilLayer < soilLayerWidth.size(); soilLayer++)
+    {
+        cumulativeSoilDepth += soilLayerWidth.at(soilLayer);
+        if (plantRootingDepth > cumulativeSoilDepth)
+        {
+            numberOfRootingSoilLayers++;
+        }
+    }
+
+    return (numberOfRootingSoilLayers);
 }

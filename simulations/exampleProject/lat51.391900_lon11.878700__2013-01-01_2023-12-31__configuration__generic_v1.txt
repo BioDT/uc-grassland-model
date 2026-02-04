@@ -62,9 +62,29 @@ processSetupFile	BioDT-generic/process_setup__generic_v1.txt
 # =============================================================================
 # 		Output files of simulation results (and settings)  
 # =============================================================================	
-outputFile	true
+communityOutputFile	true
 \datatype:boolean
-\description:Select if the output file is written to the created output folder
+\description:results on vegetation state variables aggregated to the community level
+
+pftOutputFile	false
+\datatype:boolean
+\description:results on vegetation state variables aggregated to the PFT level
+
+plantCohortOutputFile	false
+\datatype:boolean
+\description:results on vegetation state variables for each single plant cohort
+
+soilCarbonOutputFile	false
+\datatype:boolean
+\description:results on soil carbon dynamics (state variables and fluxes)
+
+soilNitrogenOutputFile	false
+\datatype:boolean
+\description:results on soil nitrogen dynamics (state variables and fluxes)
+
+soilWaterOutputFile	false
+\datatype:boolean
+\description:results on soil water dynamics (state variables and fluxes)
 
 outputWritingDatesFile	NaN
 \datatype:string
@@ -74,10 +94,11 @@ outputWritingDatesFile	NaN
 clippingHeightOfBiomassMeasurement 3
 \datatype:float
 \description:height at which vegetation is clipped for biomass measurements in the field
-\details:should be higher than or equal to 3 cm?
+\details:relevant for an output variable aimed to be compared to field measurements  
 
 randomNumberGeneratorSeed	0
 \datatype:integer
 \description:Initializer for the random number generator
 \details:if set to NaN, the seed will be drawn from machine time and stored to the outputfile  
 \details:if set to value >= 0, simulation results can be reproduced according to the specific seed
+\details:is only relevant if the parameter stochasticSimulation in the parameters\process_setup.txt file is activated
