@@ -31,7 +31,7 @@ public:
      * @param plantBiomass The initial biomass of the plant in g(ODM).
      * @param amount The number of plants in the cohort.
      */
-    PLANT(UTILS utils, PARAMETER parameter, ALLOMETRY allometry, int pft, int amount) : pft(pft), amount(amount)
+    PLANT(UTILS utils, PARAMETER parameter, ALLOMETRY allometry, int pft, double amount) : pft(pft), amount(amount)
     {
         /* properties and geometry */
         age = 0;
@@ -171,9 +171,9 @@ public:
     }
     ~PLANT();
 
-    int amount; /// Number of plants in cohort with equal properties listed below (representative for ONE plant)
-    short pft;  /// Number of plant functional types (PFT)
-    double age; /// Plant age (in days)
+    double amount; /// Number of plants in cohort with equal properties listed below (representative for ONE plant)
+    short pft;     /// Number of plant functional types (PFT)
+    double age;    /// Plant age (in days)
 
     double coveredArea;            /// Ground area covered by plant (in square cm)
     double width;                  /// Plant width (in cm)
