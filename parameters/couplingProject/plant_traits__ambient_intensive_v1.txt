@@ -229,8 +229,8 @@ plantCNRatioExudates	40.0
 \unit:g(C) g(N)-1
 \description:ratio of carbon (C) and nitrogen (N) in exudates
 
-symbioticNitrogenFixationFraction	false
-\datatype:boolean-array
+symbioticNitrogenFixationFraction	0
+\datatype:float-array
 \description:nitrogen fixation ability
 
 rhizobiaExchangeRateCToN	10.0

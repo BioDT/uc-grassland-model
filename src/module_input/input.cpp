@@ -591,7 +591,7 @@ void INPUT::transferPlantTraitsParameterValueToModelParameter(PARAMETER &paramet
         parameter.plantCNRatioRoots.push_back(configParFloat["plantCNRatioRoots" + array_pos]);
         parameter.plantCNRatioSeeds.push_back(configParFloat["plantCNRatioSeeds" + array_pos]);
         parameter.plantCNRatioExudates.push_back(configParFloat["plantCNRatioExudates" + array_pos]);
-        parameter.symbioticNitrogenFixationFraction.push_back(configParBool["symbioticNitrogenFixationFraction" + array_pos]);
+        parameter.symbioticNitrogenFixationFraction.push_back(configParFloat["symbioticNitrogenFixationFraction" + array_pos]);
         parameter.plantWaterUseEfficiency.push_back(configParFloat["plantWaterUseEfficiency" + array_pos]);
         parameter.lowerSoilWaterFractionForPlantGppReduction.push_back(configParFloat["lowerSoilWaterFractionForPlantGppReduction" + array_pos]);
         parameter.lowerSoilWaterContentForPlantGppReduction.push_back(configParFloat["lowerSoilWaterContentForPlantGppReduction" + array_pos]);

@@ -1,6 +1,6 @@
-Silt	Clay	Sand		
-0.59	0.13	0.28		
-				
+Silt	Clay	Sand
+0.59	0.13	0.28
+		
 Layer	LayerWidth[cm]	FC[V%]	PWP[V%]	POR[V%]	KS[mm/d]
 1	10	38.4	15.5	46.2	604
 2	10	38.4	15.5	46.2	604

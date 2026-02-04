@@ -110,7 +110,7 @@ public:
     std::vector<double> plantCNRatioRoots;
     std::vector<double> plantCNRatioSeeds;
     std::vector<double> plantCNRatioExudates;
-    std::vector<bool> symbioticNitrogenFixationFraction;
+    std::vector<double> symbioticNitrogenFixationFraction;
     double rhizobiaExchangeRateCToN;
     std::vector<double> plantWaterUseEfficiency;
     std::string plantGppReductionBySoilWaterApproach;
