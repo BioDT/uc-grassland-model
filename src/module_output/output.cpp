@@ -512,13 +512,13 @@ void OUTPUT::closeOutputFiles(UTILS utils, PARAMETER parameter)
  */
 void OUTPUT::createOutputFolder(std::string path, UTILS utils)
 {
-    char separator = '\\';
-    utils.splitString(path, separator);
+    char pathSeparator = utils.getPathSeparator();
+    utils.splitString(path, pathSeparator);
     for (int it = 0; it < utils.strings.size() - 1; it++)
     {
-        outputDirectory = outputDirectory + utils.strings.at(it) + "\\";
+        outputDirectory = outputDirectory + utils.strings.at(it) + pathSeparator;
     }
-    outputDirectory = outputDirectory + "output\\";
+    outputDirectory = outputDirectory + "output" + pathSeparator;
 }
 
 /**
@@ -541,11 +541,11 @@ void OUTPUT::createOutputFolder(std::string path, UTILS utils)
  */
 void OUTPUT::openAndReadOutputWritingDates(std::string path, UTILS utils, PARAMETER &parameter)
 {
-    char separator = '\\';
-    utils.splitString(path, separator);
+    char pathSeparator = utils.getPathSeparator();
+    utils.splitString(path, pathSeparator);
     for (int it = 0; it < utils.strings.size() - 1; it++)
     {
-        fileDirectory = fileDirectory + utils.strings.at(it) + "\\";
+        fileDirectory = fileDirectory + utils.strings.at(it) + pathSeparator;
     }
     fileDirectory = fileDirectory + parameter.outputWritingDatesFile;
 

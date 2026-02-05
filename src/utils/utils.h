@@ -42,4 +42,13 @@ public:
     int calculateDateFromDayCount(UTILS utils, int dayCount, int startDay, std::string keywordForReturn);
     double parseDoubleOrNaN(const std::string &str);
     int parseIntegerOrNaN(const std::string &str);
+
+    inline char getPathSeparator()
+    {
+#ifdef _WIN32
+        return '\\';
+#else
+        return '/';
+#endif
+    }
 };
