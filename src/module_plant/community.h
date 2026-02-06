@@ -36,6 +36,10 @@ public:
     double greenleafAreaIndexOfPlantsInCommunity;
     double totalLeafAreaIndexOfPlantsInCommunity; // cm per cm (calculated in output.cpp) --> CHANGE
 
+    // required for soil temperature calculation, calculated in interaction.cpp
+    double abovegroundBiomassOfAllPlants;
+    double abovegroundLitterBiomass;
+
     // required for crowding, calculated in
     double coveredAreaOfAllPlants;
 

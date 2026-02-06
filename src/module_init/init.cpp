@@ -98,6 +98,8 @@ void INIT::resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &rec
     community.totalLeafAreaIndexOfPlantsInCommunity = 0;
     community.greenleafAreaIndexOfPlantsInCommunity = 0;
     community.coveredAreaOfAllPlants = 0.0;
+    community.abovegroundBiomassOfAllPlants = 0.0;
+    community.abovegroundLitterBiomass = 0.0;
 
     // 3. Carbon and nitrogen balances
     community.carbonRespirationOfAllPlants = 0.0;

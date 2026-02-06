@@ -519,6 +519,7 @@ void INPUT::transferConfigParameterValueToModelParameter(PARAMETER &parameter, U
     parameter.soilCarbonOutputFile = configParBool["soilCarbonOutputFile"];
     parameter.soilNitrogenOutputFile = configParBool["soilNitrogenOutputFile"];
     parameter.soilWaterOutputFile = configParBool["soilWaterOutputFile"];
+    parameter.soilResourcesPerSoilLayerOutputFile = configParBool["soilResourcesPerSoilLayerOutputFile"];
 
     parameter.outputWritingDatesFile = configParString["outputWritingDatesFile"];
     parameter.clippingHeightOfBiomassMeasurement = configParFloat["clippingHeightOfBiomassMeasurement"];
@@ -876,7 +877,6 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
 
                 if (utils.strings.size() == (4 + parameter.pftCount + 1))
                 {
-
                     valueDate = utils.strings.at(0);
                     try
                     {

@@ -38,14 +38,14 @@ void STEP::runModelSimulation(UTILS utils, PARAMETER &parameter, INIT init, ALLO
         init.resetSoilResourceProcessAndFluxVariables(parameter, soil);
 
         /* Environmental conditions of the day */
-        interaction.getEnvironmentalConditionsOfDay(weather, parameter.day);
+        interaction.getEnvironmentalConditionsOfDay(weather, community, parameter.day);
 
         /* Calculation of ecological and plant processes */
         doDayStepOfModelSimulation(utils, parameter, allometry, community, recruitment, mortality, growth, interaction, management, soil, weather);
         output.updateVegetationStateVariablesForOutput(parameter, community, soil, management, recruitment);
 
         /* Writing of daily output of simulation results */
-        saveSimulationResultsToBuffer(utils, parameter, community, output);
+        saveSimulationResultsToBuffer(utils, parameter, community, interaction, output, soil);
     }
 }
 
@@ -93,6 +93,199 @@ void STEP::doDayStepOfModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMET
     soil.calculateSoilResourceDynamics(utils, parameter, weather, community, interaction);
 }
 
+void STEP::fillCommunityBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, OUTPUT &output, std::string date)
+{
+    if (parameter.communityOutputFile)
+    {
+        output.bufferCommunity << date << "\t" << parameter.day << "\t";
+        output.bufferCommunity << community.totalNumberOfPlantsInCommunity << "\t" << community.totalNumberOfCohortsInCommunity << "\t" << community.totalLeafAreaIndexOfPlantsInCommunity << "\t";
+        output.bufferCommunity << community.maximumHeightOfAllPlants << "\t" << community.coveredAreaOfAllPlants << "\t" << community.ecosystemCarbonBalance << "\t" << community.ecosystemNitrogenBalance << std::endl;
+    }
+}
+
+void STEP::fillPFTBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, OUTPUT &output, std::string date)
+{
+    if (parameter.pftOutputFile)
+    {
+        for (int pft = 0; pft < parameter.pftCount; pft++)
+        {
+            output.bufferPFTPopulation << date << "\t" << parameter.day << "\t" << pft << "\t";
+            output.bufferPFTPopulation << community.pftComposition[pft] << "\t" << community.numberOfPlantsPerPFT[pft] << "\t";
+            output.bufferPFTPopulation << community.coveredAreaOfPlantsPerPFT[pft] << "\t" << community.shootBiomassOfPlantsPerPFT[pft] << "\t";
+            output.bufferPFTPopulation << community.greenShootBiomassOfPlantsPerPFT[pft] << "\t" << community.brownShootBiomassOfPlantsPerPFT[pft] << "\t";
+            output.bufferPFTPopulation << community.clippedShootBiomassOfPlantsPerPFT[pft] << "\t" << community.rootBiomassOfPlantsPerPFT[pft] << "\t";
+            output.bufferPFTPopulation << community.recruitmentBiomassOfPlantsPerPFT[pft] << "\t" << community.exudationBiomassOfPlantsPerPFT[pft] << "\t";
+            output.bufferPFTPopulation << community.gppOfPlantsPerPFT[pft] << "\t" << community.nppOfPlantsPerPFT[pft] << "\t" << community.carbonRespirationOfPlantsPerPFT[pft];
+            output.bufferPFTPopulation << std::endl;
+        }
+    }
+}
+
+void STEP::fillPlantCohortBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, OUTPUT &output, std::string date)
+{
+    if (parameter.plantCohortOutputFile)
+    {
+        for (int cohortindex = 0; cohortindex < community.allPlants.size(); cohortindex++)
+        {
+            output.bufferPlant << date << "\t" << parameter.day << "\t" << community.allPlants.at(cohortindex)->pft << "\t";
+            output.bufferPlant << community.allPlants.at(cohortindex)->age << "\t" << community.allPlants.at(cohortindex)->amount << "\t";
+            output.bufferPlant << community.allPlants.at(cohortindex)->height << "\t" << community.allPlants.at(cohortindex)->width << "\t";
+            output.bufferPlant << community.allPlants.at(cohortindex)->lai << "\t" << community.allPlants.at(cohortindex)->coveredArea << "\t";
+            output.bufferPlant << community.allPlants.at(cohortindex)->rootingDepth << "\t" << community.allPlants.at(cohortindex)->numberOfSoilLayersRooting << "\t";
+            output.bufferPlant << community.allPlants.at(cohortindex)->shootBiomass << "\t" << community.allPlants.at(cohortindex)->shootBiomassGreenLeaves << "\t";
+            output.bufferPlant << community.allPlants.at(cohortindex)->shootBiomassBrownLeaves << "\t" << community.allPlants.at(cohortindex)->shootBiomassAboveClippingHeight << "\t";
+            output.bufferPlant << community.allPlants.at(cohortindex)->rootBiomass << "\t" << community.allPlants.at(cohortindex)->recruitmentBiomass << "\t";
+            output.bufferPlant << community.allPlants.at(cohortindex)->exudationBiomass << "\t" << community.allPlants.at(cohortindex)->gpp << "\t";
+            output.bufferPlant << community.allPlants.at(cohortindex)->npp << "\t" << community.allPlants.at(cohortindex)->totalRespiration << "\t";
+            output.bufferPlant << community.allPlants.at(cohortindex)->availableRadiation << "\t" << community.allPlants.at(cohortindex)->shadingIndicator << "\t";
+            output.bufferPlant << community.allPlants.at(cohortindex)->limitingFactorGppWater << "\t" << community.allPlants.at(cohortindex)->limitingFactorNppNitrogen << "\t";
+            output.bufferPlant << community.allPlants.at(cohortindex)->nppAllocationShoot << "\t" << community.allPlants.at(cohortindex)->nppAllocationRoot << "\t";
+            output.bufferPlant << community.allPlants.at(cohortindex)->nppAllocationRecruitment << "\t" << community.allPlants.at(cohortindex)->nppAllocationExudation;
+            output.bufferPlant << std::endl;
+        }
+    }
+}
+
+void STEP::fillSoilCarbonBuffer(UTILS utils, PARAMETER parameter, SOIL soil, OUTPUT &output, std::string date)
+{
+    if (parameter.soilCarbonOutputFile)
+    {
+        output.bufferSoilCarbon << date << "\t" << parameter.day << "\t";
+        output.bufferSoilCarbon << soil.carbonContent_surfaceGreenLitterPool << "\t";
+        output.bufferSoilCarbon << soil.carbonContent_surfaceBrownLitterPool << "\t";
+        output.bufferSoilCarbon << soil.carbonContent_soilRootLitterPool << "\t"
+                                << soil.carbonContent_soilSeedLitterPool << "\t";
+        output.bufferSoilCarbon << soil.carbonContent_surfaceStructuralLitterPool << "\t"
+                                << soil.carbonContent_surfaceMetabolicLitterPool << "\t";
+        output.bufferSoilCarbon << soil.carbonContent_soilStructuralLitterPool << "\t"
+                                << soil.carbonContent_soilMetabolicLitterPool << "\t";
+        output.bufferSoilCarbon << soil.carbonContent_soilMicrobesPool << "\t"
+                                << soil.carbonContent_soilActivePool << "\t";
+        output.bufferSoilCarbon << soil.carbonContent_soilSlowPool << "\t"
+                                << soil.carbonContent_soilPassivePool << "\t";
+        output.bufferSoilCarbon << soil.carbonContent_leachedFromSoil << "\t";
+        output.bufferSoilCarbon << soil.carbonFlux_surfaceStructuralLitterPool_to_soilMicrobesPool << "\t";
+        output.bufferSoilCarbon << soil.carbonFlux_surfaceStructuralLitterPool_to_soilSlowPool << "\t";
+        output.bufferSoilCarbon << soil.carbonFlux_surfaceMetabolicLitterPool_to_soilMicrobesPool << "\t";
+        output.bufferSoilCarbon << soil.carbonFlux_soilStructuralLitterPool_to_soilActivePool << "\t";
+        output.bufferSoilCarbon << soil.carbonFlux_soilStructuralLitterPool_to_soilSlowPool << "\t";
+        output.bufferSoilCarbon << soil.carbonFlux_soilSlowPool_to_soilPassivePool << "\t";
+        output.bufferSoilCarbon << soil.carbonFlux_soilSlowPool_to_soilActivePool << "\t";
+        output.bufferSoilCarbon << soil.carbonFlux_soilSlowPool_to_soilPassiveAndActivePool << "\t";
+        output.bufferSoilCarbon << soil.carbonFlux_soilActivePool_to_soilPassivePool << "\t";
+        output.bufferSoilCarbon << soil.carbonFlux_soilActivePool_to_soilSlowPool << "\t";
+        output.bufferSoilCarbon << soil.carbonFlux_soilActivePool_to_soilPassiveAndSlowPool << "\t";
+        output.bufferSoilCarbon << soil.carbonFlux_soilMetabolicLitterPool_to_soilActivePool << "\t";
+        output.bufferSoilCarbon << soil.carbonFlux_soilMicrobesPool_to_soilSlowPool << "\t";
+        output.bufferSoilCarbon << soil.carbonFlux_soilPassivePool_to_soilActivePool << "\t";
+        output.bufferSoilCarbon << soil.leachingCarbon;
+        output.bufferSoilCarbon << std::endl;
+    }
+}
+
+void STEP::fillSoilNitrogenBuffer(UTILS utils, PARAMETER parameter, SOIL soil, OUTPUT &output, std::string date)
+{
+    if (parameter.soilNitrogenOutputFile)
+    {
+        output.bufferSoilNitrogen << date << "\t" << parameter.day << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenContent_surfaceGreenLitterPool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenContent_surfaceBrownLitterPool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenContent_soilRootLitterPool << "\t"
+                                  << soil.nitrogenContent_soilSeedLitterPool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenContent_surfaceStructuralLitterPool << "\t"
+                                  << soil.nitrogenContent_surfaceMetabolicLitterPool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenContent_soilStructuralLitterPool << "\t"
+                                  << soil.nitrogenContent_soilMetabolicLitterPool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenContent_soilMicrobesPool << "\t"
+                                  << soil.nitrogenContent_soilActivePool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenContent_soilSlowPool << "\t"
+                                  << soil.nitrogenContent_soilPassivePool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenContent_leachedFromSoil << "\t";
+
+        output.bufferSoilNitrogen << soil.nitrogenFlux_surfaceStructuralLitterPool_to_soilMicrobesPool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlux_surfaceStructuralLitterPool_to_soilSlowPool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlux_surfaceMetabolicLitterPool_to_soilMicrobesPool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlux_soilStructuralLitterPool_to_soilActivePool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlux_soilStructuralLitterPool_to_soilSlowPool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlux_soilSlowPool_to_soilPassivePool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlux_soilSlowPool_to_soilActivePool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlux_soilActivePool_to_soilPassivePool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlux_soilActivePool_to_soilSlowPool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlux_soilMetabolicLitterPool_to_soilActivePool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlux_soilMicrobesPool_to_soilSlowPool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlux_soilPassivePool_to_soilActivePool << "\t";
+
+        output.bufferSoilNitrogen << soil.leachingNitrogen << "\t";
+        output.bufferSoilNitrogen << soil.addedMineralNitrogenToSoilByFertilization << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFixationToSoil << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenGrossMineralization << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenNetMineralization << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenVolatilization << "\t";
+
+        output.bufferSoilNitrogen << soil.nitrogenFlow_soilActivePool_to_soilPassivePool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlow_soilActivePool_to_soilSlowPool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlow_soilMetabolicLitterPool_to_soilActivePool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlow_soilMicrobesPool_to_soilSlowPool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlow_soilPassivePool_to_soilActivePool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlow_soilSlowPool_to_soilActivePool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlow_soilSlowPool_to_soilPassivePool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlow_soilStructuralLitterPool_to_soilActivePool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlow_soilStructuralLitterPool_to_soilSlowPool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlow_surfaceMetabolicLitterPool_to_soilMicrobesPool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlow_surfaceStructuralLitterPool_to_soilMicrobesPool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlow_surfaceStructuralLitterPool_to_soilSlowPool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlux_soilSlowPool_to_soilActivePool << "\t";
+        output.bufferSoilNitrogen << soil.nitrogenFlux_soilSlowPool_to_soilPassivePool;
+        output.bufferSoilNitrogen << std::endl;
+    }
+}
+
+void STEP::fillSoilWaterBuffer(UTILS utils, PARAMETER parameter, SOIL soil, INTERACTION interaction, OUTPUT &output, std::string date)
+{
+    if (parameter.soilWaterOutputFile)
+    {
+        output.bufferSoilWater << date << "\t" << parameter.day << "\t";
+        output.bufferSoilWater << soil.addedWaterToSoilByIrrigation << "\t";
+        output.bufferSoilWater << soil.interception << "\t";
+        output.bufferSoilWater << soil.surfaceRunOff << "\t";
+        output.bufferSoilWater << soil.soilRunOff << "\t";
+        output.bufferSoilWater << soil.solidSnowContent << "\t";
+        output.bufferSoilWater << soil.liquidSnowContent << "\t";
+        output.bufferSoilWater << soil.evaporation << "\t";
+        output.bufferSoilWater << interaction.soilTemperature;
+
+        output.bufferSoilWater << std::endl;
+    }
+}
+
+void STEP::fillSoilResourcePerSoilLayerBuffer(UTILS utils, PARAMETER parameter, SOIL soil, OUTPUT &output, std::string date)
+{
+    if (parameter.soilResourcesPerSoilLayerOutputFile)
+    {
+        for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
+        {
+            output.bufferSoilResourcesPerSoilLayer << date << "\t" << parameter.day << "\t";
+            output.bufferSoilResourcesPerSoilLayer << soilLayer << "\t";
+            output.bufferSoilResourcesPerSoilLayer << parameter.soilLayerWidth.at(soilLayer) << "\t";
+            output.bufferSoilResourcesPerSoilLayer << soil.soilWaterFluxDownwardsOutOfSoilLayer.at(soilLayer) << "\t";
+            output.bufferSoilResourcesPerSoilLayer << soil.waterContent_soilWaterPoolPerSoilLayer.at(soilLayer) << "\t";
+            output.bufferSoilResourcesPerSoilLayer << soil.nitrogenContent_soilMineralPoolPerSoilLayer.at(soilLayer);
+            output.bufferSoilResourcesPerSoilLayer << std::endl;
+        }
+    }
+}
+
+void STEP::fillSimulationResultsToBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, INTERACTION interaction, OUTPUT &output, SOIL soil, std::string date)
+{
+    fillCommunityBuffer(utils, parameter, community, output, date);
+    fillPFTBuffer(utils, parameter, community, output, date);
+    fillPlantCohortBuffer(utils, parameter, community, output, date);
+    fillSoilCarbonBuffer(utils, parameter, soil, output, date);
+    fillSoilNitrogenBuffer(utils, parameter, soil, output, date);
+    fillSoilWaterBuffer(utils, parameter, soil, interaction, output, date);
+    fillSoilResourcePerSoilLayerBuffer(utils, parameter, soil, output, date);
+}
+
 /**
  * @brief Saves the simulation results to a buffer for output.
  *
@@ -115,7 +308,7 @@ void STEP::doDayStepOfModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMET
  * - Otherwise, results for every day of the simulation are stored directly in the
  *   buffer.
  */
-void STEP::saveSimulationResultsToBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, OUTPUT &output)
+void STEP::saveSimulationResultsToBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, INTERACTION interaction, OUTPUT &output, SOIL soil)
 {
     int day = utils.calculateDateFromDayCount(utils, parameter.day, parameter.referenceJulianDayStart, "day");
     int month = utils.calculateDateFromDayCount(utils, parameter.day, parameter.referenceJulianDayStart, "month");
@@ -132,77 +325,12 @@ void STEP::saveSimulationResultsToBuffer(UTILS utils, PARAMETER parameter, COMMU
         {
             if (parameter.day == day)
             {
-                output.bufferCommunity << date << "\t" << parameter.day << "\t";
-                output.bufferCommunity << community.totalNumberOfPlantsInCommunity << "\t" << community.totalNumberOfCohortsInCommunity << "\t" << community.totalLeafAreaIndexOfPlantsInCommunity << "\t";
-                output.bufferCommunity << community.maximumHeightOfAllPlants << "\t" << community.coveredAreaOfAllPlants << "\t" << community.ecosystemCarbonBalance << "\t" << community.ecosystemNitrogenBalance << std::endl;
-
-                for (int pft = 0; pft < parameter.pftCount; pft++)
-                {
-                    output.bufferPFTPopulation << date << "\t" << parameter.day << "\t" << pft << "\t";
-                    output.bufferPFTPopulation << community.pftComposition[pft] << "\t" << community.numberOfPlantsPerPFT[pft] << "\t";
-                    output.bufferPFTPopulation << community.coveredAreaOfPlantsPerPFT[pft] << "\t" << community.shootBiomassOfPlantsPerPFT[pft] << "\t";
-                    output.bufferPFTPopulation << community.greenShootBiomassOfPlantsPerPFT[pft] << "\t" << community.brownShootBiomassOfPlantsPerPFT[pft] << "\t";
-                    output.bufferPFTPopulation << community.clippedShootBiomassOfPlantsPerPFT[pft] << "\t" << community.rootBiomassOfPlantsPerPFT[pft] << "\t";
-                    output.bufferPFTPopulation << community.recruitmentBiomassOfPlantsPerPFT[pft] << "\t" << community.exudationBiomassOfPlantsPerPFT[pft] << "\t";
-                    output.bufferPFTPopulation << community.gppOfPlantsPerPFT[pft] << "\t" << community.nppOfPlantsPerPFT[pft] << "\t" << community.carbonRespirationOfPlantsPerPFT[pft];
-                    output.bufferPFTPopulation << std::endl;
-                }
-
-                for (int cohortindex = 0; cohortindex < community.allPlants.size(); cohortindex++)
-                {
-                    output.bufferPlant << date << "\t" << parameter.day << "\t" << community.allPlants.at(cohortindex)->pft << "\t";
-                    output.bufferPlant << community.allPlants.at(cohortindex)->age << "\t" << community.allPlants.at(cohortindex)->amount << "\t";
-                    output.bufferPlant << community.allPlants.at(cohortindex)->height << "\t" << community.allPlants.at(cohortindex)->width << "\t";
-                    output.bufferPlant << community.allPlants.at(cohortindex)->lai << "\t" << community.allPlants.at(cohortindex)->coveredArea << "\t";
-                    output.bufferPlant << community.allPlants.at(cohortindex)->rootingDepth << "\t" << community.allPlants.at(cohortindex)->numberOfSoilLayersRooting << "\t";
-                    output.bufferPlant << community.allPlants.at(cohortindex)->shootBiomass << "\t" << community.allPlants.at(cohortindex)->shootBiomassGreenLeaves << "\t";
-                    output.bufferPlant << community.allPlants.at(cohortindex)->shootBiomassBrownLeaves << "\t" << community.allPlants.at(cohortindex)->shootBiomassAboveClippingHeight << "\t";
-                    output.bufferPlant << community.allPlants.at(cohortindex)->rootBiomass << "\t" << community.allPlants.at(cohortindex)->recruitmentBiomass << "\t";
-                    output.bufferPlant << community.allPlants.at(cohortindex)->exudationBiomass << "\t" << community.allPlants.at(cohortindex)->gpp << "\t";
-                    output.bufferPlant << community.allPlants.at(cohortindex)->npp << "\t" << community.allPlants.at(cohortindex)->totalRespiration << "\t";
-                    output.bufferPlant << community.allPlants.at(cohortindex)->availableRadiation << "\t" << community.allPlants.at(cohortindex)->shadingIndicator << "\t";
-                    output.bufferPlant << community.allPlants.at(cohortindex)->limitingFactorGppWater << "\t" << community.allPlants.at(cohortindex)->limitingFactorNppNitrogen << "\t";
-                    output.bufferPlant << community.allPlants.at(cohortindex)->nppAllocationShoot << "\t" << community.allPlants.at(cohortindex)->nppAllocationRoot << "\t";
-                    output.bufferPlant << community.allPlants.at(cohortindex)->nppAllocationRecruitment << "\t" << community.allPlants.at(cohortindex)->nppAllocationExudation;
-                    output.bufferPlant << std::endl;
-                }
+                fillSimulationResultsToBuffer(utils, parameter, community, interaction, output, soil, date);
             }
         }
     }
     else /* daily results stored in buffer */
     {
-        output.bufferCommunity << date << "\t" << parameter.day << "\t";
-        output.bufferCommunity << community.totalNumberOfPlantsInCommunity << "\t" << community.totalNumberOfCohortsInCommunity << "\t" << community.totalLeafAreaIndexOfPlantsInCommunity << "\t";
-        output.bufferCommunity << community.maximumHeightOfAllPlants << "\t" << community.coveredAreaOfAllPlants << "\t" << community.ecosystemCarbonBalance << "\t" << community.ecosystemNitrogenBalance << std::endl;
-
-        for (int pft = 0; pft < parameter.pftCount; pft++)
-        {
-            output.bufferPFTPopulation << date << "\t" << parameter.day << "\t" << pft << "\t" << community.pftComposition[pft] << "\t" << community.numberOfPlantsPerPFT[pft] << "\t";
-            output.bufferPFTPopulation << community.coveredAreaOfPlantsPerPFT[pft] << "\t" << community.shootBiomassOfPlantsPerPFT[pft] << "\t";
-            output.bufferPFTPopulation << community.greenShootBiomassOfPlantsPerPFT[pft] << "\t" << community.brownShootBiomassOfPlantsPerPFT[pft] << "\t";
-            output.bufferPFTPopulation << community.clippedShootBiomassOfPlantsPerPFT[pft] << "\t" << community.rootBiomassOfPlantsPerPFT[pft] << "\t";
-            output.bufferPFTPopulation << community.recruitmentBiomassOfPlantsPerPFT[pft] << "\t" << community.exudationBiomassOfPlantsPerPFT[pft] << "\t";
-            output.bufferPFTPopulation << community.gppOfPlantsPerPFT[pft] << "\t" << community.nppOfPlantsPerPFT[pft] << "\t" << community.carbonRespirationOfPlantsPerPFT[pft];
-            output.bufferPFTPopulation << std::endl;
-        }
-
-        for (int cohortindex = 0; cohortindex < community.allPlants.size(); cohortindex++)
-        {
-            output.bufferPlant << date << "\t" << parameter.day << "\t" << community.allPlants.at(cohortindex)->pft << "\t";
-            output.bufferPlant << community.allPlants.at(cohortindex)->age << "\t" << community.allPlants.at(cohortindex)->amount << "\t";
-            output.bufferPlant << community.allPlants.at(cohortindex)->height << "\t" << community.allPlants.at(cohortindex)->width << "\t";
-            output.bufferPlant << community.allPlants.at(cohortindex)->lai << "\t" << community.allPlants.at(cohortindex)->coveredArea << "\t";
-            output.bufferPlant << community.allPlants.at(cohortindex)->rootingDepth << "\t" << community.allPlants.at(cohortindex)->numberOfSoilLayersRooting << "\t";
-            output.bufferPlant << community.allPlants.at(cohortindex)->shootBiomass << "\t" << community.allPlants.at(cohortindex)->shootBiomassGreenLeaves << "\t";
-            output.bufferPlant << community.allPlants.at(cohortindex)->shootBiomassBrownLeaves << "\t" << community.allPlants.at(cohortindex)->shootBiomassAboveClippingHeight << "\t";
-            output.bufferPlant << community.allPlants.at(cohortindex)->rootBiomass << "\t" << community.allPlants.at(cohortindex)->recruitmentBiomass << "\t";
-            output.bufferPlant << community.allPlants.at(cohortindex)->exudationBiomass << "\t" << community.allPlants.at(cohortindex)->gpp << "\t";
-            output.bufferPlant << community.allPlants.at(cohortindex)->npp << "\t" << community.allPlants.at(cohortindex)->totalRespiration << "\t";
-            output.bufferPlant << community.allPlants.at(cohortindex)->availableRadiation << "\t" << community.allPlants.at(cohortindex)->shadingIndicator << "\t";
-            output.bufferPlant << community.allPlants.at(cohortindex)->limitingFactorGppWater << "\t" << community.allPlants.at(cohortindex)->limitingFactorNppNitrogen << "\t";
-            output.bufferPlant << community.allPlants.at(cohortindex)->nppAllocationShoot << "\t" << community.allPlants.at(cohortindex)->nppAllocationRoot << "\t";
-            output.bufferPlant << community.allPlants.at(cohortindex)->nppAllocationRecruitment << "\t" << community.allPlants.at(cohortindex)->nppAllocationExudation;
-            output.bufferPlant << std::endl;
-        }
+        fillSimulationResultsToBuffer(utils, parameter, community, interaction, output, soil, date);
     }
 }

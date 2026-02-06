@@ -29,6 +29,7 @@ public:
     bool weatherFileOpened;
     bool managementFileOpened;
     bool soilFileOpened;
+    bool processSetupFileOpened;
 
     /* vectors to store information of parsed lines for parameters */
     std::vector<std::string> lineValues;        // stored parameter text lines
