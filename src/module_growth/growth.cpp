@@ -431,6 +431,15 @@ void GROWTH::doPlantNPPAllocation(UTILS utils, PARAMETER parameter, COMMUNITY &c
             community.allPlants.at(cohortindex)->exudationCarbon = community.allPlants.at(cohortindex)->exudationBiomass * carbonContentOdm;
             community.allPlants.at(cohortindex)->exudationNitrogen = community.allPlants.at(cohortindex)->exudationCarbon / parameter.plantCNRatioExudates[pft];
 
+            // transfer exudation to interfaces to external soil module
+            if (parameter.useExternalSoilModule_BODIUM)
+            {
+                std::for_each(soil.couplingInterface_rootExudatesCarbon.begin(), soil.couplingInterface_rootExudatesCarbon.begin() + community.allPlants.at(cohortindex)->numberOfSoilLayersRooting, [&community, cohortindex](double &x)
+                              { x += community.allPlants.at(cohortindex)->amount * community.allPlants.at(cohortindex)->exudationCarbon; });
+                std::for_each(soil.couplingInterface_rootExudatesNitrogen.begin(), soil.couplingInterface_rootExudatesNitrogen.begin() + community.allPlants.at(cohortindex)->numberOfSoilLayersRooting, [&community, cohortindex](double &x)
+                              { x += community.allPlants.at(cohortindex)->amount * community.allPlants.at(cohortindex)->exudationNitrogen; });
+            }
+
             // to be added: transfer exudation biomass to soil pool
             // soil.CPool_Soil_active += community.allPlants.at(cohortindex)->amount * community.allPlants.at(cohortindex)->exudationBiomass;
             // community.allPlants.at(cohortindex)->exudationBiomass = 0;

@@ -62,7 +62,7 @@ processSetupFile	couplingProject/process_setup__ambient_intensive_v1.txt
 # =============================================================================
 # 		Output files of simulation results (and settings)  
 # =============================================================================	
-communityOutputFile	true
+communityOutputFile	false
 \datatype:boolean
 \description:results on vegetation state variables aggregated to the community level
 

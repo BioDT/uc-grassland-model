@@ -68,6 +68,10 @@ void INPUT::searchParameterInInputFile(std::string keyword, const char *filename
         found = false;
         while (std::getline(file, line))
         {
+            if (!line.empty() && line.back() == '\r') /* if windows artifact, remove it*/
+            {
+                line.pop_back();
+            }
             if (found) /* if in the previous line the keyword was found, save the next line as datatype in lineTypeValues */
             {
                 lineTypeValues.push_back(line);
@@ -674,7 +678,7 @@ void INPUT::checkIfProcessSetupParameterValuesAreConsistent(UTILS utils, PARAMET
         utils.handleError("Inconsistent parameter settings: Both internal and external soil module are activated. Please check the process setup parameter file!");
     }
 
-    if (parameter.useExternalSoilModule_selfCoupled_getVariables && parameter.useExternalSoilModule_selfCoupled_setVariables)
+    if (parameter.useExternalSoilModule_selfCoupled_getVariables && parameter.useInternalSoilModule_selfCoupled_setVariables)
     {
         utils.handleError("Inconsistent parameter settings: Both getting and setting variables from/to the coupling interface are activated. Please check the process setup parameter file!");
     }
@@ -684,7 +688,7 @@ void INPUT::checkIfProcessSetupParameterValuesAreConsistent(UTILS utils, PARAMET
         utils.handleError("Inconsistent parameter settings: Internal soil module and getting variables from the coupling interface are both activated. Please check the process setup parameter file!");
     }
 
-    if (parameter.useInternalSoilModule && parameter.useExternalSoilModule_selfCoupled_setVariables)
+    if (parameter.useInternalSoilModule && parameter.useInternalSoilModule_selfCoupled_setVariables)
     {
         utils.handleError("Inconsistent parameter settings: Internal soil module and setting variables to the coupling interface are both activated. Please check the process setup parameter file!");
     }
@@ -694,7 +698,7 @@ void INPUT::checkIfProcessSetupParameterValuesAreConsistent(UTILS utils, PARAMET
         utils.handleError("Inconsistent parameter settings: External soil module BODIUM and getting variables from the coupling interface are both activated. Please check the process setup parameter file!");
     }
 
-    if (parameter.useExternalSoilModule_BODIUM && parameter.useExternalSoilModule_selfCoupled_setVariables)
+    if (parameter.useExternalSoilModule_BODIUM && parameter.useInternalSoilModule_selfCoupled_setVariables)
     {
         utils.handleError("Inconsistent parameter settings: External soil module BODIUM and setting variables to the coupling interface are both activated. Please check the process setup parameter file!");
     }
@@ -706,7 +710,7 @@ void INPUT::transferProcessSetupParameterValueToModelParameter(PARAMETER &parame
     parameter.useInternalSoilModule = configParBool["useInternalSoilModule"];
     parameter.useExternalSoilModule_BODIUM = configParBool["useExternalSoilModule_BODIUM"];
     parameter.useExternalSoilModule_selfCoupled_getVariables = configParBool["useExternalSoilModule_selfCoupled_getVariables"];
-    parameter.useExternalSoilModule_selfCoupled_setVariables = configParBool["useExternalSoilModule_selfCoupled_setVariables"];
+    parameter.useInternalSoilModule_selfCoupled_setVariables = configParBool["useInternalSoilModule_selfCoupled_setVariables"];
 
     parameter.stochasticSimulation = configParBool["stochasticSimulation"];
 }
@@ -754,6 +758,10 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
         weatherFileOpened = true;
         while (std::getline(file, line))
         {
+            if (!line.empty() && line.back() == '\r') /* if windows artifact, remove it*/
+            {
+                line.pop_back();
+            }
             m++;
             if (m > 1)
             { // skip header line
@@ -867,6 +875,10 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
         managementFileOpened = true;
         while (std::getline(file, line))
         {
+            if (!line.empty() && line.back() == '\r') /* if windows artifact, remove it*/
+            {
+                line.pop_back();
+            }
             m++;
             if (m > 1)
             { // skip header line
@@ -1099,6 +1111,10 @@ void INPUT::openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parame
     {
         while (std::getline(file, line))
         {
+            if (!line.empty() && line.back() == '\r') /* if windows artifact, remove it*/
+            {
+                line.pop_back();
+            }
             m++;
             if (m == 2)
             { // skip header line

@@ -23,6 +23,21 @@ public:
     std::vector<double> porosity;
     std::vector<double> saturatedHydraulicConductivity;
 
+    /* interface parameter for coupling with external soil module */
+    std::vector<double> couplingInterface_permanentWiltingPointPerSoilLayer;                // self coupling required input at plant water uptake
+    std::vector<double> couplingInterface_fieldCapacityPerSoilLayer;                        // self coupling required input at plant water uptake
+    std::vector<double> couplingInterface_porosityPerSoilLayer;                             // self coupling required input at plant water uptake
+    std::vector<double> couplingInterface_waterContentPerSoilLayer;                         // self coupling required input at plant water uptake
+    std::vector<double> couplingInterface_waterUptakeReductionByAvailableWaterPerSoilLayer; // self coupling required input at plant water uptake
+    std::vector<double> couplingInterface_nitrogenContentPerSoilLayer;                      // self coupling required input at plant nitrogen uptake
+
+    std::vector<double> couplingInterface_soilWaterPotentialPerSoilLayer; // in bodium coupling replaces interfaces: couplingInterface_permanentWiltingPointPerSoilLayer, couplingInterface_fieldCapacityPerSoilLayer, couplingInterface_porosityPerSoilLayer, couplingInterface_waterContentPerSoilLayer
+    std::vector<double> couplingInterface_soilWaterNh4Concentration;      // in bodium coupling replaces interface: couplingInterface_nitrogenContentPerSoilLayer
+    std::vector<double> couplingInterface_soilWaterNo3Concentration;      // in bodium coupling replaces interface: couplingInterface_nitrogenContentPerSoilLayer
+    std::vector<double> couplingInterface_plantNh4UptakePerSoilLayer;     // in bodium coupling provide input to bodium
+    std::vector<double> couplingInterface_plantNo3UptakePerSoilLayer;     // in bodium coupling provide input to bodium
+    std::vector<double> couplingInterface_plantSoilWaterUptakePerLayer;   // in bodium coupling provide input to bodium
+
     /* soil variables of general interest */
     double soilTemperature;
 
@@ -39,6 +54,9 @@ public:
     double surfaceRunOff;
     double soilRunOff;
     double interception;
+    // coupling interface
+    double couplingInterface_soilWaterSurfaceInput; // in bodium coupling provide input to bodium
+    double couplingInterface_potentialEvapotranspirationReducedByInterceptionSublimation; // in bodium coupling provide input to bodium
 
     // carbon content in pools
     double carbonContent_surfaceGreenLitterPool;
@@ -73,6 +91,14 @@ public:
     double nitrogenContent_soilMicrobesPool;
 
     std::vector<double> nitrogenContent_soilMineralPoolPerSoilLayer;
+
+    // coupling interfaces litter fluxes
+    double couplingInterface_surfaceLitterFluxCarbon;   // shoot plus seed litter corbon // in bodium coupling provide input to bodium
+    double couplingInterface_surfaceLitterFluxNitrogen; // shoot plus seed litter nitrogen // in bodium coupling provide input to bodium
+    std::vector<double> couplingInterface_rootLitterFluxCarbon;  // in bodium coupling provide input to bodium
+    std::vector<double> couplingInterface_rootLitterFluxNitrogen;  // in bodium coupling provide input to bodium
+    std::vector<double> couplingInterface_rootExudatesCarbon;  // in bodium coupling provide input to bodium
+    std::vector<double> couplingInterface_rootExudatesNitrogen;  // in bodium coupling provide input to bodium
 
     // decisive carbon-nitrogen ratios for deciding on the decomposition of pools
     // and for determining nitrogen mineralization or immobilization during decomposition
@@ -216,7 +242,9 @@ public:
     double decompositionFactor;
     double nitrogenFixationToSoil;
 
-    void transferDyingPlantPartsToLitterPools(UTILS utils, PARAMETER parameter, int number, double biomass, std::string typeOfMaterial, int pft);
+    void transferDyingPlantPartsToLitterPools(UTILS utils, PARAMETER parameter, int number, double biomass, std::string typeOfMaterial, int pft, int numberOfTargetSoilLayers = 0);
+    void calculateBodiumSoilWaterLimitationAndWaterUptake(UTILS utils, PARAMETER parameter, COMMUNITY &community);
+    void calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, COMMUNITY &community);
     void calculateSoilResourceDynamics(UTILS utils, PARAMETER parameter, WEATHER weather, COMMUNITY &community, INTERACTION interaction);
 
     void calculateSoilWaterDynamics(UTILS utils, PARAMETER parameter, WEATHER weather, INTERACTION interaction, COMMUNITY &community);

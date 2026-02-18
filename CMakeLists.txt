@@ -72,3 +72,27 @@ add_executable(GRASSMIND3 ${SOURCES} ${HEADERS})
 
 #Set include directories for the target
 target_include_directories(GRASSMIND3 PUBLIC include)
+
+#Create library target
+add_library(grassmind3 STATIC
+    src/utils/utils.cpp
+    src/module_output/output.cpp
+    src/module_input/input.cpp
+    src/module_parameter/parameter.cpp
+    src/module_weather/weather.cpp
+    src/module_soil/soil.cpp
+    src/module_management/management.cpp
+    src/module_plant/community.cpp
+    src/module_plant/plant.cpp
+    src/module_plant/allometry.cpp
+    src/module_init/init.cpp
+    src/module_step/step.cpp
+    src/module_growth/growth.cpp
+    src/module_mortality/mortality.cpp
+    src/module_recruitment/recruitment.cpp
+    src/module_interaction/interaction.cpp
+    src/pythoninterface/pythoninterface.cpp
+)
+set_target_properties(grassmind3 PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_include_directories(grassmind3 PUBLIC include)
+

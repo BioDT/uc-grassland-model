@@ -55,7 +55,7 @@ plantTraitsFile	BioDT-generic/plant_traits__generic_v1.txt
 \datatype:string
 \description:File name of model parameters for plant processes (traits of species or plant functional types) 
 
-processSetupFile	BioDT-generic/process_setup__generic_v1.txt
+processSetupFile	BioDT-generic/process_setup__generic_v1_selfCoupling_getV.txt
 \datatype:string
 \description:File name of model parameters for activating or deactivating model processes
 

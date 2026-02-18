@@ -141,7 +141,7 @@ void MORTALITY::doRootSenescenceAndLitterFall(UTILS utils, COMMUNITY &community,
 {
     double dyingRootBiomass = community.allPlants.at(cohortIndex)->rootBiomass * (1.0 / parameter.rootLifeSpan[pft]);
 
-    soil.transferDyingPlantPartsToLitterPools(utils, parameter, community.allPlants.at(cohortIndex)->amount, dyingRootBiomass, "soil_root", pft);
+    soil.transferDyingPlantPartsToLitterPools(utils, parameter, community.allPlants.at(cohortIndex)->amount, dyingRootBiomass, "soil_root", pft, community.allPlants.at(cohortIndex)->numberOfSoilLayersRooting);
     community.allPlants.at(cohortIndex)->rootBiomass -= dyingRootBiomass;
     community.allPlants.at(cohortIndex)->rootCarbon = community.allPlants.at(cohortIndex)->rootBiomass * carbonContentOdm;
     community.allPlants.at(cohortIndex)->rootNitrogen = community.allPlants.at(cohortIndex)->rootCarbon / parameter.plantCNRatioRoots[pft];
@@ -196,7 +196,7 @@ void MORTALITY::doPlantCrowding(PARAMETER parameter, UTILS utils, SOIL &soil, CO
             {
                 soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfTooManyPlants, community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves, "surface_green", pft);
                 soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfTooManyPlants, community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves, "surface_brown", pft);
-                soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfTooManyPlants, community.allPlants.at(cohortIndex)->rootBiomass, "soil_root", pft);
+                soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfTooManyPlants, community.allPlants.at(cohortIndex)->rootBiomass, "soil_root", pft, community.allPlants.at(cohortIndex)->numberOfSoilLayersRooting);
                 soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfTooManyPlants, community.allPlants.at(cohortIndex)->recruitmentBiomass, "soil_seed", pft);
                 community.allPlants[cohortIndex]->amount -= amountOfTooManyPlants;
             }
@@ -249,7 +249,7 @@ void MORTALITY::doBasicMortality(UTILS utils, PARAMETER parameter, SOIL &soil, C
                 {
                     soil.transferDyingPlantPartsToLitterPools(utils, parameter, 1, community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves, "surface_green", pft);
                     soil.transferDyingPlantPartsToLitterPools(utils, parameter, 1, community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves, "surface_brown", pft);
-                    soil.transferDyingPlantPartsToLitterPools(utils, parameter, 1, community.allPlants.at(cohortIndex)->rootBiomass, "soil_root", pft);
+                    soil.transferDyingPlantPartsToLitterPools(utils, parameter, 1, community.allPlants.at(cohortIndex)->rootBiomass, "soil_root", pft, community.allPlants.at(cohortIndex)->numberOfSoilLayersRooting);
                     soil.transferDyingPlantPartsToLitterPools(utils, parameter, 1, community.allPlants.at(cohortIndex)->recruitmentBiomass, "soil_seed", pft);
                     community.allPlants[cohortIndex]->amount -= 1;
                 }
@@ -266,7 +266,7 @@ void MORTALITY::doBasicMortality(UTILS utils, PARAMETER parameter, SOIL &soil, C
         double amountOfPlantsToDie = std::ceil(community.allPlants[cohortIndex]->amount * mortalityProbability);
         soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfPlantsToDie, community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves, "surface_green", pft);
         soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfPlantsToDie, community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves, "surface_brown", pft);
-        soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfPlantsToDie, community.allPlants.at(cohortIndex)->rootBiomass, "soil_root", pft);
+        soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfPlantsToDie, community.allPlants.at(cohortIndex)->rootBiomass, "soil_root", pft, community.allPlants.at(cohortIndex)->numberOfSoilLayersRooting);
         soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfPlantsToDie, community.allPlants.at(cohortIndex)->recruitmentBiomass, "soil_seed", pft);
         community.allPlants[cohortIndex]->amount -= amountOfPlantsToDie;
     }

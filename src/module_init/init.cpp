@@ -219,7 +219,7 @@ void INIT::initSoilResourceStateVariables(UTILS utils, SOIL &soil, WEATHER weath
     soil.waterContent_soilWaterPoolPerSoilLayer.clear();
     for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers + 1; soilLayer++)
     {
-        if (parameter.useInternalSoilModule || parameter.useExternalSoilModule_selfCoupled_setVariables)
+        if (parameter.useInternalSoilModule || parameter.useInternalSoilModule_selfCoupled_setVariables)
         {
             if (soilLayer < parameter.numberOfSoilLayers)
             {

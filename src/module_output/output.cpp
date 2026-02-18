@@ -562,6 +562,10 @@ void OUTPUT::openAndReadOutputWritingDates(std::string path, UTILS utils, PARAME
         outputWritingDatesFileOpened = true;
         while (std::getline(file, line))
         {
+            if (!line.empty() && line.back() == '\r') /* if windows artifact, remove it*/
+            {
+                line.pop_back();
+            }
             m++;
             if (m > 1)
             { // skip header line
