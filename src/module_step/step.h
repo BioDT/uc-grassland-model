@@ -11,17 +11,27 @@
 #include "../module_output/output.h"
 #include "../module_soil/soil.h"
 #include "../module_weather/weather.h"
+#include "../module_interaction/interaction.h"
 #include "../utils/utils.h"
 #include <random>
 
 class STEP
 {
 public:
-   STEP();
-   ~STEP();
+    STEP();
+    ~STEP();
 
-   void runModelSimulation(UTILS utils, PARAMETER &parameter, INIT init, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT &recruitment, MORTALITY mortality, GROWTH growth, MANAGEMENT management, SOIL &soil, WEATHER weather, INTERACTION &interaction, OUTPUT &output);
-   void runModelSimulationStep(UTILS utils, PARAMETER &parameter, INIT init, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT &recruitment, MORTALITY mortality, GROWTH growth, MANAGEMENT management, SOIL &soil, WEATHER weather, INTERACTION &interaction, OUTPUT &output);
-   void doDayStepOfModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT &recruitment, MORTALITY mortality, GROWTH growth, INTERACTION &interaction, MANAGEMENT management, SOIL &soil, WEATHER weather);
-   void saveSimulationResultsToBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, OUTPUT &output);
+    void runModelSimulation(UTILS utils, PARAMETER &parameter, INIT init, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT &recruitment, MORTALITY mortality, GROWTH growth, MANAGEMENT management, SOIL &soil, WEATHER weather, INTERACTION &interaction, OUTPUT &output);
+    void runModelSimulationStep(UTILS utils, PARAMETER &parameter, INIT init, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT &recruitment, MORTALITY mortality, GROWTH growth, MANAGEMENT management, SOIL &soil, WEATHER weather, INTERACTION &interaction, OUTPUT &output);
+    void doDayStepOfModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT &recruitment, MORTALITY mortality, GROWTH growth, INTERACTION &interaction, MANAGEMENT management, SOIL &soil, WEATHER weather);
+    void saveSimulationResultsToBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, INTERACTION interaction, OUTPUT &output, SOIL soil);
+
+    void fillCommunityBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, OUTPUT &output, std::string date);
+    void fillPFTBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, OUTPUT &output, std::string date);
+    void fillPlantCohortBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, OUTPUT &output, std::string date);
+    void fillSoilCarbonBuffer(UTILS utils, PARAMETER parameter, SOIL soil, OUTPUT &output, std::string date);
+    void fillSoilNitrogenBuffer(UTILS utils, PARAMETER parameter, SOIL soil, OUTPUT &output, std::string date);
+    void fillSoilWaterBuffer(UTILS utils, PARAMETER parameter, SOIL soil, INTERACTION interaction, OUTPUT &output, std::string date);
+    void fillSoilResourcePerSoilLayerBuffer(UTILS utils, PARAMETER parameter, SOIL soil, OUTPUT &output, std::string date);
+    void fillSimulationResultsToBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, INTERACTION interaction, OUTPUT &output, SOIL soil, std::string date);
 };

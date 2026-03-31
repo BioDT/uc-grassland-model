@@ -86,6 +86,10 @@ soilWaterOutputFile	false
 \datatype:boolean
 \description:results on soil water dynamics (state variables and fluxes)
 
+soilResourcesPerSoilLayerOutputFile	false
+\datatype:boolean
+\description:results on soil water and nitrogen dynamics for each soil layer
+
 outputWritingDatesFile	NaN
 \datatype:string
 \description:File name of selected dates at which simulation results should be written

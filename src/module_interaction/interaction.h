@@ -9,31 +9,33 @@
 class INTERACTION
 {
 public:
-   INTERACTION();
-   ~INTERACTION();
+    INTERACTION();
+    ~INTERACTION();
 
-   double fullSunLight;
-   double dayLength;
-   double fullDayAirTemperature;
-   double dayTimeAirTemperature;
+    double fullSunLight;
+    double dayLength;
+    double fullDayAirTemperature;
+    double dayTimeAirTemperature;
+    double soilTemperature;
 
-   int maximumHeightLayerIndexReachedByPlants;
-   std::vector<double> LAI;
-   std::vector<double> LAIwithLightExtinction;
-   std::vector<double> weightsForPlantContributionToHeightLayer;
+    int maximumHeightLayerIndexReachedByPlants;
+    std::vector<double> LAI;
+    std::vector<double> LAIwithLightExtinction;
+    std::vector<double> weightsForPlantContributionToHeightLayer;
 
-   void getEnvironmentalConditionsOfDay(WEATHER weather, int day);
-   void calculateLightAttenuationAndAvailabilityForPlants(UTILS utils, PARAMETER parameter, COMMUNITY &community, double fullSunLight);
+    void getEnvironmentalConditionsOfDay(WEATHER weather, COMMUNITY community, int day);
+    double calculateSoilTemperature(COMMUNITY community, double fullDayAirTemperature);
+    void calculateLightAttenuationAndAvailabilityForPlants(UTILS utils, PARAMETER parameter, COMMUNITY &community, double fullSunLight);
 
-   void calculateNumberOfHeightLayersFromLargestPlant(UTILS utils, COMMUNITY &community);
-   void calculateCumulativeLeafAreaIndexAcrossHeightLayers(UTILS utils, COMMUNITY &community, PARAMETER parameter);
-   void calculateWeightsOfPlantHeightContributionToHeightLayers(int topHeightLayerIndexOfPlant, double plantHeight);
-   void addPlantLeafAreaToHeightLayers(int topHeightLayerIndexOfPlant, double leafAreaOfPlantCohort, double plantLightExtinctionCoefficient);
-   void accumulateLeafAreaFromTopToBottomHeightLayers(int maximumHeightLayerReachedByPlants);
+    void calculateNumberOfHeightLayersFromLargestPlant(UTILS utils, COMMUNITY &community);
+    void calculateCumulativeLeafAreaIndexAcrossHeightLayers(UTILS utils, COMMUNITY &community, PARAMETER parameter);
+    void calculateWeightsOfPlantHeightContributionToHeightLayers(int topHeightLayerIndexOfPlant, double plantHeight);
+    void addPlantLeafAreaToHeightLayers(int topHeightLayerIndexOfPlant, double leafAreaOfPlantCohort, double plantLightExtinctionCoefficient);
+    void accumulateLeafAreaFromTopToBottomHeightLayers(int maximumHeightLayerReachedByPlants);
 
-   void calculateLightAvailabilityForPlants(UTILS utils, COMMUNITY &community, PARAMETER parameter, double fullSunLight);
-   void getOvertoppingCumulativeLeafAreaIndexOfPlant(COMMUNITY &community, int cohortindex, int top);
-   void calculateAvailableLightReachingAPlant(PARAMETER parameter, COMMUNITY &community, int cohortindex, double fullSunLight);
-   void calculateShadingIndicatorOfPlantForOutput(UTILS utils, PARAMETER parameter, COMMUNITY &community, int cohortindex, double fullSunLight);
-   double getRadiationByLightExtinctionLaw(double cumulativeLAIAboveAndAtHeightLayer, double fullSunLight);
+    void calculateLightAvailabilityForPlants(UTILS utils, COMMUNITY &community, PARAMETER parameter, double fullSunLight);
+    void getOvertoppingCumulativeLeafAreaIndexOfPlant(COMMUNITY &community, int cohortindex, int top);
+    void calculateAvailableLightReachingAPlant(PARAMETER parameter, COMMUNITY &community, int cohortindex, double fullSunLight);
+    void calculateShadingIndicatorOfPlantForOutput(UTILS utils, PARAMETER parameter, COMMUNITY &community, int cohortindex, double fullSunLight);
+    double getRadiationByLightExtinctionLaw(double cumulativeLAIAboveAndAtHeightLayer, double fullSunLight);
 };

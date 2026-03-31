@@ -74,17 +74,21 @@ plantCohortOutputFile	false
 \datatype:boolean
 \description:results on vegetation state variables for each single plant cohort
 
-soilCarbonOutputFile	false
+soilCarbonOutputFile	true
 \datatype:boolean
 \description:results on soil carbon dynamics (state variables and fluxes)
 
-soilNitrogenOutputFile	false
+soilNitrogenOutputFile	true
 \datatype:boolean
 \description:results on soil nitrogen dynamics (state variables and fluxes)
 
-soilWaterOutputFile	false
+soilWaterOutputFile	true
 \datatype:boolean
 \description:results on soil water dynamics (state variables and fluxes)
+
+soilResourcesPerSoilLayerOutputFile	true
+\datatype:boolean
+\description:results on soil water and nitrogen dynamics for each soil layer
 
 outputWritingDatesFile	NaN
 \datatype:string

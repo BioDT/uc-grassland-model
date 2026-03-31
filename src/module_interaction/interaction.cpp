@@ -161,10 +161,25 @@ double INTERACTION::getRadiationByLightExtinctionLaw(double cumulativeLAIAboveAn
     return radiationByExtinction;
 }
 
-void INTERACTION::getEnvironmentalConditionsOfDay(WEATHER weather, int day)
+void INTERACTION::getEnvironmentalConditionsOfDay(WEATHER weather, COMMUNITY community, int day)
 {
     fullSunLight = weather.photosyntheticPhotonFluxDensity.at(day - 1); // parameter.day starts at 1, but vectors start with index 0
     dayLength = weather.dayLength.at(day - 1);
     dayTimeAirTemperature = weather.dayTimeAirTemperature.at(day - 1);
     fullDayAirTemperature = weather.fullDayAirTemperature.at(day - 1);
+    soilTemperature = calculateSoilTemperature(community, fullDayAirTemperature);
+}
+
+double INTERACTION::calculateSoilTemperature(COMMUNITY community, double fullDayAirTemperature)
+{
+    double abovegroundBiomass = community.abovegroundBiomassOfAllPlants + 0.4 * community.abovegroundLitterBiomass;
+    abovegroundBiomass = std::min(abovegroundBiomass, 600.0);
+
+    double upperRange = fullDayAirTemperature + (25.4 / (1.0 + 18.0 * exp(-0.20 * fullDayAirTemperature))) * (exp(-0.0035 * abovegroundBiomass) - 0.13);
+    double lowerRange = fullDayAirTemperature + 0.004 * abovegroundBiomass - 1.78;
+
+    // double soilTemperature = (upperRange + lowerRange) / 2.0;
+    double soilTemperature = lowerRange;
+
+    return soilTemperature;
 }

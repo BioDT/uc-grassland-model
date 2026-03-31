@@ -52,6 +52,7 @@ void OUTPUT::updateVegetationStateVariablesForOutput(PARAMETER parameter, COMMUN
             community.coveredAreaOfAllPlants += community.allPlants[cohortindex]->coveredArea * parameter.plantShootOverlapFactors[community.allPlants[cohortindex]->pft];
             community.carbonRespirationOfAllPlants += community.allPlants[cohortindex]->totalRespiration * community.allPlants[cohortindex]->amount * carbonContentOdm;
             community.carbonNPPOfAllPlants += community.allPlants[cohortindex]->npp * community.allPlants[cohortindex]->amount * carbonContentOdm;
+            community.abovegroundBiomassOfAllPlants += community.allPlants[cohortindex]->shootBiomass * community.allPlants[cohortindex]->amount;
         }
 
         // Normalizations
@@ -62,6 +63,9 @@ void OUTPUT::updateVegetationStateVariablesForOutput(PARAMETER parameter, COMMUN
                 community.pftComposition[pft] *= 100.0 / community.totalNumberOfPlantsInCommunity;
             }
         }
+
+        // calculations from soil state variables
+        community.abovegroundLitterBiomass += (soil.carbonContent_surfaceStructuralLitterPool + soil.carbonContent_surfaceMetabolicLitterPool) * (1.0 / carbonContentOdm);
     }
 
     // Summing up PFT-specific variables for community-based variables
@@ -142,6 +146,7 @@ void OUTPUT::createAndOpenOutputFiles(UTILS utils, PARAMETER parameter)
     std::string filenameSoilCarbon = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputSoilCarbon__" + endingParameter;
     std::string filenameSoilNitrogen = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputSoilNitrogen__" + endingParameter;
     std::string filenameSoilWater = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputSoilWater__" + endingParameter;
+    std::string filenameSoilResourcesPerSoilLayer = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputSoilResourcesPerSoilLayer__" + endingParameter;
 
     if (parameter.communityOutputFile)
     {
@@ -194,6 +199,15 @@ void OUTPUT::createAndOpenOutputFiles(UTILS utils, PARAMETER parameter)
         if (!outputSoilWater.is_open())
         {
             utils.handleError("Error writing to the soil water output file.");
+        }
+    }
+
+    if (parameter.soilResourcesPerSoilLayerOutputFile)
+    {
+        outputSoilResourcesPerSoilLayer.open(filenameSoilResourcesPerSoilLayer);
+        if (!outputSoilResourcesPerSoilLayer.is_open())
+        {
+            utils.handleError("Error writing to the soil resources per soil layer output file.");
         }
     }
 }
@@ -276,7 +290,30 @@ void OUTPUT::writeHeaderInOutputFiles(UTILS utils, PARAMETER parameter)
         }
         else
         {
-            outputSoilCarbon << "Date\tDayCount";
+            outputSoilCarbon << "Date\tDayCount\t";
+            outputSoilCarbon << "carbonContent_surfaceGreenLitterPool\t";
+            outputSoilCarbon << "carbonContent_surfaceBrownLitterPool\t";
+            outputSoilCarbon << "carbonContent_soilRootLitterPool\tcarbonContent_soilSeedLitterPool\t";
+            outputSoilCarbon << "carbonContent_surfaceStructuralLitterPool\tcarbonContent_surfaceMetabolicLitterPool\t";
+            outputSoilCarbon << "carbonContent_soilStructuralLitterPool\tcarbonContent_soilMetabolicLitterPool\t";
+            outputSoilCarbon << "carbonContent_soilMicrobesPool\tcarbonContent_soilActivePool\t";
+            outputSoilCarbon << "carbonContent_soilSlowPool\tcarbonContent_soilPassivePool\t";
+            outputSoilCarbon << "carbonContent_leachedFromSoil\t";
+            outputSoilCarbon << "carbonFlux_surfaceStructuralLitterPool_to_soilMicrobesPool\t";
+            outputSoilCarbon << "carbonFlux_surfaceStructuralLitterPool_to_soilSlowPool\t";
+            outputSoilCarbon << "carbonFlux_surfaceMetabolicLitterPool_to_soilMicrobesPool\t";
+            outputSoilCarbon << "carbonFlux_soilStructuralLitterPool_to_soilActivePool\t";
+            outputSoilCarbon << "carbonFlux_soilStructuralLitterPool_to_soilSlowPool\t";
+            outputSoilCarbon << "carbonFlux_soilSlowPool_to_soilPassivePool\t";
+            outputSoilCarbon << "carbonFlux_soilSlowPool_to_soilActivePool\t";
+            outputSoilCarbon << "carbonFlux_soilSlowPool_to_soilPassiveAndActivePool\t";
+            outputSoilCarbon << "carbonFlux_soilActivePool_to_soilPassivePool\t";
+            outputSoilCarbon << "carbonFlux_soilActivePool_to_soilSlowPool\t";
+            outputSoilCarbon << "carbonFlux_soilActivePool_to_soilPassiveAndSlowPool\t";
+            outputSoilCarbon << "carbonFlux_soilMetabolicLitterPool_to_soilActivePool\t";
+            outputSoilCarbon << "carbonFlux_soilMicrobesPool_to_soilSlowPool\t";
+            outputSoilCarbon << "carbonFlux_soilPassivePool_to_soilActivePool\t";
+            outputSoilCarbon << "leachingCarbon";
             outputSoilCarbon << std::endl;
         }
     }
@@ -289,7 +326,52 @@ void OUTPUT::writeHeaderInOutputFiles(UTILS utils, PARAMETER parameter)
         }
         else
         {
-            outputSoilNitrogen << "Date\tDayCount";
+            outputSoilNitrogen << "Date\tDayCount\t";
+            outputSoilNitrogen << "nitrogenContent_surfaceGreenLitterPool\t";
+            outputSoilNitrogen << "nitrogenContent_surfaceBrownLitterPool\t";
+            outputSoilNitrogen << "nitrogenContent_soilRootLitterPool\t"
+                               << "nitrogenContent_soilSeedLitterPool\t";
+            outputSoilNitrogen << "nitrogenContent_surfaceStructuralLitterPool\t"
+                               << "nitrogenContent_surfaceMetabolicLitterPool\t";
+            outputSoilNitrogen << "nitrogenContent_soilStructuralLitterPool\t"
+                               << "nitrogenContent_soilMetabolicLitterPool\t";
+            outputSoilNitrogen << "nitrogenContent_soilMicrobesPool\t"
+                               << "nitrogenContent_soilActivePool\t";
+            outputSoilNitrogen << "nitrogenContent_soilSlowPool\t"
+                               << "nitrogenContent_soilPassivePool\t";
+            outputSoilNitrogen << "nitrogenContent_leachedFromSoil\t";
+            outputSoilNitrogen << "nitrogenFlux_surfaceStructuralLitterPool_to_soilMicrobesPool\t";
+            outputSoilNitrogen << "nitrogenFlux_surfaceStructuralLitterPool_to_soilSlowPool\t";
+            outputSoilNitrogen << "nitrogenFlux_surfaceMetabolicLitterPool_to_soilMicrobesPool\t";
+            outputSoilNitrogen << "nitrogenFlux_soilStructuralLitterPool_to_soilActivePool\t";
+            outputSoilNitrogen << "nitrogenFlux_soilStructuralLitterPool_to_soilSlowPool\t";
+            outputSoilNitrogen << "nitrogenFlux_soilSlowPool_to_soilPassivePool\t";
+            outputSoilNitrogen << "nitrogenFlux_soilSlowPool_to_soilActivePool\t";
+            outputSoilNitrogen << "nitrogenFlux_soilActivePool_to_soilPassivePool\t";
+            outputSoilNitrogen << "nitrogenFlux_soilActivePool_to_soilSlowPool\t";
+            outputSoilNitrogen << "nitrogenFlux_soilMetabolicLitterPool_to_soilActivePool\t";
+            outputSoilNitrogen << "nitrogenFlux_soilMicrobesPool_to_soilSlowPool\t";
+            outputSoilNitrogen << "nitrogenFlux_soilPassivePool_to_soilActivePool\t";
+            outputSoilNitrogen << "leachingNitrogen\t";
+            outputSoilNitrogen << "addedMineralNitrogenToSoilByFertilization\t";
+            outputSoilNitrogen << "nitrogenFixationToSoil\t";
+            outputSoilNitrogen << "nitrogenGrossMineralization\t";
+            outputSoilNitrogen << "nitrogenNetMineralization\t";
+            outputSoilNitrogen << "nitrogenVolatilization\t";
+            outputSoilNitrogen << "nitrogenFlow_soilActivePool_to_soilPassivePool\t";
+            outputSoilNitrogen << "nitrogenFlow_soilActivePool_to_soilSlowPool\t";
+            outputSoilNitrogen << "nitrogenFlow_soilMetabolicLitterPool_to_soilActivePool\t";
+            outputSoilNitrogen << "nitrogenFlow_soilMicrobesPool_to_soilSlowPool\t";
+            outputSoilNitrogen << "nitrogenFlow_soilPassivePool_to_soilActivePool\t";
+            outputSoilNitrogen << "nitrogenFlow_soilSlowPool_to_soilActivePool\t";
+            outputSoilNitrogen << "nitrogenFlow_soilSlowPool_to_soilPassivePool\t";
+            outputSoilNitrogen << "nitrogenFlow_soilStructuralLitterPool_to_soilActivePool\t";
+            outputSoilNitrogen << "nitrogenFlow_soilStructuralLitterPool_to_soilSlowPool\t";
+            outputSoilNitrogen << "nitrogenFlow_surfaceMetabolicLitterPool_to_soilMicrobesPool\t";
+            outputSoilNitrogen << "nitrogenFlow_surfaceStructuralLitterPool_to_soilMicrobesPool\t";
+            outputSoilNitrogen << "nitrogenFlow_surfaceStructuralLitterPool_to_soilSlowPool\t";
+            outputSoilNitrogen << "nitrogenFlow_soilSlowPool_to_soilActivePool\t";
+            outputSoilNitrogen << "nitrogenFlow_soilSlowPool_to_soilPassivePool";
             outputSoilNitrogen << std::endl;
         }
     }
@@ -302,8 +384,34 @@ void OUTPUT::writeHeaderInOutputFiles(UTILS utils, PARAMETER parameter)
         }
         else
         {
-            outputSoilWater << "Date\tDayCount";
+            outputSoilWater << "Date\tDayCount\t";
+            outputSoilWater << "addedWaterToSoilByIrrigation\t";
+            outputSoilWater << "interception\t";
+            outputSoilWater << "surfaceRunOff\t";
+            outputSoilWater << "soilRunOff\t";
+            outputSoilWater << "solidSnowContent\t";
+            outputSoilWater << "liquidSnowContent\t";
+            outputSoilWater << "evaporation\t";
+            outputSoilWater << "soilTemperature";
             outputSoilWater << std::endl;
+        }
+    }
+
+    if (parameter.soilResourcesPerSoilLayerOutputFile)
+    {
+        if (!outputSoilResourcesPerSoilLayer.is_open())
+        {
+            utils.handleError("Error writing to the soil resources per soil layer output file.");
+        }
+        else
+        {
+            outputSoilResourcesPerSoilLayer << "Date\tDayCount\t";
+            outputSoilResourcesPerSoilLayer << "SoilLayerNumber\t";
+            outputSoilResourcesPerSoilLayer << "SoilLayerWidth\t";
+            outputSoilResourcesPerSoilLayer << "soilWaterFluxDownwardsOutOfSoilLayer\t";
+            outputSoilResourcesPerSoilLayer << "waterContent_soilWaterPoolPerSoilLayer\t";
+            outputSoilResourcesPerSoilLayer << "nitrogenContent_soilMineralPoolPerSoilLayer";
+            outputSoilResourcesPerSoilLayer << std::endl;
         }
     }
 }
@@ -405,6 +513,20 @@ void OUTPUT::writeSimulationResultsToOutputFiles(UTILS utils, PARAMETER paramete
             utils.handleError("The output file of soil water variables is not open for writing.");
         }
     }
+
+    if (parameter.soilResourcesPerSoilLayerOutputFile)
+    {
+        if (outputSoilResourcesPerSoilLayer.is_open())
+        {
+            outputSoilResourcesPerSoilLayer << bufferSoilResourcesPerSoilLayer.str();
+            bufferSoilResourcesPerSoilLayer.str("");
+            bufferSoilResourcesPerSoilLayer.clear();
+        }
+        else
+        {
+            utils.handleError("The output file of soil resources per soil layer variables is not open for writing.");
+        }
+    }
 }
 
 /**
@@ -492,6 +614,18 @@ void OUTPUT::closeOutputFiles(UTILS utils, PARAMETER parameter)
             utils.handleError("The output file of soil water variables is not open.");
         }
     }
+
+    if (parameter.soilResourcesPerSoilLayerOutputFile)
+    {
+        if (outputSoilResourcesPerSoilLayer.is_open())
+        {
+            outputSoilResourcesPerSoilLayer.close();
+        }
+        else
+        {
+            utils.handleError("The output file of soil resources per soil layer variables is not open.");
+        }
+    }
 }
 
 /**
@@ -518,9 +652,10 @@ void OUTPUT::createOutputFolder(std::string path, UTILS utils)
     {
         outputDirectory = outputDirectory + utils.strings.at(it) + pathSeparator;
     }
-    outputDirectory = outputDirectory + "output" + pathSeparator;
-}
 
+    outputDirectory = outputDirectory + "output" + pathSeparator;
+    _mkdir(outputDirectory.c_str());
+}
 /**
  * @brief Reads output writing dates from a file.
  *
@@ -640,6 +775,14 @@ void OUTPUT::printSimulationSettingsToConsole(PARAMETER parameter, INPUT input)
     std::cout << "Plant traits: " << parameter.plantTraitsFile << std::endl
               << std::endl;
     if (!input.plantTraitsFileOpened)
+    {
+        std::cout << "File failed to be opened!" << std::endl
+                  << std::endl;
+    }
+
+    std::cout << "Process setup: " << parameter.processSetupFile << std::endl
+              << std::endl;
+    if (!input.processSetupFileOpened)
     {
         std::cout << "File failed to be opened!" << std::endl
                   << std::endl;

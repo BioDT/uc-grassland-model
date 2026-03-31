@@ -38,9 +38,6 @@ public:
     std::vector<double> couplingInterface_plantNo3UptakePerSoilLayer;     // in bodium coupling provide input to bodium
     std::vector<double> couplingInterface_plantSoilWaterUptakePerLayer;   // in bodium coupling provide input to bodium
 
-    /* soil variables of general interest */
-    double soilTemperature;
-
     /* variables of soil input defined by management */ // TODO: rename to nitrogenFlux_... and waterFlux_...
     double addedMineralNitrogenToSoilByFertilization;
     double addedWaterToSoilByIrrigation;
@@ -256,6 +253,12 @@ public:
     void soilWaterPercolation(UTILS utils, PARAMETER parameter, double waterInputToSoil);
     void leachingOfNitrogenCoupledToWaterPercolation(UTILS utils, PARAMETER parameter);
     void evaporationFromTopSoilLayer(UTILS utils, PARAMETER parameter, COMMUNITY &community, double remainingDailyPET);
+    double estimateSoilSurfaceAffectedBySoilEvaporation(UTILS utils, COMMUNITY community);
+    double calculateSoilHorizonAffectedBySoilEvaporation(UTILS utils, PARAMETER parameter, int numberOfTopSoilLayersAffectedByEvaporation);
+    std::vector<double> calculateDistributionOfEvaporationAcrossAffectedSoilLayers(UTILS utils, PARAMETER parameter, int numberOfTopSoilLayersAffectedByEvaporation, double soilDepthAffectedByEvaporation, double remainingDailyPET);
+    std::vector<double> calculateSoilEvaporationPerSoilLayer(UTILS utils, PARAMETER parameter, int numberOfTopSoilLayersAffectedByEvaporation, std::vector<double> proportionOfEvaporationPerSoilLayer, double openCanopy, double remainingDailyPET);
+    void subtractSoilEvaporationFromSoilWaterPool(UTILS utils, PARAMETER parameter, int numberOfTopSoilLayersAffectedByEvaporation, std::vector<double> soilEvaporation);
+
     void setSoilParametersAndVariablesToNaN(UTILS utils, PARAMETER parameter);
     void transferSoilParametersAndVariablesToInterface(UTILS utils);
     void transferSoilParametersAndVariablesFromInterface(UTILS utils);
@@ -289,7 +292,7 @@ public:
     void summarizeTotalSoilNitrogenUptakeFromAllPlants(UTILS utils, PARAMETER parameter, COMMUNITY &community);
     void subtractPlantNitrogenUptakeFromSoilMineralNitrogenPool(UTILS utils, PARAMETER parameter, COMMUNITY &community);
 
-    void calculateSoilCarbonNitrogenDynamics(UTILS utils, PARAMETER parameter, WEATHER weather);
+    void calculateSoilCarbonNitrogenDynamics(UTILS utils, PARAMETER parameter, INTERACTION interaction, WEATHER weather);
     void splitLitterFluxesToStructuralAndMetabolicLitterPools(UTILS utils, PARAMETER parameter, WEATHER weather);
     void addCarbonNitrogenOfPlantLitterToStructuralAndMetabolicLitterPools(UTILS utils, PARAMETER parameter, WEATHER weather, std::string type);
     double calculateDIRABS(UTILS utils, std::string type);
@@ -299,7 +302,7 @@ public:
     double adjustLigninContentOfStructuralLitter(UTILS utils, double fractionOfLignin, double carbonAddedToStructuralLitter, double strlig, std::string type);
     void processLitterFluxes(UTILS utils, double dirabs, double cadds, double caddm, double eadds, double eaddm, std::string type);
 
-    double calculateTemperatureAndWaterEffectsOnDecomposition(UTILS utils, PARAMETER parameter);
+    double calculateTemperatureAndWaterEffectsOnDecomposition(UTILS utils, INTERACTION interaction, PARAMETER parameter);
     void doDecompositionFluxesInLitterAndSoilPools(UTILS utils);
     void startDecomposition(UTILS utils, double carbonPool, double factor, double lignin, std::string typeOfSoilPool);
     void calculateDecisiveCarbonNitrogenRatiosForDecomposition(UTILS utils, std::string typeOfPool);

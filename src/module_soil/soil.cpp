@@ -100,7 +100,7 @@ void SOIL::calculateSoilResourceDynamics(UTILS utils, PARAMETER parameter, WEATH
     if (parameter.useInternalSoilModule || parameter.useInternalSoilModule_selfCoupled_setVariables)
     {
         /* soil carbon & nitrogen dynamics */
-        calculateSoilCarbonNitrogenDynamics(utils, parameter, weather);
+        calculateSoilCarbonNitrogenDynamics(utils, parameter, interaction, weather);
     }
 }
 
@@ -202,7 +202,7 @@ double SOIL::meltingOfSnow(UTILS utils, PARAMETER parameter, WEATHER weather, do
         {
             // 0.2% of snow (in mm) per temperature degree increase above 0 is able to melt per day
             double meltingSnow = 0.002 * fullDayAverageAirTemperature;
-            meltingSnow = std::max(meltingSnow, solidSnowContent);
+            meltingSnow = std::min(meltingSnow, solidSnowContent);
             solidSnowContent -= meltingSnow;
             liquidSnowContent += meltingSnow;
         }
@@ -221,7 +221,15 @@ double SOIL::meltingOfSnow(UTILS utils, PARAMETER parameter, WEATHER weather, do
         if (liquidSnowContent > maximumLiquidSnowContent)
         {
             meltedSnowAsAddedWaterInputToSoil = liquidSnowContent - maximumLiquidSnowContent;
-            liquidSnowContent -= meltedSnowAsAddedWaterInputToSoil;
+            if (meltedSnowAsAddedWaterInputToSoil <= liquidSnowContent)
+            {
+                liquidSnowContent -= meltedSnowAsAddedWaterInputToSoil;
+            }
+            else
+            {
+                utils.handleError("Liquid snow content is below 0 through melting.");
+                liquidSnowContent = 0.0;
+            }
         }
     }
 
@@ -255,12 +263,12 @@ double SOIL::evaporationOfSnow(UTILS utils, WEATHER weather, PARAMETER parameter
 
         if (solidSnowContent < 0.0)
         {
-            // utils.handleError("Solid snow pack is below 0 through evaporation / sublimation.");
+            utils.handleError("Solid snow pack is below 0 through evaporation / sublimation.");
             solidSnowContent = 0.0;
         }
         if (liquidSnowContent < 0.0)
         {
-            // utils.handleError("Liquid snow pack is below 0 through evaporation / sublimation.");
+            utils.handleError("Liquid snow pack is below 0 through evaporation / sublimation.");
             liquidSnowContent = 0.0;
         }
 
@@ -282,7 +290,7 @@ double SOIL::interceptionByVegetation(UTILS utils, INTERACTION interaction, doub
     double canopyClosure = 1.0 - exp(-interaction.LAIwithLightExtinction.at(0));
     interception = maximumInterception * canopyClosure;
 
-    interception = std::max(remainingDailyPET, interception);
+    interception = std::min(remainingDailyPET, interception);
     dailyWaterInputToSoil -= interception;
     return (dailyWaterInputToSoil);
 }
@@ -292,12 +300,12 @@ double SOIL::interceptionByVegetation(UTILS utils, INTERACTION interaction, doub
  */
 double SOIL::runOffAtSurface(UTILS utils, PARAMETER parameter, double dailyWaterInputToSoil)
 {
-    // if (!par.disableRunoff) // TODO (coupling)
-    //{
-    surfaceRunOff = 0.41 * dailyWaterInputToSoil - (28.7 / 30.0);
-    surfaceRunOff = std::max(surfaceRunOff, 0.0);
-    dailyWaterInputToSoil -= surfaceRunOff;
-    //}
+    if (!parameter.disableRunoff)
+    {
+        surfaceRunOff = 0.41 * dailyWaterInputToSoil - (28.7 / 30.0);
+        surfaceRunOff = std::max(surfaceRunOff, 0.0);
+        dailyWaterInputToSoil -= surfaceRunOff;
+    }
 
     return (dailyWaterInputToSoil);
 }
@@ -391,12 +399,7 @@ void SOIL::leachingOfNitrogenCoupledToWaterPercolation(UTILS utils, PARAMETER pa
     nitrogenVolatilization += streamOfNitrogen;
 }
 
-/**
- * @cite approach adapted from BOWET model
- *   // BOWET: constant extraction of evaporative water to maximum soil depth of 40 cm
- *        // parameters from BOWET soil model (basis of CANDY)
- */
-void SOIL::evaporationFromTopSoilLayer(UTILS utils, PARAMETER parameter, COMMUNITY &community, double remainingDailyPET)
+double SOIL::estimateSoilSurfaceAffectedBySoilEvaporation(UTILS utils, COMMUNITY community)
 {
     double canopyClosure = 0.0;
     if (community.totalLeafAreaIndexOfPlantsInCommunity > 0)
@@ -404,25 +407,104 @@ void SOIL::evaporationFromTopSoilLayer(UTILS utils, PARAMETER parameter, COMMUNI
         canopyClosure = community.greenleafAreaIndexOfPlantsInCommunity / community.totalLeafAreaIndexOfPlantsInCommunity;
     }
 
-    int numberOfTopSoilLayersAffectedByEvaporation = 4;
-    for (int i = 0; i < numberOfTopSoilLayersAffectedByEvaporation; i++)
+    if (canopyClosure > 1.0)
     {
-        if (waterContent_soilWaterPoolPerSoilLayer.at(i) > permanentWiltingPoint.at(i))
+        canopyClosure = 1.0;
+        utils.handleWarning("Canopy closure is above 1.0, setting to 1.0");
+    }
+
+    return (1.0 - canopyClosure);
+}
+
+double SOIL::calculateSoilHorizonAffectedBySoilEvaporation(UTILS utils, PARAMETER parameter, int numberOfTopSoilLayersAffectedByEvaporation)
+{
+    double soilDepthAffectedByEvaporation = 0; // cm
+    for (int soilLayer = 0; soilLayer < numberOfTopSoilLayersAffectedByEvaporation; soilLayer++)
+    {
+        soilDepthAffectedByEvaporation += parameter.soilLayerWidth.at(soilLayer);
+    }
+    return soilDepthAffectedByEvaporation;
+}
+
+std::vector<double> SOIL::calculateDistributionOfEvaporationAcrossAffectedSoilLayers(UTILS utils, PARAMETER parameter, int numberOfTopSoilLayersAffectedByEvaporation, double soilDepthAffectedByEvaporation, double remainingDailyPET)
+{
+    std::vector<double> proportionOfEvaporationPerSoilLayer(numberOfTopSoilLayersAffectedByEvaporation, 0.0);
+
+    double layer0 = 0;
+    double layer1 = 0;
+    double normalizationFactor = 0.0;
+
+    for (int soilLayer = 0; soilLayer < numberOfTopSoilLayersAffectedByEvaporation; soilLayer++)
+    {
+        double drainageProportion = 20.0; // TODO: add parameter.drainageProportion;
+        (soilLayer > 0) ? layer0 += parameter.soilLayerWidth.at(soilLayer - 1) : layer0 = 0;
+        layer1 += parameter.soilLayerWidth.at(soilLayer);
+
+        double part1 = -(1.0 / drainageProportion) * (layer1 - layer0);
+        double part2 = ((1.0 + drainageProportion) / (std::pow(drainageProportion, 2.0)));
+        double part3 = log(1.0 + drainageProportion * (layer1 / soilDepthAffectedByEvaporation)) - log(1.0 + drainageProportion * (layer0 / soilDepthAffectedByEvaporation));
+        proportionOfEvaporationPerSoilLayer.at(soilLayer) = part1 + (part2 * part3 * soilDepthAffectedByEvaporation);
+        normalizationFactor += proportionOfEvaporationPerSoilLayer.at(soilLayer);
+    }
+
+    for (int soilLayer = 0; soilLayer < numberOfTopSoilLayersAffectedByEvaporation; soilLayer++)
+    {
+        proportionOfEvaporationPerSoilLayer.at(soilLayer) = proportionOfEvaporationPerSoilLayer.at(soilLayer) / normalizationFactor;
+    }
+
+    return proportionOfEvaporationPerSoilLayer;
+}
+
+std::vector<double> SOIL::calculateSoilEvaporationPerSoilLayer(UTILS utils, PARAMETER parameter, int numberOfTopSoilLayersAffectedByEvaporation, std::vector<double> proportionOfEvaporationPerSoilLayer, double openCanopy, double remainingDailyPET)
+{
+    std::vector<double> soilEvaporation(numberOfTopSoilLayersAffectedByEvaporation, 0.0);
+    for (int soilLayer = 0; soilLayer < numberOfTopSoilLayersAffectedByEvaporation; soilLayer++)
+    {
+        /* soil water content per soil layer is not allowed to fall below permanent wilting point */
+        if (waterContent_soilWaterPoolPerSoilLayer.at(soilLayer) > permanentWiltingPoint.at(soilLayer))
         {
+            double criticalPoint = 0.7; // TODO: add parameter for critical point of soil water content for evaporation
+            double reductionFactor = (waterContent_soilWaterPoolPerSoilLayer.at(soilLayer) - permanentWiltingPoint.at(soilLayer)) / (criticalPoint * fieldCapacity.at(soilLayer) - permanentWiltingPoint.at(soilLayer));
+            reductionFactor = std::min(reductionFactor, 1.0);
 
-            double rk = (waterContent_soilWaterPoolPerSoilLayer.at(i) - permanentWiltingPoint.at(i)) / (fieldCapacity.at(i) - permanentWiltingPoint.at(i));
-            double layer0 = ((double)i) * parameter.soilLayerWidth.at(i);
-            double layer1 = ((double)(i + 1)) * parameter.soilLayerWidth.at(i + 1);
-            double cf = 20.0; // TODO: add parameter.Water_DrainageProportion;
-            double h2 = rk * (1. / cf) * 22.7609 * (layer0 - layer1) +
-                        9.10436 * ((1. + cf) / (pow(cf, 2.))) * (log(0.4 + cf * layer1) - log(0.4 + cf * layer0));
-            double evlos = (1.0 - canopyClosure) * h2 * remainingDailyPET;
-
-            waterContent_soilWaterPoolPerSoilLayer.at(i) -= evlos;
-            evaporation += evlos;
-            waterContent_soilWaterPoolPerSoilLayer.at(i) = std::max(waterContent_soilWaterPoolPerSoilLayer.at(i), permanentWiltingPoint.at(i));
+            soilEvaporation.at(soilLayer) = openCanopy * reductionFactor * proportionOfEvaporationPerSoilLayer.at(soilLayer) * remainingDailyPET;
         }
     }
+    return soilEvaporation;
+}
+
+void SOIL::subtractSoilEvaporationFromSoilWaterPool(UTILS utils, PARAMETER parameter, int numberOfTopSoilLayersAffectedByEvaporation, std::vector<double> soilEvaporation)
+{
+    for (int soilLayer = 0; soilLayer < numberOfTopSoilLayersAffectedByEvaporation; soilLayer++)
+    {
+        /* soil water content per soil layer is not allowed to fall below permanent wilting point */
+        waterContent_soilWaterPoolPerSoilLayer.at(soilLayer) -= soilEvaporation.at(soilLayer);
+        evaporation += soilEvaporation.at(soilLayer);
+
+        /* ensure soil water content does not fall below permanent wilting point */
+        waterContent_soilWaterPoolPerSoilLayer.at(soilLayer) = std::max(waterContent_soilWaterPoolPerSoilLayer.at(soilLayer), permanentWiltingPoint.at(soilLayer));
+    }
+}
+/**
+ * @cite approach adapted from BOWET model (https://pdf.sciencedirectassets.com/271743/1-s2.0-S0304380000X00142/1-s2.0-030438009400160J/main.pdf?X-Amz-Security-Token=IQoJb3JpZ2luX2VjEGYaCXVzLWVhc3QtMSJIMEYCIQDuwipX8QK68P1nXwQAqnGhkqTaAlubnrE3xhUdTWpBSwIhAIvDfer7qtYGKlRvtzfnbeJ89ZqTHM%2FC8NiaKsTtfQzhKrIFCC8QBRoMMDU5MDAzNTQ2ODY1IgyIliwA2Dfnd54xeXMqjwXVSmg0x9y%2BPL3wsOZuLwjSASVir0VI2K%2BlR4KwiOjA2fPbGCs%2FsWlIP%2B1IVrPL25LJRcsSEtEkaABRyfpfFv7TgNI%2FEx0XjBTYdYBogYUiCa54MuZ%2BrB2OEz4%2B8CgyZSVf5XW4ZiT7ao03W%2F%2B%2FTYQvGnnQ6m7a7MJXEQiTsae3U09KER7MXmagn54%2B%2Fr1zm5ghtcYNGXd2OInBR%2FErfRNX%2BQ4fzDhcIhRphHBTyU98Bncy3x0L%2BGbRA%2FacLcptUgKUDJySx41yaX%2Bx3ucemR5ZS6tPqd4IGY02WKgGTtAAhRP3rhNNgoI%2BxM1XF4VAMNTnQSzyQazPCl1MnXPKu7PYFDObbtSM2E5XoERUbypnwzvVif%2FjPrjLpE3mWaS3vTKvGMZ6Nu%2FONtwhwGvKvpx7HCYzQy%2FWtJQs3SRQc9jy7fjUDtlpQq1%2BhqjSJ1TXqUqQ%2FiWPExB0vURo38DkSMWJfXHuwjjsOeV4Li7egk8qwh0Srm6O3JIC2C6agjSC%2BGpJDO9a%2BPR9zNKpwSDGhdjOeCMyVU53OzbXkEP5F%2BY7VMUboHKQdcWWRjW6mlK%2BKPH1K%2BjQnkdQ2UjK79MtGANADeseqqF37W%2FqOLxYIQ8S18Q2w%2BIwmQFeiFsXina%2BGy8g%2FgscffhgE14bXJU57LayjTrbH4iLr2nATncYaKL%2FFG8BFk%2BgZRuD0assV4wwzAM0bw6SBtmIBxutoAYbgRK0UCxdPl1o8%2BwogM34cRPzl65OPwi3UDT1q3ERN%2F%2FBszP4gT2FTsg%2BFqd0v6ln53wrtEPnEFoUBzApKXUfC%2Bed%2B5wU1xJYMaZM4BELf0dhssZNhGX8GORAZ2jRGYRC69g2E6ahPa1n%2FTcqfgLq40pJMIy8kswGOrABvwFD3Adpp9lAP34mzgLtY1Y%2FSgTq%2BbW08za3C8YdMuz9JwTZxpqtTsKw7KtKSCgEfGnQg9zbKdvuUiY1dHcP7GjsQpOeXasSWHippHmFVsNBYCnOA5acj8aMuP%2FPY%2FQfUt2GTxV2VS8g4vsBA7A8VriucMWSD5qZbJAn4Q%2BA%2BteVaRO8roulm2HVborAY3Goe8MuHjfkMG9OfOsY0C5W6duFfmfxMxvgaIaVM5BEIk0%3D&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260205T150222Z&X-Amz-SignedHeaders=host&X-Amz-Expires=300&X-Amz-Credential=ASIAQ3PHCVTYXC4X7SOS%2F20260205%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=1aacef28e8da96be7e74f4c03630f8d5eb16852ffe158997bb7ad1859b4868bf&hash=e5ac8d9af2e4f438fe54150cf99ce692c3ca7c3f7c74368db73c536da3645486&host=68042c943591013ac2b2430a89b270f6af2c76d8dfd086a07176afe7c76c2c61&pii=030438009400160J&tid=spdf-7a3e919f-ed7f-4a75-a129-bb1471b6207f&sid=1c2d420171867746c34b386-1c2440f5943agxrqb&type=client&tsoh=d3d3LnNjaWVuY2VkaXJlY3QuY29t&rh=d3d3LnNjaWVuY2VkaXJlY3QuY29t&ua=1e075c035c515b5d0657&rr=9c9349d53f0b1eca&cc=de)
+ * @brief constant extraction of evaporative water to maximum soil depth of 40 cm
+ */
+void SOIL::evaporationFromTopSoilLayer(UTILS utils, PARAMETER parameter, COMMUNITY &community, double remainingDailyPET)
+{
+    /* estimate fraction of soil surface affected by evaporation */
+    double openCanopy = estimateSoilSurfaceAffectedBySoilEvaporation(utils, community);
+
+    /* calculate soil depth affected by evaporation */
+    int numberOfTopSoilLayersAffectedByEvaporation = 4; // TODO: add as parameter
+    double soilDepthAffectedByEvaporation = calculateSoilHorizonAffectedBySoilEvaporation(utils, parameter, numberOfTopSoilLayersAffectedByEvaporation);
+
+    /* calculate distribution of evaporation across affected soil layers */
+    std::vector<double> proportionOfEvaporationPerSoilLayer = calculateDistributionOfEvaporationAcrossAffectedSoilLayers(utils, parameter, numberOfTopSoilLayersAffectedByEvaporation, soilDepthAffectedByEvaporation, remainingDailyPET);
+
+    /* calculate soil evaporation per soil layer */
+    std::vector<double> soilEvaporation = calculateSoilEvaporationPerSoilLayer(utils, parameter, numberOfTopSoilLayersAffectedByEvaporation, proportionOfEvaporationPerSoilLayer, openCanopy, remainingDailyPET);
+
+    subtractSoilEvaporationFromSoilWaterPool(utils, parameter, numberOfTopSoilLayersAffectedByEvaporation, soilEvaporation);
 }
 
 void SOIL::doPlantSoilWaterUptakeAndGppLimitationBySoilWaterConditions(UTILS utils, PARAMETER parameter, WEATHER weather, COMMUNITY &community)
@@ -1370,11 +1452,11 @@ void SOIL::subtractPlantNitrogenUptakeFromSoilMineralNitrogenPool(UTILS utils, P
 // ##################################################################################################
 // carbon-nitrogen dynamics
 // ##################################################################################################
-void SOIL::calculateSoilCarbonNitrogenDynamics(UTILS utils, PARAMETER parameter, WEATHER weather)
+void SOIL::calculateSoilCarbonNitrogenDynamics(UTILS utils, PARAMETER parameter, INTERACTION interaction, WEATHER weather)
 {
     splitLitterFluxesToStructuralAndMetabolicLitterPools(utils, parameter, weather);
 
-    decompositionFactor = calculateTemperatureAndWaterEffectsOnDecomposition(utils, parameter);
+    decompositionFactor = calculateTemperatureAndWaterEffectsOnDecomposition(utils, interaction, parameter);
 
     doDecompositionFluxesInLitterAndSoilPools(utils);
 
@@ -1809,16 +1891,15 @@ void SOIL::calculateDecisiveCarbonNitrogenRatiosForDecomposition(UTILS utils, st
 /**
  * @cite Function and code has been reused from the CENTURY4.0 soil model
  */
-double SOIL::calculateTemperatureAndWaterEffectsOnDecomposition(UTILS utils, PARAMETER parameter)
-
+double SOIL::calculateTemperatureAndWaterEffectsOnDecomposition(UTILS utils, INTERACTION interaction, PARAMETER parameter)
 {
     // TODO: move somewhere else??
     if (solidSnowContent > 0.0)
     {
-        soilTemperature = 0.0;
+        interaction.soilTemperature = 0.0;
     }
 
-    double temperatureFunction = (((atan(((soilTemperature - 15.4) + (2 * PI)) / (0.031 * 11.75 * 29.7))) + atan(0.031 * 29.7 * PI)) /
+    double temperatureFunction = (((atan(((interaction.soilTemperature - 15.4) + (2 * PI)) / (0.031 * 11.75 * 29.7))) + atan(0.031 * 29.7 * PI)) /
                                   (2 * atan(0.031 * 29.7 * PI)));
 
     double relativeWaterContent = (waterContent_soilWaterPoolPerSoilLayer.at(0) - permanentWiltingPoint.at(0)) / (fieldCapacity.at(0) - permanentWiltingPoint.at(0));

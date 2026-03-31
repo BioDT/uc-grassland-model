@@ -30,7 +30,7 @@ public:
         {"deimsID", "latitude", "longitude", "lastYear", "firstYear",
          "weatherFile", "soilFile", "managementFile", "plantTraitsFile", "processSetupFile",
          "communityOutputFile", "pftOutputFile", "plantCohortOutputFile", "soilCarbonOutputFile",
-         "soilNitrogenOutputFile", "soilWaterOutputFile", "outputWritingDatesFile", "clippingHeightOfBiomassMeasurement",
+         "soilNitrogenOutputFile", "soilWaterOutputFile", "soilResourcesPerSoilLayerOutputFile", "outputWritingDatesFile", "clippingHeightOfBiomassMeasurement",
          "randomNumberGeneratorSeed"};
 
     std::string deimsID;
@@ -51,6 +51,7 @@ public:
     bool soilCarbonOutputFile;
     bool soilNitrogenOutputFile;
     bool soilWaterOutputFile;
+    bool soilResourcesPerSoilLayerOutputFile;
     std::string outputWritingDatesFile;
     double clippingHeightOfBiomassMeasurement;
     unsigned int randomNumberGeneratorSeed;

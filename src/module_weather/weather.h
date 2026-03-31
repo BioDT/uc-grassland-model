@@ -15,60 +15,19 @@
 class WEATHER
 {
 public:
-   WEATHER();
-   ~WEATHER();
+    WEATHER();
+    ~WEATHER();
 
-   /**
-    * @brief A vector storing the dates of the weather data.
-    *
-    * Each entry corresponds to a specific day for which weather data is recorded.
-    */
-   std::vector<std::string> weatherDates;
+    std::vector<std::string> weatherDates;
+    std::vector<double> precipitation;
+    std::vector<double> fullDayAirTemperature;
+    std::vector<double> dayTimeAirTemperature;
+    std::vector<double> photosyntheticPhotonFluxDensity;
+    std::vector<double> potEvapoTranspiration;
+    std::vector<double> dayLength;
 
-   /**
-    * @brief A vector storing precipitation values for each corresponding date.
-    *
-    * The values represent the amount of precipitation measured (in mm / day).
-    */
-   std::vector<double> precipitation;
-
-   /**
-    * @brief A vector storing the full-day average air temperature.
-    *
-    * The values represent the average air temperature for the full day (average of 24 hours, in °C).
-    */
-   std::vector<double> fullDayAirTemperature;
-
-   /**
-    * @brief A vector storing the daytime air temperature.
-    *
-    * The values represent the average air temperature during daylight hours (from astronomic sunrise to sunset, in °C).
-    */
-   std::vector<double> dayTimeAirTemperature;
-
-   /**
-    * @brief A vector storing photosynthetic photon flux density (PPFD) values.
-    *
-    * The values represent the light intensity available for photosynthesis (in µmol(photons)/m²/s).
-    */
-   std::vector<double> photosyntheticPhotonFluxDensity;
-
-   /**
-    * @brief A vector storing potential evapotranspiration values.
-    *
-    * The values represent the potential evapotranspiration (mm / day).
-    */
-   std::vector<double> potEvapoTranspiration;
-
-   /**
-    * @brief A vector storing the length of the day.
-    *
-    * The values represent the astronomically duration of daylight (from sunrise to sunset, in hours / day).
-    */
-   std::vector<double> dayLength;
-
-   double calculateAnnualPrecipitationOfSpecificYear(UTILS utils, PARAMETER parameter, int year);
-   double calculateMeanAnnualPrecipitationFromYearAToYearB(UTILS utils, PARAMETER parameter, int yearA, int yearB);
-   double calculateAverageAirTemperatureOfSpecificYear(UTILS utils, PARAMETER parameter, int specificYear);
-   double calculateAverageAirTemperatureFromYearAToYearB(UTILS utils, PARAMETER parameter, int yearA, int yearB);
+    double calculateAnnualPrecipitationOfSpecificYear(UTILS utils, PARAMETER parameter, int year);
+    double calculateMeanAnnualPrecipitationFromYearAToYearB(UTILS utils, PARAMETER parameter, int yearA, int yearB);
+    double calculateAverageAirTemperatureOfSpecificYear(UTILS utils, PARAMETER parameter, int specificYear);
+    double calculateAverageAirTemperatureFromYearAToYearB(UTILS utils, PARAMETER parameter, int yearA, int yearB);
 };
