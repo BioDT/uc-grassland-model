@@ -654,7 +654,11 @@ void OUTPUT::createOutputFolder(std::string path, UTILS utils)
     }
 
     outputDirectory = outputDirectory + "output" + pathSeparator;
-    _mkdir(outputDirectory.c_str());
+    #ifdef _WIN32
+        _mkdir(outputDirectory.c_str());
+    #else
+        mkdir(outputDirectory.c_str(), 0777);
+    #endif
 }
 /**
  * @brief Reads output writing dates from a file.
