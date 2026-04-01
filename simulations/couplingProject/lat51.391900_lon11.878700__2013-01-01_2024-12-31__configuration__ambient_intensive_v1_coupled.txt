@@ -55,7 +55,7 @@ plantTraitsFile	couplingProject/plant_traits__ambient_intensive_v1.txt
 \datatype:string
 \description:File name of model parameters for plant processes (traits of species or plant functional types) 
 
-processSetupFile	couplingProject/process_setup__ambient_intensive_v1.txt
+processSetupFile	couplingProject/process_setup__ambient_intensive_v1_coupled.txt
 \datatype:string
 \description:File name of model parameters for activating or deactivating model processes
 

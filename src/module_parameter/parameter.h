@@ -132,13 +132,13 @@ public:
     // **** parameters of the process setup file **** //
     // vector needed to have names as string-keywords for searching parameters in process setup file
     std::vector<std::string> processSetupParameterNames =
-        {"useInternalSoilModule", "useExternalSoilModule_BODIUM", "useExternalSoilModule_selfCoupled_getVariables", "useExternalSoilModule_selfCoupled_setVariables",
+        {"useInternalSoilModule", "useExternalSoilModule_BODIUM", "useExternalSoilModule_selfCoupled_getVariables", "useInternalSoilModule_selfCoupled_setVariables",
          "stochasticSimulation"};
 
     bool useInternalSoilModule;
     bool useExternalSoilModule_BODIUM;
     bool useExternalSoilModule_selfCoupled_getVariables;
-    bool useExternalSoilModule_selfCoupled_setVariables;
+    bool useInternalSoilModule_selfCoupled_setVariables;
     bool stochasticSimulation;
 
     /* parameters derived from other input parameters in the code (not listed in the input files) */

@@ -16,7 +16,7 @@ stochasticSimulation	false
 #  Soil modules 
 # =============================================================================
 
-useInternalSoilModule	true
+useInternalSoilModule	false
 \datatype:boolean
 \description:de-/activation of the soil dynamics calculated internally
 
@@ -31,7 +31,7 @@ useExternalSoilModule_selfCoupled_getVariables	false
 \description:de-/activation of a self-coupling test framework for getting interface variables
 
 
-useInternalSoilModule_selfCoupled_setVariables	false
+useInternalSoilModule_selfCoupled_setVariables	true
 \datatype:boolean
 \description:de-/activation of a self-coupling test framework for setting interface variables
 

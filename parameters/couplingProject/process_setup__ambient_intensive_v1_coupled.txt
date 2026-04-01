@@ -12,19 +12,18 @@ stochasticSimulation	false
 \datatype:boolean
 \description:de-/activation of stochasticity in the model (use of random number generator)
 
+
 # =============================================================================
 #  Soil modules 
 # =============================================================================
 
-useInternalSoilModule	true
+useInternalSoilModule	false
 \datatype:boolean
 \description:de-/activation of the soil dynamics calculated internally
 
-
-useExternalSoilModule_BODIUM	false
+useExternalSoilModule_BODIUM	true
 \datatype:boolean
 \description:de-/activation of birdirectional coupling to the soil model BODIUM
-
 
 useExternalSoilModule_selfCoupled_getVariables	false
 \datatype:boolean

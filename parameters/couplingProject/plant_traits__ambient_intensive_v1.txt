@@ -112,7 +112,7 @@ maximumPlantHeight	200
 \unit:cm
 \description:maximum height of a plant
 
-plantHeightToWidthRatio	0.76628257
+plantHeightToWidthRatio	0.5
 \datatype:float-array
 \unit:cm cm-1
 \description:height to width ratio of a plant's growth form (cylindric)
@@ -132,15 +132,15 @@ plantShootRootRatio	3.41
 \unit:g(odm) g(odm)-1
 \description:shoot to root ratio (organic dry matter of biomass)
 
-plantRootDepthParamIntercept	1.16405201
+plantRootDepthParamIntercept	0.60471778
 \datatype:float-array
 \description:intercept of power-law relationship of shoot biomass with rooting depth
 
-plantRootDepthParamExponent	0.20681463
+plantRootDepthParamExponent	0.1807843
 \datatype:float-array
 \description:exponent of power-law relationship of shoot biomass with rooting depth
 
-plantShootOverlapFactors	0.34716036
+plantShootOverlapFactors	1.0
 \datatype:float-array
 \description:fraction of possible overlapping of a plant's shoot with other plants
 
@@ -152,12 +152,12 @@ communityShadingInGppCalculation	true
 \datatype:boolean
 \description:de-/activation of community shading in the calculation of GPP
 
-maximumGrossLeafPhotosynthesisRate	18.14207236
+maximumGrossLeafPhotosynthesisRate	27.37948867
 \datatype:float-array
 \unit:mikromol(CO2) m-2 s-1
 \description:maximum gross leaf photosynthesis rate
 
-initialSlopeOfLightResponseCurve	0.02
+initialSlopeOfLightResponseCurve	0.1071887
 \datatype:float-array
 \unit:mikromol(CO2) mikromol(photons)-1
 \description:initial slope of light response curve
@@ -242,7 +242,7 @@ rhizobiaExchangeRateCToN	10.0
 # 		Soil water demand and limitation  
 # =============================================================================
 
-plantWaterUseEfficiency	19.10832187
+plantWaterUseEfficiency	11.19306317
 \datatype:float-array
 \unit:g(odm) kg(h2O)-1
 \description:water use efficiency coefficient

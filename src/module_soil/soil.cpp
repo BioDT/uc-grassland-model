@@ -16,35 +16,75 @@ SOIL::~SOIL() {};
  * @param biomass Biomass of each plant part [g]
  * @param typeOfMaterial Type of plant material: "surface_green", "surface_brown", "soil_root", or "soil_seed"
  * @param pft Plant functional type index
+ * @param numberOfTargetSoilLayers Number of soil layer litter material is distributed over (only required for external soil module)
  */
-void SOIL::transferDyingPlantPartsToLitterPools(UTILS utils, PARAMETER parameter, int number, double biomass, std::string typeOfMaterial, int pft)
+void SOIL::transferDyingPlantPartsToLitterPools(UTILS utils, PARAMETER parameter, int number, double biomass, std::string typeOfMaterial, int pft, int numberOfTargetSoilLayers)
 {
 
     double carbonFlux = number * (biomass * carbonContentOdm);
 
-    if (typeOfMaterial == "surface_green")
+    if (parameter.useInternalSoilModule || parameter.useInternalSoilModule_selfCoupled_setVariables)
     {
-        carbonContent_surfaceGreenLitterPool += carbonFlux;
-        nitrogenContent_surfaceGreenLitterPool += (carbonFlux / parameter.plantCNRatioGreenLeaves[pft]);
+        if (typeOfMaterial == "surface_green")
+        {
+            carbonContent_surfaceGreenLitterPool += carbonFlux;
+            nitrogenContent_surfaceGreenLitterPool += (carbonFlux / parameter.plantCNRatioGreenLeaves[pft]);
+        }
+        else if (typeOfMaterial == "surface_brown")
+        {
+            carbonContent_surfaceBrownLitterPool += carbonFlux;
+            nitrogenContent_surfaceBrownLitterPool += (carbonFlux / parameter.plantCNRatioBrownLeaves[pft]);
+        }
+        else if (typeOfMaterial == "soil_root")
+        {
+            carbonContent_soilRootLitterPool += carbonFlux;
+            nitrogenContent_soilRootLitterPool += (carbonFlux / parameter.plantCNRatioRoots[pft]);
+        }
+        else if (typeOfMaterial == "soil_seed")
+        {
+            carbonContent_soilSeedLitterPool += carbonFlux;
+            nitrogenContent_soilSeedLitterPool += (carbonFlux / parameter.plantCNRatioSeeds[pft]);
+        }
+        else
+        {
+            utils.handleError("Wrong type of material of litter.");
+        }
     }
-    else if (typeOfMaterial == "surface_brown")
+    else if (parameter.useExternalSoilModule_BODIUM)
     {
-        carbonContent_surfaceBrownLitterPool += carbonFlux;
-        nitrogenContent_surfaceBrownLitterPool += (carbonFlux / parameter.plantCNRatioBrownLeaves[pft]);
-    }
-    else if (typeOfMaterial == "soil_root")
-    {
-        carbonContent_soilRootLitterPool += carbonFlux;
-        nitrogenContent_soilRootLitterPool += (carbonFlux / parameter.plantCNRatioRoots[pft]);
-    }
-    else if (typeOfMaterial == "soil_seed")
-    {
-        carbonContent_soilSeedLitterPool += carbonFlux;
-        nitrogenContent_soilSeedLitterPool += (carbonFlux / parameter.plantCNRatioSeeds[pft]);
-    }
-    else
-    {
-        utils.handleError("Wrong type of material of litter.");
+        if (typeOfMaterial == "surface_green")
+        {
+            couplingInterface_surfaceLitterFluxCarbon += carbonFlux;
+            couplingInterface_surfaceLitterFluxNitrogen += (carbonFlux / parameter.plantCNRatioGreenLeaves[pft]);
+        }
+        else if (typeOfMaterial == "surface_brown")
+        {
+            couplingInterface_surfaceLitterFluxCarbon += carbonFlux;
+            couplingInterface_surfaceLitterFluxNitrogen += (carbonFlux / parameter.plantCNRatioBrownLeaves[pft]);
+        }
+        else if (typeOfMaterial == "soil_seed")
+        {
+            couplingInterface_surfaceLitterFluxCarbon += carbonFlux;
+            couplingInterface_surfaceLitterFluxNitrogen += (carbonFlux / parameter.plantCNRatioSeeds[pft]);
+        }
+        else if (typeOfMaterial == "soil_root")
+        {
+            if (numberOfTargetSoilLayers == 0)
+            {
+                utils.handleError("External soil module require number of target layers for root litter.");
+            }
+            // distribute dying root flux equally among rooting layers
+            for (int soilLayer = 0; soilLayer < numberOfTargetSoilLayers; soilLayer++)
+            {
+                couplingInterface_rootLitterFluxCarbon[soilLayer] +=
+                    carbonFlux / numberOfTargetSoilLayers;
+                couplingInterface_rootLitterFluxNitrogen[soilLayer] += (carbonFlux / parameter.plantCNRatioRoots[pft]) / numberOfTargetSoilLayers;
+            }
+        }
+        else
+        {
+            utils.handleError("Wrong type of material of litter.");
+        }
     }
 }
 
@@ -57,8 +97,11 @@ void SOIL::calculateSoilResourceDynamics(UTILS utils, PARAMETER parameter, WEATH
     /* soil water dynamics */
     calculateSoilWaterDynamics(utils, parameter, weather, interaction, community);
 
-    /* soil carbon & nitrogen dynamics */
-    calculateSoilCarbonNitrogenDynamics(utils, parameter, interaction, weather);
+    if (parameter.useInternalSoilModule || parameter.useInternalSoilModule_selfCoupled_setVariables)
+    {
+        /* soil carbon & nitrogen dynamics */
+        calculateSoilCarbonNitrogenDynamics(utils, parameter, interaction, weather);
+    }
 }
 
 // ##################################################################################################
@@ -91,10 +134,11 @@ void SOIL::calculateSoilWaterDynamics(UTILS utils, PARAMETER parameter, WEATHER 
 
     if (parameter.useExternalSoilModule_BODIUM)
     {
-        // landtrans_soilWaterSurfaceInput = dailyWaterInputToSoil;
+        couplingInterface_soilWaterSurfaceInput = dailyWaterInputToSoil;
+        couplingInterface_potentialEvapotranspirationReducedByInterceptionSublimation = remainingDailyPET - interception;
     }
 
-    if (parameter.useInternalSoilModule || parameter.useExternalSoilModule_selfCoupled_setVariables)
+    if (parameter.useInternalSoilModule || parameter.useInternalSoilModule_selfCoupled_setVariables)
     {
         // vertical stream of dailyWaterInputToSoil through soil layers
         soilWaterPercolation(utils, parameter, dailyWaterInputToSoil);
@@ -525,11 +569,11 @@ void SOIL::calculateSoilWaterUptakeByAvailableSoilWaterContentAndLimitPlantGpp(U
 
     if (parameter.useExternalSoilModule_BODIUM)
     {
-        // calculateBodiumWaterReductionAndUptakeWater();
+        calculateBodiumSoilWaterLimitationAndWaterUptake(utils, parameter, community);
     }
     else
     {
-        if (parameter.useExternalSoilModule_selfCoupled_setVariables)
+        if (parameter.useInternalSoilModule_selfCoupled_setVariables)
         {
             transferSoilParametersAndVariablesToInterface(utils);
         }
@@ -556,20 +600,18 @@ void SOIL::calculateSoilWaterUptakeByAvailableSoilWaterContentAndLimitPlantGpp(U
 
 void SOIL::transferSoilParametersAndVariablesToInterface(UTILS utils)
 {
-    /*
-    landtrans_fieldCapacityPerLayer = fieldCapacity;
-    landtrans_permanentWiltingPointPerLayer = permanentWiltingPoint;
-    landtrans_soilWaterPerLayer = waterContent_soilWaterPoolPerSoilLayer;
-    */
+    couplingInterface_fieldCapacityPerSoilLayer = fieldCapacity;
+    couplingInterface_permanentWiltingPointPerSoilLayer = permanentWiltingPoint;
+    couplingInterface_porosityPerSoilLayer = porosity;
+    couplingInterface_waterContentPerSoilLayer = waterContent_soilWaterPoolPerSoilLayer;
 }
 
 void SOIL::transferSoilParametersAndVariablesFromInterface(UTILS utils)
 {
-    /*
-    fieldCapacity = landtrans_fieldCapacityPerLayer;
-    permanentWiltingPoint = landtrans_permanentWiltingPointPerLayer;
-    waterContent_soilWaterPoolPerSoilLayer = landtrans_soilWaterPerLayer;
-    */
+    fieldCapacity = couplingInterface_fieldCapacityPerSoilLayer;
+    permanentWiltingPoint = couplingInterface_permanentWiltingPointPerSoilLayer;
+    waterContent_soilWaterPoolPerSoilLayer = couplingInterface_waterContentPerSoilLayer;
+    porosity = couplingInterface_porosityPerSoilLayer;
 }
 
 void SOIL::setSoilParametersAndVariablesToNaN(UTILS utils, PARAMETER parameter)
@@ -577,6 +619,7 @@ void SOIL::setSoilParametersAndVariablesToNaN(UTILS utils, PARAMETER parameter)
     fieldCapacity.insert(fieldCapacity.begin(), parameter.numberOfSoilLayers, NAN);
     permanentWiltingPoint.insert(permanentWiltingPoint.begin(), parameter.numberOfSoilLayers, NAN);
     waterContent_soilWaterPoolPerSoilLayer.insert(waterContent_soilWaterPoolPerSoilLayer.begin(), parameter.numberOfSoilLayers, NAN);
+    porosity.insert(porosity.begin(), parameter.numberOfSoilLayers, NAN);
 }
 
 void SOIL::calculateSoilWaterLimitationFactorPerPlant(UTILS utils, PARAMETER parameter, COMMUNITY &community)
@@ -673,6 +716,72 @@ void SOIL::calculateSoilWaterUptakePerPlant(UTILS utils, COMMUNITY &community)
     }
 }
 
+void SOIL::calculateBodiumSoilWaterLimitationAndWaterUptake(UTILS utils, PARAMETER parameter, COMMUNITY &community)
+{
+    /* !
+    \brief		Calculates water reduction factor plantwise and water uptake (transpiration) per layer
+    */
+    // const taken from Bodium:
+    double h3 = -1500000;       // values from Wesseling and Brandyk, 1985, Pa, except h3, Hydrus Doku S. 109 //
+                                // as PWP definition in chernozem
+    double h2L = parameter.h2L; //-300000; //-80000;
+    double h2H = parameter.h2H; //-50000; //-20000;
+    double h1 = -2500;
+    double h0 = -1000;
+    double transp_low = 1;  // lower potential transpiration rate
+    double transp_high = 5; // higher potential transpiration rate
+
+    // ##### Calculations of plants reduction factors #####
+    double h2 = (community.totalSoilWaterDemand < transp_low) ? h2L
+                : ((community.totalSoilWaterDemand >= transp_low) && (community.totalSoilWaterDemand <= transp_high))
+                    ? (h2L + ((community.totalSoilWaterDemand - transp_low) / (transp_high - transp_low)) * (h2H - h2L))
+                    : h2H;
+    for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
+    {
+        if (community.allPlants.at(cohortindex)->amount > 0)
+        {
+            // iterating through the layers calculating waterPotentialPlantRootAverage (bodiums "psi_t")
+            // from landtrans_waterPotentialPerLayer (bodiums "psiloc"),
+            // assuming root equally distributed between rooting layers
+            double waterPotentialPlantRootAverage = 0.;
+            double waterUptakeWeightingFactorSum = 0.;
+
+            for (int soilLayer = 0; soilLayer < community.allPlants.at(cohortindex)->numberOfSoilLayersRooting; soilLayer++)
+            {
+                waterPotentialPlantRootAverage +=
+                    couplingInterface_soilWaterPotentialPerSoilLayer[soilLayer] / community.allPlants.at(cohortindex)->numberOfSoilLayersRooting;
+                waterUptakeWeightingFactorSum += couplingInterface_soilWaterPotentialPerSoilLayer[soilLayer] < h3
+                                                     ? 0
+                                                     : (couplingInterface_soilWaterPotentialPerSoilLayer[soilLayer] - h3);
+            }
+            community.allPlants.at(cohortindex)->limitingFactorGppWater =
+                (waterPotentialPlantRootAverage < h3)   ? 0
+                : (waterPotentialPlantRootAverage < h2) ? ((waterPotentialPlantRootAverage - h3) / (h2 - h3))
+                : (waterPotentialPlantRootAverage < h1) ? 1
+                : (waterPotentialPlantRootAverage < h0) ? ((waterPotentialPlantRootAverage - h0) / (h1 - h0))
+                                                        : 0;
+
+            // water uptake
+            community.allPlants.at(cohortindex)->soilWaterUptake = community.allPlants.at(cohortindex)->soilWaterDemand * community.allPlants.at(cohortindex)->limitingFactorGppWater;
+            community.totalSoilWaterUptake += community.allPlants.at(cohortindex)->soilWaterUptake * community.allPlants.at(cohortindex)->amount;
+
+            if (community.allPlants.at(cohortindex)->soilWaterUptake > 0)
+            {
+                for (int soilLayer = 0; soilLayer < community.allPlants.at(cohortindex)->numberOfSoilLayersRooting; soilLayer++)
+                {
+                    community.allPlants.at(cohortindex)->soilWaterUptakePerSoilLayer.at(soilLayer) =
+                        community.allPlants.at(cohortindex)->soilWaterUptake *
+                        (couplingInterface_soilWaterPotentialPerSoilLayer[soilLayer] < h3
+                             ? 0
+                             : (couplingInterface_soilWaterPotentialPerSoilLayer[soilLayer] - h3)) /
+                        waterUptakeWeightingFactorSum;
+                    community.totalSoilWaterUptakePerSoilLayer.at(soilLayer) += community.allPlants.at(cohortindex)->amount * community.allPlants.at(cohortindex)->soilWaterUptakePerSoilLayer.at(soilLayer);
+                }
+            }
+        }
+    }
+}
+
 void SOIL::reducePlantGppBySoilWaterLimitationFactor(UTILS utils, COMMUNITY &community)
 {
     for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
@@ -724,19 +833,19 @@ void SOIL::limitPlantGppAndSoilWaterUptakeByPermanentWiltingPoint(UTILS utils, P
 {
     std::vector<double> waterUptakeReductionByAvailableWaterPerLayer(parameter.numberOfSoilLayers, 0);
 
-    if (parameter.useInternalSoilModule || parameter.useExternalSoilModule_selfCoupled_setVariables)
+    if (parameter.useInternalSoilModule || parameter.useInternalSoilModule_selfCoupled_setVariables)
     {
         // current PWP limitation works based on wateramount, in bodium coupling water limitation
         // is based on water potential -> TODO: new PWP limitation criterion?
         waterUptakeReductionByAvailableWaterPerLayer = limitSoilWaterUptakeByPermanentWiltingPoint(utils, parameter, community);
-        if (parameter.useExternalSoilModule_selfCoupled_setVariables)
+        if (parameter.useInternalSoilModule_selfCoupled_setVariables)
         {
-            // landtrans_waterUptakeReductionByAvailableWaterPerLayer = waterUptakeReductionByAvailableWaterPerLayer;
+            couplingInterface_waterUptakeReductionByAvailableWaterPerSoilLayer = waterUptakeReductionByAvailableWaterPerLayer;
         }
     }
     else if (parameter.useExternalSoilModule_BODIUM || parameter.useExternalSoilModule_selfCoupled_getVariables)
     {
-        // waterUptakeReductionByAvailableWaterPerLayer = landtrans_waterUptakeReductionByAvailableWaterPerLayer;
+        waterUptakeReductionByAvailableWaterPerLayer = couplingInterface_waterUptakeReductionByAvailableWaterPerSoilLayer;
         double newWaterUptake = 0;
         for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
         {
@@ -820,7 +929,7 @@ void SOIL::reducePlantGppBasedOnLimitationByPermanentWiltingPoint(UTILS utils, C
 
 void SOIL::subtractPlantWaterUptakeFromSoilWaterPool(UTILS utils, COMMUNITY &community, PARAMETER parameter)
 {
-    if (parameter.useInternalSoilModule || parameter.useExternalSoilModule_selfCoupled_setVariables)
+    if (parameter.useInternalSoilModule || parameter.useInternalSoilModule_selfCoupled_setVariables)
     {
         //  update of soil water content due to water uptake
         for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
@@ -832,7 +941,7 @@ void SOIL::subtractPlantWaterUptakeFromSoilWaterPool(UTILS utils, COMMUNITY &com
     {
         for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
         {
-            // landtrans_soilWaterUptakePerLayer.at(soilLayer) = community.totalSoilWaterUptake.at(soilLayer);
+            couplingInterface_plantSoilWaterUptakePerLayer.at(soilLayer) = community.totalSoilWaterUptakePerSoilLayer.at(soilLayer);
         }
     }
 }
@@ -851,7 +960,7 @@ void SOIL::doPlantSoilNitrogenUptakeAndNppLimitationBySoilNitrogenConditions(UTI
     /* calculate plant nitrogen uptake from soil */
     if (parameter.useExternalSoilModule_BODIUM)
     {
-        // nitrogenUptakeBodium(utils, community);
+        calculateBodiumSoilNitrogenUptake(utils, parameter, community);
     }
     else
     {
@@ -871,7 +980,7 @@ void SOIL::doPlantSoilNitrogenUptakeAndNppLimitationBySoilNitrogenConditions(UTI
     // allocate nitrogen uptake to plant pools for growth (shoot, root, reproduction, exudates)
     allocateNitrogenUptakeToPlant(utils, community);
 
-    if (parameter.useInternalSoilModule || parameter.useExternalSoilModule_selfCoupled_setVariables)
+    if (parameter.useInternalSoilModule || parameter.useInternalSoilModule_selfCoupled_setVariables)
     {
         summarizeTotalSoilNitrogenUptakeFromAllPlants(utils, parameter, community);
 
@@ -882,13 +991,13 @@ void SOIL::doPlantSoilNitrogenUptakeAndNppLimitationBySoilNitrogenConditions(UTI
 
 void SOIL::transferInterfaceVariablesForSelfCoupling_soilNitrogen(UTILS utils, PARAMETER parameter)
 {
-    if (parameter.useExternalSoilModule_selfCoupled_setVariables)
+    if (parameter.useInternalSoilModule_selfCoupled_setVariables)
     {
-        // landtrans_soilNitrogenPerLayer = nitrogenContent_soilMineralPoolPerSoilLayer;
+        couplingInterface_nitrogenContentPerSoilLayer = nitrogenContent_soilMineralPoolPerSoilLayer;
     }
     else if (parameter.useExternalSoilModule_selfCoupled_getVariables)
     {
-        // nitrogenContent_soilMineralPoolPerSoilLayer = landtrans_soilNitrogenPerLayer;
+        nitrogenContent_soilMineralPoolPerSoilLayer = couplingInterface_nitrogenContentPerSoilLayer;
     }
 }
 
@@ -1073,6 +1182,162 @@ void SOIL::calculateSoilNitrogenUptakePerPlant(UTILS utils, PARAMETER parameter,
             for (int soilLayer = 0; soilLayer < community.allPlants.at(cohortindex)->numberOfSoilLayersRooting; soilLayer++)
             {
                 community.allPlants.at(cohortindex)->totalSoilNitrogenUptake += community.allPlants.at(cohortindex)->soilNitrogenUptakePerSoilLayer.at(soilLayer);
+            }
+        }
+    }
+}
+
+void SOIL::calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, COMMUNITY &community)
+{
+    /* !
+    \brief		Calculates actual nitrogen uptake of plant from water uptake and nitrogen demand
+    \input      plant.WaterUptakePerLayer, plant.soilNitrogenDemand,
+    patch.landtrans_nh4ConcentrationPerLayer, patch.landtrans_no3ConcentrationPerLayer
+    \output     plant.NitrogenUptakePerLayer, NH4uptake, NO3Uptake
+    */
+
+    double meanRootDiameter = 5e-4; // m
+    double meanSpecificRootLength =
+        120000 * 1000; // bodium config summeroats (m per kg) , coversion to m per ton
+
+    for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
+    {
+        community.allPlants.at(cohortindex)->totalSoilNitrogenUptake = 0.0;
+        if (community.allPlants.at(cohortindex)->amount > 0)
+        {
+            double n_demand =
+                community.allPlants.at(cohortindex)->totalSoilNitrogenDemand / 1000; // concversion from g to kg (per squaremeter and day)
+            double total_n = 0, n_conv = 0, n_diff = 0;
+            double water_up_n = 0;
+            double n_lim = 0.0004;                         // value from Bodium TODO: different values for different plants?
+            n_lim = (n_lim > n_demand) ? n_demand : n_lim; // convective update should not be bigger than demand
+            double surface;
+
+            for (int soilLayer = 0; soilLayer < community.allPlants.at(cohortindex)->numberOfSoilLayersRooting; soilLayer++)
+            {
+                double n_conv_node = 0;
+                // water uptake per node
+                water_up_n = community.allPlants.at(cohortindex)->soilWaterUptakePerSoilLayer[soilLayer]; // mm per layer (on one m**2) per day
+
+                // N uptake by convection per node
+                double nh4conc =
+                    couplingInterface_soilWaterNh4Concentration[soilLayer]; // TODO: check in coupling, that dim = dim
+                                                                            // of par.Water_SoilLayer or .at() here
+                double no3conc = couplingInterface_soilWaterNo3Concentration[soilLayer];
+                nh4conc =
+                    nh4conc > 0.043 ? 0.043 : nh4conc; // set a maximum concentration to prevent too high uptake
+                no3conc = no3conc > 0.043 ? 0.043 : no3conc;
+                n_conv_node = water_up_n * (nh4conc + no3conc);
+
+                // total N uptake by convection
+                n_conv += n_conv_node;
+            }
+            // compare n_conv with n_lim per node
+            for (int soilLayer = 0; soilLayer < community.allPlants.at(cohortindex)->numberOfSoilLayersRooting; soilLayer++)
+            {
+                double n_conv_node = 0;
+                water_up_n = community.allPlants.at(cohortindex)->soilWaterUptakePerSoilLayer[soilLayer];
+                double nh4conc = couplingInterface_soilWaterNh4Concentration[soilLayer];
+                double no3conc = couplingInterface_soilWaterNo3Concentration[soilLayer];
+                nh4conc = nh4conc > 0.043 ? 0.043 : nh4conc;
+                no3conc = no3conc > 0.043 ? 0.043 : no3conc;
+
+                n_conv_node = water_up_n * (nh4conc + no3conc);
+
+                if (n_conv > n_lim)
+                {
+                    double new_nup = (n_conv_node / n_conv) * n_lim;
+                    double ratio_nh4 = nh4conc / (nh4conc + no3conc);
+                    ratio_nh4 = (std::isnan(ratio_nh4)) ? 0 : ratio_nh4;
+                    couplingInterface_plantNh4UptakePerSoilLayer[soilLayer] += community.allPlants.at(cohortindex)->amount * (new_nup * ratio_nh4);       // kg
+                    couplingInterface_plantNo3UptakePerSoilLayer[soilLayer] += community.allPlants.at(cohortindex)->amount * (new_nup * (1 - ratio_nh4)); // kg
+                    community.allPlants.at(cohortindex)->soilNitrogenUptakePerSoilLayer[soilLayer] += new_nup / 1000;                                     // in tons
+                    community.allPlants.at(cohortindex)->totalSoilNitrogenUptake += new_nup / 1000;                                                       // tons
+                }
+                else
+                {
+                    couplingInterface_plantNh4UptakePerSoilLayer[soilLayer] += community.allPlants.at(cohortindex)->amount * (water_up_n * nh4conc); // kg
+                    couplingInterface_plantNo3UptakePerSoilLayer[soilLayer] += community.allPlants.at(cohortindex)->amount * (water_up_n * no3conc); // kg
+                    community.allPlants.at(cohortindex)->soilNitrogenUptakePerSoilLayer[soilLayer] +=
+                        water_up_n * (nh4conc + no3conc) * 1 / 1000;                                                             // in tons
+                    community.allPlants.at(cohortindex)->totalSoilNitrogenUptake += water_up_n * (nh4conc + no3conc) * 1 / 1000; // tons
+                }
+            }
+            n_conv = (n_conv > n_lim) ? n_lim : n_conv;
+            n_demand = (n_demand > n_lim) ? n_lim : n_demand;
+            // TODO also check, that conv isnt bigger than demand? (change here and above)
+
+            // if convection is not enough, we need diffusion
+            if (n_conv < n_demand)
+            {
+                double diff_coeff = 5E-7; // diff_coeff = D(theta)/l_d in m/s, D is 5e-11 m²/s,
+                double n_diff_pot = n_demand - n_conv;
+                bool usepot;
+                double depth = 0.0;
+
+                //  calculate max diffusion  (all layers)
+                for (int soilLayer = 0; soilLayer < community.allPlants.at(cohortindex)->numberOfSoilLayersRooting; soilLayer++)
+                {
+                    double n_diff_node = 0;
+
+                    if (soilLayer < (community.allPlants.at(cohortindex)->numberOfSoilLayersRooting - 1))
+                    {
+                        surface = community.allPlants.at(cohortindex)->rootBiomass * parameter.soilLayerWidth[soilLayer] / community.allPlants.at(cohortindex)->rootingDepth *
+                                  meanSpecificRootLength * 2 * PI * (meanRootDiameter / 2);
+                        depth += parameter.soilLayerWidth[soilLayer];
+                    }
+                    else
+                    {
+                        surface = community.allPlants.at(cohortindex)->rootBiomass * (1 - (depth / community.allPlants.at(cohortindex)->rootingDepth)) *
+                                  meanSpecificRootLength * 2 * PI * (meanRootDiameter / 2);
+                    }
+                    // double surface=2*(theRoot->getVolume()/(mean_dia/2)); // pi r² -> 2pi r, m²/Node
+                    n_diff_node = surface * diff_coeff * DAYINSECONDS *
+                                  (couplingInterface_soilWaterNh4Concentration[soilLayer] +
+                                   couplingInterface_soilWaterNo3Concentration[soilLayer]);
+                    // total N uptake per diffusion
+                    n_diff += n_diff_node;
+                }
+
+                // is the maximum possible diffusion smaller than the potential demand?
+                usepot = (n_diff <= n_diff_pot) ? false : true;
+
+                for (int soilLayer = 0; soilLayer < community.allPlants.at(cohortindex)->numberOfSoilLayersRooting; soilLayer++)
+                {
+                    double n_diff_node = 0;
+
+                    if (soilLayer < (community.allPlants.at(cohortindex)->numberOfSoilLayersRooting - 1))
+                    {
+                        surface = community.allPlants.at(cohortindex)->rootBiomass * parameter.soilLayerWidth[soilLayer] / community.allPlants.at(cohortindex)->rootingDepth *
+                                  meanSpecificRootLength * 2 * PI * (meanRootDiameter / 2);
+                    }
+                    else
+                    {
+                        surface = community.allPlants.at(cohortindex)->rootBiomass * (1 - (depth / community.allPlants.at(cohortindex)->rootingDepth)) *
+                                  meanSpecificRootLength * 2 * PI * (meanRootDiameter / 2);
+                    }
+                    // double surface=2*(theRoot->getVolume()/(mean_dia/2));
+                    n_diff_node = surface * diff_coeff * DAYINSECONDS *
+                                  (couplingInterface_soilWaterNh4Concentration[soilLayer] +
+                                   couplingInterface_soilWaterNo3Concentration[soilLayer]);
+
+                    double ratio_NH4 = (couplingInterface_soilWaterNh4Concentration[soilLayer] +
+                                            couplingInterface_soilWaterNo3Concentration[soilLayer] >
+                                        0)
+                                           ? (couplingInterface_soilWaterNh4Concentration[soilLayer]) /
+                                                 (couplingInterface_soilWaterNh4Concentration[soilLayer] +
+                                                  couplingInterface_soilWaterNo3Concentration[soilLayer])
+                                           : 0;
+
+                    n_diff_node = (usepot) ? n_diff_pot * (n_diff_node / n_diff) : n_diff_node;
+
+                    couplingInterface_plantNh4UptakePerSoilLayer[soilLayer] += community.allPlants.at(cohortindex)->amount * (n_diff_node * ratio_NH4);       // kg
+                    couplingInterface_plantNo3UptakePerSoilLayer[soilLayer] += community.allPlants.at(cohortindex)->amount * (n_diff_node * (1 - ratio_NH4)); // kg
+                    community.allPlants.at(cohortindex)->soilNitrogenUptakePerSoilLayer[soilLayer] += n_diff_node * 1000;                                     // g
+                    community.allPlants.at(cohortindex)->totalSoilNitrogenUptake += n_diff_node * 1000;                                                       // g
+                }
+                n_diff = (usepot) ? n_diff_pot : n_diff;
+                total_n = n_conv + n_diff;
             }
         }
     }

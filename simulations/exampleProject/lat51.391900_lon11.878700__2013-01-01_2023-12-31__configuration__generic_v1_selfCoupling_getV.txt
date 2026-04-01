@@ -55,7 +55,7 @@ plantTraitsFile	BioDT-generic/plant_traits__generic_v1.txt
 \datatype:string
 \description:File name of model parameters for plant processes (traits of species or plant functional types) 
 
-processSetupFile	BioDT-generic/process_setup__generic_v1.txt
+processSetupFile	BioDT-generic/process_setup__generic_v1_selfCoupling_getV.txt
 \datatype:string
 \description:File name of model parameters for activating or deactivating model processes
 
@@ -74,21 +74,17 @@ plantCohortOutputFile	false
 \datatype:boolean
 \description:results on vegetation state variables for each single plant cohort
 
-soilCarbonOutputFile	true
+soilCarbonOutputFile	false
 \datatype:boolean
 \description:results on soil carbon dynamics (state variables and fluxes)
 
-soilNitrogenOutputFile	true
+soilNitrogenOutputFile	false
 \datatype:boolean
 \description:results on soil nitrogen dynamics (state variables and fluxes)
 
-soilWaterOutputFile	true
+soilWaterOutputFile	false
 \datatype:boolean
 \description:results on soil water dynamics (state variables and fluxes)
-
-soilResourcesPerSoilLayerOutputFile	true
-\datatype:boolean
-\description:results on soil water and nitrogen dynamics for each soil layer
 
 outputWritingDatesFile	NaN
 \datatype:string

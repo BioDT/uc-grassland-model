@@ -68,6 +68,10 @@ void INPUT::searchParameterInInputFile(std::string keyword, const char *filename
         found = false;
         while (std::getline(file, line))
         {
+            if (!line.empty() && line.back() == '\r') /* if windows artifact, remove it*/
+            {
+                line.pop_back();
+            }
             if (found) /* if in the previous line the keyword was found, save the next line as datatype in lineTypeValues */
             {
                 lineTypeValues.push_back(line);
@@ -603,14 +607,14 @@ void INPUT::transferPlantTraitsParameterValueToModelParameter(PARAMETER &paramet
 /* open and read plant traits parameter file */
 void INPUT::openAndReadPlantTraitsFile(std::string path, UTILS utils, PARAMETER &parameter)
 {
-    char separator = '\\';
+    char pathSeparator = utils.getPathSeparator();
     utils.strings.clear();
-    utils.splitString(path, separator);
+    utils.splitString(path, pathSeparator);
     for (int it = 0; it < utils.strings.size() - 3; it++)
     {
-        plantTraitsDirectory = plantTraitsDirectory + utils.strings.at(it) + "\\";
+        plantTraitsDirectory = plantTraitsDirectory + utils.strings.at(it) + pathSeparator;
     }
-    plantTraitsDirectory = plantTraitsDirectory + "parameters\\" + parameter.plantTraitsFile;
+    plantTraitsDirectory = plantTraitsDirectory + "parameters" + pathSeparator + parameter.plantTraitsFile;
     const char *filename = plantTraitsDirectory.c_str();
 
     for (auto par : parameter.plantTraitsParameterNames) /* parameterNames are listed in the class definition of PARAMETER (parameter.h)*/
@@ -635,14 +639,14 @@ void INPUT::openAndReadPlantTraitsFile(std::string path, UTILS utils, PARAMETER 
 /* open and read process setup parameter file */
 void INPUT::openAndReadProcessSetupFile(std::string path, UTILS utils, PARAMETER &parameter)
 {
-    char separator = '\\';
+    char pathSeparator = utils.getPathSeparator();
     utils.strings.clear();
-    utils.splitString(path, separator);
+    utils.splitString(path, pathSeparator);
     for (int it = 0; it < utils.strings.size() - 3; it++)
     {
-        processSetupDirectory = processSetupDirectory + utils.strings.at(it) + "\\";
+        processSetupDirectory = processSetupDirectory + utils.strings.at(it) + pathSeparator;
     }
-    processSetupDirectory = processSetupDirectory + "parameters\\" + parameter.processSetupFile;
+    processSetupDirectory = processSetupDirectory + "parameters" + pathSeparator + parameter.processSetupFile;
     const char *filename = processSetupDirectory.c_str();
 
     for (auto par : parameter.processSetupParameterNames) /* parameterNames are listed in the class definition of PARAMETER (parameter.h)*/
@@ -675,7 +679,7 @@ void INPUT::checkIfProcessSetupParameterValuesAreConsistent(UTILS utils, PARAMET
         utils.handleError("Inconsistent parameter settings: Both internal and external soil module are activated. Please check the process setup parameter file!");
     }
 
-    if (parameter.useExternalSoilModule_selfCoupled_getVariables && parameter.useExternalSoilModule_selfCoupled_setVariables)
+    if (parameter.useExternalSoilModule_selfCoupled_getVariables && parameter.useInternalSoilModule_selfCoupled_setVariables)
     {
         utils.handleError("Inconsistent parameter settings: Both getting and setting variables from/to the coupling interface are activated. Please check the process setup parameter file!");
     }
@@ -685,7 +689,7 @@ void INPUT::checkIfProcessSetupParameterValuesAreConsistent(UTILS utils, PARAMET
         utils.handleError("Inconsistent parameter settings: Internal soil module and getting variables from the coupling interface are both activated. Please check the process setup parameter file!");
     }
 
-    if (parameter.useInternalSoilModule && parameter.useExternalSoilModule_selfCoupled_setVariables)
+    if (parameter.useInternalSoilModule && parameter.useInternalSoilModule_selfCoupled_setVariables)
     {
         utils.handleError("Inconsistent parameter settings: Internal soil module and setting variables to the coupling interface are both activated. Please check the process setup parameter file!");
     }
@@ -695,7 +699,7 @@ void INPUT::checkIfProcessSetupParameterValuesAreConsistent(UTILS utils, PARAMET
         utils.handleError("Inconsistent parameter settings: External soil module BODIUM and getting variables from the coupling interface are both activated. Please check the process setup parameter file!");
     }
 
-    if (parameter.useExternalSoilModule_BODIUM && parameter.useExternalSoilModule_selfCoupled_setVariables)
+    if (parameter.useExternalSoilModule_BODIUM && parameter.useInternalSoilModule_selfCoupled_setVariables)
     {
         utils.handleError("Inconsistent parameter settings: External soil module BODIUM and setting variables to the coupling interface are both activated. Please check the process setup parameter file!");
     }
@@ -707,7 +711,7 @@ void INPUT::transferProcessSetupParameterValueToModelParameter(PARAMETER &parame
     parameter.useInternalSoilModule = configParBool["useInternalSoilModule"];
     parameter.useExternalSoilModule_BODIUM = configParBool["useExternalSoilModule_BODIUM"];
     parameter.useExternalSoilModule_selfCoupled_getVariables = configParBool["useExternalSoilModule_selfCoupled_getVariables"];
-    parameter.useExternalSoilModule_selfCoupled_setVariables = configParBool["useExternalSoilModule_selfCoupled_setVariables"];
+    parameter.useInternalSoilModule_selfCoupled_setVariables = configParBool["useInternalSoilModule_selfCoupled_setVariables"];
 
     parameter.stochasticSimulation = configParBool["stochasticSimulation"];
 }
@@ -715,20 +719,20 @@ void INPUT::transferProcessSetupParameterValueToModelParameter(PARAMETER &parame
 /* read-in weather variables from input file */
 void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &parameter, WEATHER &weather)
 {
-    char separator = '\\';
+    char pathSeparator = utils.getPathSeparator();
     utils.strings.clear();
-    utils.splitString(path, separator);
+    utils.splitString(path, pathSeparator);
     for (int it = 0; it < utils.strings.size() - 3; it++)
     {
-        weatherDirectory = weatherDirectory + utils.strings.at(it) + "\\";
+        weatherDirectory = weatherDirectory + utils.strings.at(it) + pathSeparator;
     }
     std::string location = utils.strings.at(utils.strings.size() - 1);
-    separator = '_';
+    char filenameSeparator = '_';
     utils.strings.clear();
-    utils.splitString(location, separator);
+    utils.splitString(location, filenameSeparator);
     location = utils.strings.at(0) + "_" + utils.strings.at(1);
 
-    weatherDirectory = weatherDirectory + "scenarios\\" + location + "\\weather\\" + parameter.weatherFile;
+    weatherDirectory = weatherDirectory + "scenarios" + pathSeparator + location + pathSeparator + "weather" + pathSeparator + parameter.weatherFile;
     const char *filename = weatherDirectory.c_str();
 
     weather.weatherDates.clear();
@@ -755,6 +759,10 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
         weatherFileOpened = true;
         while (std::getline(file, line))
         {
+            if (!line.empty() && line.back() == '\r') /* if windows artifact, remove it*/
+            {
+                line.pop_back();
+            }
             m++;
             if (m > 1)
             { // skip header line
@@ -819,20 +827,20 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
 /* read-in management information from input file */
 void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &parameter, MANAGEMENT &management)
 {
-    char separator = '\\';
+    char pathSeparator = utils.getPathSeparator();
     utils.strings.clear();
-    utils.splitString(path, separator);
+    utils.splitString(path, pathSeparator);
     for (int it = 0; it < utils.strings.size() - 3; it++)
     {
-        manageDirectory = manageDirectory + utils.strings.at(it) + "\\";
+        manageDirectory = manageDirectory + utils.strings.at(it) + pathSeparator;
     }
     std::string location = utils.strings.at(utils.strings.size() - 1);
-    separator = '_';
+    char filenameSeparator = '_';
     utils.strings.clear();
-    utils.splitString(location, separator);
+    utils.splitString(location, filenameSeparator);
     location = utils.strings.at(0) + "_" + utils.strings.at(1);
 
-    manageDirectory = manageDirectory + "scenarios\\" + location + "\\management\\" + parameter.managementFile;
+    manageDirectory = manageDirectory + "scenarios" + pathSeparator + location + pathSeparator + "management" + pathSeparator + parameter.managementFile;
     const char *filename = manageDirectory.c_str();
 
     management.mowingDate.clear();
@@ -868,6 +876,10 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
         managementFileOpened = true;
         while (std::getline(file, line))
         {
+            if (!line.empty() && line.back() == '\r') /* if windows artifact, remove it*/
+            {
+                line.pop_back();
+            }
             m++;
             if (m > 1)
             { // skip header line
@@ -1061,20 +1073,20 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
 /* Reads-in soil parameters from input file */
 void INPUT::openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parameter, SOIL &soil)
 {
-    char separator = '\\';
+    char pathSeparator = utils.getPathSeparator();
     utils.strings.clear();
-    utils.splitString(path, separator);
+    utils.splitString(path, pathSeparator);
     for (int it = 0; it < utils.strings.size() - 3; it++)
     {
-        soilDirectory = soilDirectory + utils.strings.at(it) + "\\";
+        soilDirectory = soilDirectory + utils.strings.at(it) + pathSeparator;
     }
     std::string location = utils.strings.at(utils.strings.size() - 1);
-    separator = '_';
+    char filnameSeparator = '_';
     utils.strings.clear();
-    utils.splitString(location, separator);
+    utils.splitString(location, filnameSeparator);
     location = utils.strings.at(0) + "_" + utils.strings.at(1);
 
-    soilDirectory = soilDirectory + "scenarios\\" + location + "\\soil\\" + parameter.soilFile;
+    soilDirectory = soilDirectory + "scenarios" + pathSeparator + location + pathSeparator + "soil" + pathSeparator + parameter.soilFile;
     const char *filename = soilDirectory.c_str();
 
     soil.siltContent = -1;
@@ -1099,6 +1111,10 @@ void INPUT::openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parame
     {
         while (std::getline(file, line))
         {
+            if (!line.empty() && line.back() == '\r') /* if windows artifact, remove it*/
+            {
+                line.pop_back();
+            }
             m++;
             if (m == 2)
             { // skip header line

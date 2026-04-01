@@ -30,7 +30,7 @@ useExternalSoilModule_selfCoupled_getVariables	false
 \description:de-/activation of a self-coupling test framework for getting interface variables
 
 
-useExternalSoilModule_selfCoupled_setVariables	false
+useInternalSoilModule_selfCoupled_setVariables	false
 \datatype:boolean
 \description:de-/activation of a self-coupling test framework for setting interface variables
 

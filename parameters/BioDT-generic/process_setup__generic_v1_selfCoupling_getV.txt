@@ -16,7 +16,7 @@ stochasticSimulation	false
 #  Soil modules 
 # =============================================================================
 
-useInternalSoilModule	true
+useInternalSoilModule	false
 \datatype:boolean
 \description:de-/activation of the soil dynamics calculated internally
 
@@ -26,7 +26,7 @@ useExternalSoilModule_BODIUM	false
 \description:de-/activation of birdirectional coupling to the soil model BODIUM
 
 
-useExternalSoilModule_selfCoupled_getVariables	false
+useExternalSoilModule_selfCoupled_getVariables	true
 \datatype:boolean
 \description:de-/activation of a self-coupling test framework for getting interface variables
 
