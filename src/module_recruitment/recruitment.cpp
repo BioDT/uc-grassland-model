@@ -260,10 +260,7 @@ void RECRUITMENT::calculateSeedGerminationToSeedlings(UTILS utils, PARAMETER par
 
                 if (parameter.crowdingMortalityActivated)
                 {
-                    if ((community.coveredAreaOfAllPlants > 1.0))
-                    {
-                        seedlingCrowdingMortality(utils, parameter, community, allometry);
-                    }
+                    seedlingCrowdingMortality(utils, parameter, community, allometry);
                 }
                 addGerminatedSeedlingsToCommunity(utils, parameter, community, allometry, soil, pft);
 
@@ -355,9 +352,9 @@ void RECRUITMENT::seedlingCrowdingMortality(UTILS utils, PARAMETER parameter, CO
 
     newCoveredAreaOfAllPlants = community.coveredAreaOfAllPlants + requiredSpaceForNewSeedlings;
 
-    if (newCoveredAreaOfAllPlants > 1.0)
+    if (newCoveredAreaOfAllPlants > SIMULATIONAREA)
     {
-        availableSpaceForNewSeedlings = std::max(1.0 - community.coveredAreaOfAllPlants, 0.0);
+        availableSpaceForNewSeedlings = std::max(SIMULATIONAREA - community.coveredAreaOfAllPlants, 0.0);
         reductionOfNewSeedlingsByCrowding = availableSpaceForNewSeedlings / requiredSpaceForNewSeedlings;
 
         for (int pft = 0; pft < parameter.pftCount; pft++)

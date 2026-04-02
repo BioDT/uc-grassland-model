@@ -27,6 +27,15 @@ void MORTALITY::doPlantMortality(UTILS utils, PARAMETER parameter, COMMUNITY &co
         // 1. Leaf and root senescence and litter fall
         doSenescenceAndLitterFall(utils, parameter, community, allometry, growth, interaction, soil, cohortIndex, pft);
 
+        // 2. Update coveredAreaOfAllPlants to compare with simulationarea
+        if (community.allPlants.size() > 0)
+        {
+            for (int cohortindex = 0; cohortindex < community.allPlants.size(); cohortindex++)
+            {
+                community.coveredAreaOfAllPlants += community.allPlants[cohortindex]->coveredArea * parameter.plantShootOverlapFactors[community.allPlants[cohortindex]->pft] * community.allPlants[cohortindex]->amount;
+            }
+        }
+
         // 2. Crowding mortality
         if (parameter.crowdingMortalityActivated)
         {
@@ -107,6 +116,7 @@ void MORTALITY::doLeafLitterFall(UTILS utils, COMMUNITY &community, ALLOMETRY al
             // community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves remains unchanged here
 
             soil.transferDyingPlantPartsToLitterPools(utils, parameter, community.allPlants.at(cohortIndex)->amount, fallingLeafBiomass, "surface_brown", pft);
+            // TODO: avoid change of form after cutting
             updatePlantSize(utils, community, allometry, parameter, fractionLeavesFalling, cohortIndex, pft);
         }
     }
@@ -164,10 +174,10 @@ void MORTALITY::doPlantCrowding(PARAMETER parameter, UTILS utils, SOIL &soil, CO
 {
     if (community.allPlants[cohortIndex]->amount > 0)
     {
-        if (community.coveredAreaOfAllPlants > 1.0)
+        if (community.coveredAreaOfAllPlants > SIMULATIONAREA)
         {
             /* amount of plants that shall die due to crowding */
-            double amountOfTooManyPlants = community.allPlants[cohortIndex]->amount * (1.0 - (1.0 / community.coveredAreaOfAllPlants));
+            double amountOfTooManyPlants = community.allPlants[cohortIndex]->amount * (1.0 - (SIMULATIONAREA / community.coveredAreaOfAllPlants));
 
             /* decide if either stochastic or deterministic mortality */
             if (parameter.stochasticSimulation)
@@ -177,6 +187,7 @@ void MORTALITY::doPlantCrowding(PARAMETER parameter, UTILS utils, SOIL &soil, CO
                 double randomNumber = dis(gen);
 
                 double letAnotherPlantDy = amountOfTooManyPlants - int(amountOfTooManyPlants);
+                amountOfTooManyPlants = int(amountOfTooManyPlants);
                 if (randomNumber <= letAnotherPlantDy)
                 {
                     amountOfTooManyPlants += 1.0;

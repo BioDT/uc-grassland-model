@@ -9,3 +9,4 @@ const double lightTransmissionCoefficient = 0.1; // -
 const int heightLayerWidth = 1;                  // (cm)
 const int maximumHeightLayer = 5000;             // equals 5000 cm height with heightLayerWidth = 1 cm
 const int DAYINSECONDS = 86400;
+const double SIMULATIONAREA = 10000;              // cm^2

@@ -490,8 +490,8 @@ void GROWTH::doPlantGrowthInSizeAndAging(UTILS utils, PARAMETER parameter, COMMU
         community.allPlants.at(cohortindex)->lai = community.allPlants.at(cohortindex)->laiBrown + community.allPlants.at(cohortindex)->laiGreen;
 
         // state variable updates for soil evaporation
-        community.greenleafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->amount * community.allPlants[cohortindex]->laiGreen * community.allPlants[cohortindex]->coveredArea;
-        community.totalLeafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->lai * community.allPlants[cohortindex]->coveredArea * community.allPlants[cohortindex]->amount;
+        community.greenleafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->amount * community.allPlants[cohortindex]->laiGreen * community.allPlants[cohortindex]->coveredArea/SIMULATIONAREA;
+        community.totalLeafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->lai * community.allPlants[cohortindex]->coveredArea * community.allPlants[cohortindex]->amount/SIMULATIONAREA;
     }
 }
 
