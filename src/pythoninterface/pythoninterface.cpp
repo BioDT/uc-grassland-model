@@ -89,6 +89,8 @@ void PYTHONINTERFACE::runSimulationStep()
 {
     resetCouplingVariablesFluxes(parameter, soil);
     step.runModelSimulationStep(utils, parameter, init, allometry, community, recruitment, mortality, growth, management, soil, weather, interaction, output);
+    couplingInterface_rootBiomass = calculateRootBiomassPerLayer(); 
+    couplingInterface_rootVolume = calculateRootVolumeFromRootBiomass(couplingInterface_rootBiomass);
 }
 
 void PYTHONINTERFACE::writeResultsToOutputFiles()

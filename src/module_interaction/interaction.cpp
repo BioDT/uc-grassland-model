@@ -93,8 +93,8 @@ void INTERACTION::addPlantLeafAreaToHeightLayers(int topHeightLayerIndexOfPlant,
 {
     for (int layerindex = 0; layerindex <= topHeightLayerIndexOfPlant; layerindex++)
     {
-        LAI.at(layerindex) += (leafAreaOfPlantCohort * weightsForPlantContributionToHeightLayer.at(layerindex));
-        LAIwithLightExtinction.at(layerindex) += (leafAreaOfPlantCohort * plantLightExtinctionCoefficient * weightsForPlantContributionToHeightLayer.at(layerindex));
+        LAI.at(layerindex) += (leafAreaOfPlantCohort * weightsForPlantContributionToHeightLayer.at(layerindex)/SIMULATIONAREA);
+        LAIwithLightExtinction.at(layerindex) += (leafAreaOfPlantCohort * plantLightExtinctionCoefficient * weightsForPlantContributionToHeightLayer.at(layerindex)/SIMULATIONAREA);
     }
 }
 

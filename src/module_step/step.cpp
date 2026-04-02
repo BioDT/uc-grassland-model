@@ -79,19 +79,19 @@ void STEP::runModelSimulationStep(UTILS utils, PARAMETER &parameter, INIT init, 
         utils.handleError("Running more timesteps than configured!");
     }
 
-    /* Resetting of process- and flux-specific state variables of the vegetation community and soil resources */
-    init.resetVegetationProcessVariables(parameter, recruitment, community, interaction, soil);
-    init.resetSoilResourceProcessAndFluxVariables(parameter, soil);
+        /* Resetting of process- and flux-specific state variables of the vegetation community and soil resources */
+        init.resetVegetationProcessVariables(parameter, recruitment, community, interaction, soil);
+        init.resetSoilResourceProcessAndFluxVariables(parameter, soil);
 
-    /* Environmental conditions of the day */
-    interaction.getEnvironmentalConditionsOfDay(weather, parameter.day);
+        /* Environmental conditions of the day */
+        interaction.getEnvironmentalConditionsOfDay(weather, community, parameter.day);
 
-    /* Calculation of ecological and plant processes */
-    doDayStepOfModelSimulation(utils, parameter, allometry, community, recruitment, mortality, growth, interaction, management, soil, weather);
-    output.updateVegetationStateVariablesForOutput(parameter, community, soil, management, recruitment);
+        /* Calculation of ecological and plant processes */
+        doDayStepOfModelSimulation(utils, parameter, allometry, community, recruitment, mortality, growth, interaction, management, soil, weather);
+        output.updateVegetationStateVariablesForOutput(parameter, community, soil, management, recruitment);
 
-    /* Writing of daily output of simulation results */
-    saveSimulationResultsToBuffer(utils, parameter, community, output);
+        /* Writing of daily output of simulation results */
+        saveSimulationResultsToBuffer(utils, parameter, community, interaction, output, soil);
 
     parameter.day++; // increase day by one (initialized 1)
 }

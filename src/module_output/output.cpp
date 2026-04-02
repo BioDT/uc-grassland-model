@@ -49,9 +49,9 @@ void OUTPUT::updateVegetationStateVariablesForOutput(PARAMETER parameter, COMMUN
 
             // Community-wide calculations
             community.totalNumberOfPlantsInCommunity += community.allPlants[cohortindex]->amount;
-            community.coveredAreaOfAllPlants += community.allPlants[cohortindex]->coveredArea * parameter.plantShootOverlapFactors[community.allPlants[cohortindex]->pft];
             community.carbonRespirationOfAllPlants += community.allPlants[cohortindex]->totalRespiration * community.allPlants[cohortindex]->amount * carbonContentOdm;
             community.carbonNPPOfAllPlants += community.allPlants[cohortindex]->npp * community.allPlants[cohortindex]->amount * carbonContentOdm;
+            // MOVE:
             community.abovegroundBiomassOfAllPlants += community.allPlants[cohortindex]->shootBiomass * community.allPlants[cohortindex]->amount;
         }
 
@@ -64,6 +64,7 @@ void OUTPUT::updateVegetationStateVariablesForOutput(PARAMETER parameter, COMMUN
             }
         }
 
+        // MOVE:
         // calculations from soil state variables
         community.abovegroundLitterBiomass += (soil.carbonContent_surfaceStructuralLitterPool + soil.carbonContent_surfaceMetabolicLitterPool) * (1.0 / carbonContentOdm);
     }

@@ -1089,6 +1089,8 @@ void INPUT::openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parame
     soilDirectory = soilDirectory + "scenarios" + pathSeparator + location + pathSeparator + "soil" + pathSeparator + parameter.soilFile;
     const char *filename = soilDirectory.c_str();
 
+    soilFileOpened = false;
+
     soil.siltContent = -1;
     soil.sandContent = -1;
     soil.clayContent = -1;
@@ -1109,6 +1111,7 @@ void INPUT::openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parame
     std::ifstream file(filename);
     if (file.is_open())
     {
+        soilFileOpened = true;
         while (std::getline(file, line))
         {
             if (!line.empty() && line.back() == '\r') /* if windows artifact, remove it*/

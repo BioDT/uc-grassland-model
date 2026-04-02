@@ -48,6 +48,15 @@ void MANAGEMENT::checkIfTodayAndDoMowing(UTILS utils, COMMUNITY &community, ALLO
                 int pft = community.allPlants[cohortIndex]->pft;
                 cutPlantsAndTrackYieldAndUpdatePlantAttributes(utils, community, allometry, parameter, cohortIndex, pft, heightToCutPlantsDownTo);
             }
+            // update community variables in case of cutting
+            community.greenleafAreaIndexOfPlantsInCommunity = 0;
+            community.totalLeafAreaIndexOfPlantsInCommunity = 0;
+            for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
+            {
+                // state variable updates for soil evaporation
+                community.greenleafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->amount * community.allPlants[cohortindex]->laiGreen * community.allPlants[cohortindex]->coveredArea/SIMULATIONAREA;
+                community.totalLeafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->lai * community.allPlants[cohortindex]->coveredArea * community.allPlants[cohortindex]->amount/SIMULATIONAREA;
+            }
         }
         index++;
     }
