@@ -55,7 +55,7 @@ public:
     void openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parameter, SOIL &soil);
     void openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &parameter, MANAGEMENT &management);
 
-    void searchParameterInInputFile(std::string keyword, const char *filename, UTILS utils);
+    bool searchParameterInInputFile(std::string keyword, const char *filename, UTILS utils);
     void checkIfParameterExistsAndExtractValues(UTILS utils, std::string keyword, std::vector<std::string> lineValues, std::vector<int> lineNumbers, std::vector<std::string> lineTypeValues);
     void extractLinesOfCorrectFormat(UTILS utils, std::string keyword, std::vector<std::string> lineValues);
     void extractDataTypeForExtractedValue(UTILS utils, std::string keyword);
