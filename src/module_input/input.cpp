@@ -48,7 +48,7 @@ void INPUT::openAndReadConfigurationFile(std::string config, UTILS utils, PARAME
 }
 
 /* open file and search for name (keyword) in all lines */
-void INPUT::searchParameterInInputFile(std::string keyword, const char *filename, UTILS utils)
+bool INPUT::searchParameterInInputFile(std::string keyword, const char *filename, UTILS utils)
 {
     std::string line;   // current line text in parser
     int lineNumber = 0; // current line number in parser
@@ -60,11 +60,9 @@ void INPUT::searchParameterInInputFile(std::string keyword, const char *filename
 
     /* detect all lines in which the keyword is found */
     std::ifstream file(filename);
-    plantTraitsFileOpened = false;
 
     if (file.is_open())
     {
-        plantTraitsFileOpened = true;
         found = false;
         while (std::getline(file, line))
         {
@@ -87,6 +85,7 @@ void INPUT::searchParameterInInputFile(std::string keyword, const char *filename
             }
         }
         file.close();
+        return true;
     }
     else
     {
@@ -620,7 +619,8 @@ void INPUT::openAndReadPlantTraitsFile(std::string path, UTILS utils, PARAMETER 
     for (auto par : parameter.plantTraitsParameterNames) /* parameterNames are listed in the class definition of PARAMETER (parameter.h)*/
     {
         /* open file and search for name in all lines */
-        searchParameterInInputFile(par, filename, utils);
+        plantTraitsFileOpened = false;
+        plantTraitsFileOpened = searchParameterInInputFile(par, filename, utils);
 
         /* check if the parameter name was found at least once and read in each line */
         checkIfParameterExistsAndExtractValues(utils, par, lineValues, lineNumbers, lineTypeValues);
@@ -652,7 +652,8 @@ void INPUT::openAndReadProcessSetupFile(std::string path, UTILS utils, PARAMETER
     for (auto par : parameter.processSetupParameterNames) /* parameterNames are listed in the class definition of PARAMETER (parameter.h)*/
     {
         /* open file and search for name in all lines */
-        searchParameterInInputFile(par, filename, utils);
+        processSetupFileOpened = false;
+        processSetupFileOpened = searchParameterInInputFile(par, filename, utils);
 
         /* check if the parameter name was found at least once and read in each line */
         checkIfParameterExistsAndExtractValues(utils, par, lineValues, lineNumbers, lineTypeValues);

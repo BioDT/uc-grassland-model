@@ -23,8 +23,8 @@ public:
     std::vector<double> LAIwithLightExtinction;
     std::vector<double> weightsForPlantContributionToHeightLayer;
 
-    void getEnvironmentalConditionsOfDay(WEATHER weather, COMMUNITY community, int day);
-    double calculateSoilTemperature(COMMUNITY community, double fullDayAirTemperature);
+    void getEnvironmentalConditionsOfDay(WEATHER weather, COMMUNITY community, int day, double abovegroundLitterBiomass);
+    double calculateSoilTemperature(COMMUNITY community, double fullDayAirTemperature, double abovegroundLitterBiomass);
     void calculateLightAttenuationAndAvailabilityForPlants(UTILS utils, PARAMETER parameter, COMMUNITY &community, double fullSunLight);
 
     void calculateNumberOfHeightLayersFromLargestPlant(UTILS utils, COMMUNITY &community);

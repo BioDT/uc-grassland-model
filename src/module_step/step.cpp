@@ -7,7 +7,7 @@ STEP::~STEP() {};
  * @brief Simulates the entire simulation period.
  *
  * This function runs the model simulation for a specified number of days as defined
- * by the `parameter.simulationTimeInDays`. For each day in the simulation, it resets specific state variables,
+ * by the `parameter.simulationTimeInDays`. For each day in the simulation, it calls `runModelSimulationStep` which resets specific state variables,
  * performs daily plant processes, updates the community's dynamic state variables, and saves the simulation results.
  *
  * @param utils Utility functions for string manipulation and error handling.
@@ -33,27 +33,14 @@ void STEP::runModelSimulation(UTILS utils, PARAMETER &parameter, INIT init, ALLO
     {
         parameter.day = day; // increase day according to for-loop
 
-        /* Resetting of process- and flux-specific state variables of the vegetation community and soil resources */
-        init.resetVegetationProcessVariables(parameter, recruitment, community, interaction, soil);
-        init.resetSoilResourceProcessAndFluxVariables(parameter, soil);
-
-        /* Environmental conditions of the day */
-        interaction.getEnvironmentalConditionsOfDay(weather, community, parameter.day);
-
-        /* Calculation of ecological and plant processes */
-        doDayStepOfModelSimulation(utils, parameter, allometry, community, recruitment, mortality, growth, interaction, management, soil, weather);
-        output.updateVegetationStateVariablesForOutput(parameter, community, soil, management, recruitment);
-
-        /* Writing of daily output of simulation results */
-        saveSimulationResultsToBuffer(utils, parameter, community, interaction, output, soil);
+        runModelSimulationStep(utils, parameter, init, allometry, community, recruitment, mortality, growth, management, soil, weather, interaction, output);
     }
 }
 
 /**
  * @brief Simulates one simulation step.
  *
- * This function runs one step of the model simulation. (TODO: what abourt the specified number of days as defined
- * by the `parameter.simulationTimeInDays`) It resets specific state variables,
+ * This function runs one step of the model simulation. It resets specific state variables,
  * performs daily plant processes, updates the community's dynamic state variables, and saves the simulation results.
  *
  * @param utils Utility functions for string manipulation and error handling.
@@ -74,26 +61,20 @@ void STEP::runModelSimulation(UTILS utils, PARAMETER &parameter, INIT init, ALLO
  */
 void STEP::runModelSimulationStep(UTILS utils, PARAMETER &parameter, INIT init, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT &recruitment, MORTALITY mortality, GROWTH growth, MANAGEMENT management, SOIL &soil, WEATHER weather, INTERACTION &interaction, OUTPUT &output)
 {
-    if (parameter.day > parameter.simulationTimeInDays)
-    {
-        utils.handleError("Running more timesteps than configured!");
-    }
+    /* Resetting of process- and flux-specific state variables of the vegetation community and soil resources */
+    init.resetVegetationProcessVariables(parameter, recruitment, community, interaction, soil);
+    init.resetSoilResourceProcessAndFluxVariables(parameter, soil);
 
-        /* Resetting of process- and flux-specific state variables of the vegetation community and soil resources */
-        init.resetVegetationProcessVariables(parameter, recruitment, community, interaction, soil);
-        init.resetSoilResourceProcessAndFluxVariables(parameter, soil);
+    /* Environmental conditions of the day */
+    double abovegroundLitterBiomass = (soil.carbonContent_surfaceStructuralLitterPool + soil.carbonContent_surfaceMetabolicLitterPool) * (1.0 / carbonContentOdm);
+    interaction.getEnvironmentalConditionsOfDay(weather, community, parameter.day, abovegroundLitterBiomass);
 
-        /* Environmental conditions of the day */
-        interaction.getEnvironmentalConditionsOfDay(weather, community, parameter.day);
+    /* Calculation of ecological and plant processes */
+    doDayStepOfModelSimulation(utils, parameter, allometry, community, recruitment, mortality, growth, interaction, management, soil, weather);
+    output.updateVegetationStateVariablesForOutput(parameter, community, soil, management, recruitment);
 
-        /* Calculation of ecological and plant processes */
-        doDayStepOfModelSimulation(utils, parameter, allometry, community, recruitment, mortality, growth, interaction, management, soil, weather);
-        output.updateVegetationStateVariablesForOutput(parameter, community, soil, management, recruitment);
-
-        /* Writing of daily output of simulation results */
-        saveSimulationResultsToBuffer(utils, parameter, community, interaction, output, soil);
-
-    parameter.day++; // increase day by one (initialized 1)
+    /* Writing of daily output of simulation results */
+    saveSimulationResultsToBuffer(utils, parameter, community, interaction, output, soil);
 }
 
 /**

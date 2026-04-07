@@ -10,7 +10,7 @@ GCEF_data_path = "prepared_field_data_gcef/"
 
 
 bodium_config = "parametrizations/bodium_config.json"
-grassmind_config = "/home/kantzenb/Documents/GitLabProjects/uc-grassland-model/simulations/couplingProject/lat51.391900_lon11.878700__2013-01-01_2024-12-31__configuration__ambient_intensive_v1.txt"
+grassmind_config = "/home/kantzenb/Documents/GitLabProjects/uc-grassland-model/simulations/couplingProject/lat51.391900_lon11.878700__2013-01-01_2024-12-31__configuration__ambient_intensive_v1_coupled.txt"
 
 
 #############calibration ############################################

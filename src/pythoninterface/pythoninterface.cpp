@@ -88,7 +88,12 @@ void PYTHONINTERFACE::resetCouplingVariablesFluxes(PARAMETER &parameter, SOIL &s
 void PYTHONINTERFACE::runSimulationStep()
 {
     resetCouplingVariablesFluxes(parameter, soil);
+    if (parameter.day > parameter.simulationTimeInDays)
+    {
+        utils.handleError("Running more timesteps than configured!");
+    }
     step.runModelSimulationStep(utils, parameter, init, allometry, community, recruitment, mortality, growth, management, soil, weather, interaction, output);
+    parameter.day++; // increase day by one (initialized 1)
     couplingInterface_rootBiomass = calculateRootBiomassPerLayer(); 
     couplingInterface_rootVolume = calculateRootVolumeFromRootBiomass(couplingInterface_rootBiomass);
 }
@@ -126,6 +131,47 @@ double PYTHONINTERFACE::getLai()
 std::vector<double> PYTHONINTERFACE::getSoilWaterPerLayer()
 {
     return soil.waterContent_soilWaterPoolPerSoilLayer;
+}
+
+double PYTHONINTERFACE::getMeanWaterLimitationFactor()
+{
+    double summedWaterLimitationFactor = 0;
+    double numberOfPlants = 0;
+
+    for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
+    {
+        summedWaterLimitationFactor += community.allPlants.at(cohortindex)->limitingFactorGppWater * community.allPlants.at(cohortindex)->amount;
+        numberOfPlants += community.allPlants.at(cohortindex)->amount;
+    }
+    return summedWaterLimitationFactor/numberOfPlants;
+}
+
+double PYTHONINTERFACE::getMeanNitrogenLimitationFactor()
+{
+    double summedNitrogenLimitationFactor = 0;
+    double numberOfPlants = 0;
+
+    for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
+    {
+        summedNitrogenLimitationFactor += community.allPlants.at(cohortindex)->limitingFactorNppNitrogen * community.allPlants.at(cohortindex)->amount;
+        numberOfPlants += community.allPlants.at(cohortindex)->amount;
+    }
+    return summedNitrogenLimitationFactor/numberOfPlants;
+}
+
+std::vector<double> PYTHONINTERFACE::getNumberOfPlantsPerHeight()
+{
+    // return number of plants per height in cm up to 1m and number of plants above 1m
+    // for graphic runtimeoutput
+    std::vector<double> numberOfPlantsPerHeight(101, 0.0);
+
+    for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
+    {
+        int heightLayer = std::min(int(floor(community.allPlants.at(cohortindex)->height)), 100);
+
+        numberOfPlantsPerHeight.at(heightLayer) += community.allPlants.at(cohortindex)->amount;
+    }
+    return numberOfPlantsPerHeight;
 }
 
 // get selfcoupling variables
@@ -319,7 +365,7 @@ std::vector<double> PYTHONINTERFACE::calculateRootVolumeFromRootBiomass(
     // TODO: think of changing this calculation to pft specific
     // values as in bodium, such that
     double meanRootDiameter = 5e-4;              // m
-    double meanSpecificRootLength = 10.5 * 1000; // m per kg * ton/kg
+    double meanSpecificRootLength = 10.5 * 1/1000; // m per kg * g/kg
     std::vector<double> rootVolumePerLayer(parameter.numberOfSoilLayers);
     std::fill(rootVolumePerLayer.begin(), rootVolumePerLayer.end(), 0.0);
 

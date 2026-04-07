@@ -161,18 +161,27 @@ double INTERACTION::getRadiationByLightExtinctionLaw(double cumulativeLAIAboveAn
     return radiationByExtinction;
 }
 
-void INTERACTION::getEnvironmentalConditionsOfDay(WEATHER weather, COMMUNITY community, int day)
+void INTERACTION::getEnvironmentalConditionsOfDay(WEATHER weather, COMMUNITY community, int day, double abovegroundLitterBiomass)
 {
     fullSunLight = weather.photosyntheticPhotonFluxDensity.at(day - 1); // parameter.day starts at 1, but vectors start with index 0
     dayLength = weather.dayLength.at(day - 1);
     dayTimeAirTemperature = weather.dayTimeAirTemperature.at(day - 1);
     fullDayAirTemperature = weather.fullDayAirTemperature.at(day - 1);
-    soilTemperature = calculateSoilTemperature(community, fullDayAirTemperature);
+    soilTemperature = calculateSoilTemperature(community, fullDayAirTemperature, abovegroundLitterBiomass);
 }
 
-double INTERACTION::calculateSoilTemperature(COMMUNITY community, double fullDayAirTemperature)
+double INTERACTION::calculateSoilTemperature(COMMUNITY community, double fullDayAirTemperature, double abovegroundLitterBiomass)
 {
-    double abovegroundBiomass = community.abovegroundBiomassOfAllPlants + 0.4 * community.abovegroundLitterBiomass;
+    double abovegroundBiomassOfAllPlants = 0;
+    if (community.allPlants.size() > 0)
+    {
+        for (int cohortindex = 0; cohortindex < community.allPlants.size(); cohortindex++)
+        {
+            abovegroundBiomassOfAllPlants += community.allPlants[cohortindex]->shootBiomass * community.allPlants[cohortindex]->amount;
+        }
+    }
+    
+    double abovegroundBiomass = abovegroundBiomassOfAllPlants + 0.4 * abovegroundLitterBiomass;
     abovegroundBiomass = std::min(abovegroundBiomass, 600.0);
 
     double upperRange = fullDayAirTemperature + (25.4 / (1.0 + 18.0 * exp(-0.20 * fullDayAirTemperature))) * (exp(-0.0035 * abovegroundBiomass) - 0.13);
