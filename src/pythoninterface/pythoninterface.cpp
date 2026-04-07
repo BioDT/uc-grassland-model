@@ -88,7 +88,12 @@ void PYTHONINTERFACE::resetCouplingVariablesFluxes(PARAMETER &parameter, SOIL &s
 void PYTHONINTERFACE::runSimulationStep()
 {
     resetCouplingVariablesFluxes(parameter, soil);
+    if (parameter.day > parameter.simulationTimeInDays)
+    {
+        utils.handleError("Running more timesteps than configured!");
+    }
     step.runModelSimulationStep(utils, parameter, init, allometry, community, recruitment, mortality, growth, management, soil, weather, interaction, output);
+    parameter.day++; // increase day by one (initialized 1)
     couplingInterface_rootBiomass = calculateRootBiomassPerLayer(); 
     couplingInterface_rootVolume = calculateRootVolumeFromRootBiomass(couplingInterface_rootBiomass);
 }
