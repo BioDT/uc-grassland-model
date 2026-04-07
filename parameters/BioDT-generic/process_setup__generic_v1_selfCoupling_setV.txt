@@ -8,7 +8,7 @@
 #  Stochasticity
 # =============================================================================
 
-stochasticSimulation	false
+stochasticSimulation	true
 \datatype:boolean
 \description:de-/activation of stochasticity in the model (use of random number generator)
 

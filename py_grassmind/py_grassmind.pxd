@@ -20,7 +20,10 @@ cdef extern from "../src/pythoninterface/pythoninterface.h":
         double getShootBiomassAboveClippingHeightPerSquaremeter() except + nogil
         double getYieldPerSquaremeter() except + nogil
         double getLai() except + nogil
+        double getMeanWaterLimitationFactor() except + nogil
+        double getMeanNitrogenLimitationFactor() except + nogil
         vector[double] getSoilWaterPerLayer() except + nogil
+        vector[double] getNumberOfPlantsPerHeight() except + nogil
 
         ## get selfcoupling variables
         vector[double] getPermanentWiltingPoint_plantSoilWaterUptake() except + nogil

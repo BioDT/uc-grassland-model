@@ -51,8 +51,17 @@ cdef class GrassmindModel():
     def get_lai(self):
         return self.py_grassmind.getLai()
 
+    def get_mean_water_limitation_factor(self):
+        return self.py_grassmind.getMeanWaterLimitationFactor()
+
+    def get_mean_nitrogen_limitation_factor(self):
+        return self.py_grassmind.getMeanNitrogenLimitationFactor()
+
     def get_soil_water_per_soil_layer(self):
         return self.py_grassmind.getSoilWaterPerLayer()
+
+    def get_number_of_plants_per_height(self):
+        return self.py_grassmind.getNumberOfPlantsPerHeight()
 
     ## get selfcoupling variables
 

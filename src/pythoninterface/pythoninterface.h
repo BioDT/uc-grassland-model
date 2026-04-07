@@ -49,8 +49,8 @@ public:
     INTERACTION interaction;
 
     // coupling interface output variables, cacluated end of timestep
-    std::vector<double> couplingInterface_rootBiomass;
-    std::vector<double> couplingInterface_rootVolume;
+    std::vector<double> couplingInterface_rootBiomass; // in gODM
+    std::vector<double> couplingInterface_rootVolume; // in m^3
 
     // base functions
     void initializeSimulation(std::string path);
@@ -63,7 +63,10 @@ public:
     double getShootBiomassAboveClippingHeightPerSquaremeter();
     double getYieldPerSquaremeter();
     double getLai();
+    double getMeanWaterLimitationFactor();
+    double getMeanNitrogenLimitationFactor();
     std::vector<double> getSoilWaterPerLayer();
+    std::vector<double> getNumberOfPlantsPerHeight();
 
     // get selfcoupling variables
     std::vector<double> getPermanentWiltingPoint_plantSoilWaterUptake();
