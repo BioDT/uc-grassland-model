@@ -85,6 +85,13 @@ void PYTHONINTERFACE::resetCouplingVariablesFluxes(PARAMETER &parameter, SOIL &s
     std::fill(soil.couplingInterface_plantNo3UptakePerSoilLayer.begin(), soil.couplingInterface_plantNo3UptakePerSoilLayer.end(), 0.0);
 }
 
+void PYTHONINTERFACE::setRandomNumberGeneratorSeed(unsigned int seed)
+{
+    parameter.randomNumberGeneratorSeed = seed;
+    std::cout << "Seed of random number generator is changed to: " << std::to_string(seed) << std::endl
+              << std::endl;
+}
+
 void PYTHONINTERFACE::runSimulationStep()
 {
     resetCouplingVariablesFluxes(parameter, soil);
@@ -257,16 +264,16 @@ std::vector<double> PYTHONINTERFACE::getRootLitter()
 }
 std::vector<double> PYTHONINTERFACE::getRootLitterCnRatio()
 {
-    std::vector<double> cnRatios;
+    std::vector<double> cnRatios(parameter.numberOfSoilLayers);
     for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
     {
         if (soil.couplingInterface_rootLitterFluxNitrogen.at(soilLayer) > 0)
         {
-            cnRatios.push_back(soil.couplingInterface_rootLitterFluxCarbon.at(soilLayer) / soil.couplingInterface_rootLitterFluxNitrogen.at(soilLayer));
+            cnRatios[soilLayer] = soil.couplingInterface_rootLitterFluxCarbon.at(soilLayer) / soil.couplingInterface_rootLitterFluxNitrogen.at(soilLayer);
         }
         else
         {
-            cnRatios.push_back(std::numeric_limits<double>::quiet_NaN());
+            cnRatios[soilLayer] =  std::numeric_limits<double>::quiet_NaN();
         }
     }
     return cnRatios;
@@ -282,16 +289,16 @@ std::vector<double> PYTHONINTERFACE::getRootExudates()
 }
 std::vector<double> PYTHONINTERFACE::getRootExudatesCnRatio()
 {
-    std::vector<double> cnRatios;
+    std::vector<double> cnRatios(parameter.numberOfSoilLayers);
     for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
     {
         if (soil.couplingInterface_rootExudatesNitrogen.at(soilLayer) > 0)
         {
-            cnRatios.push_back(soil.couplingInterface_rootExudatesCarbon.at(soilLayer) / soil.couplingInterface_rootExudatesNitrogen.at(soilLayer));
+            cnRatios[soilLayer] = soil.couplingInterface_rootExudatesCarbon.at(soilLayer) / soil.couplingInterface_rootExudatesNitrogen.at(soilLayer);
         }
         else
         {
-            cnRatios.push_back(std::numeric_limits<double>::quiet_NaN());
+            cnRatios[soilLayer] = std::numeric_limits<double>::quiet_NaN();
         }
     }
     return cnRatios;

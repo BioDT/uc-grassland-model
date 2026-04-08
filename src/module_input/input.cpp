@@ -91,6 +91,7 @@ bool INPUT::searchParameterInInputFile(std::string keyword, const char *filename
     {
         std::string s = filename;
         utils.handleError("Cannot open the file" + s + ". There is no simuation possible. Please check if the file exists.");
+        return false;
     }
 }
 

@@ -76,24 +76,13 @@ void INIT::resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &rec
 {
     /// Process-related variables
     // 1. Recruitment
-    recruitment.incomingSeeds.clear();
-    recruitment.outgoingSeeds.clear();
-    recruitment.successfullGerminatedSeeds.clear();
-    for (int pft = 0; pft < parameter.pftCount; pft++)
-    {
-        recruitment.incomingSeeds.push_back(0);
-        recruitment.outgoingSeeds.push_back(0);
-        recruitment.successfullGerminatedSeeds.push_back(0);
-    }
+    recruitment.incomingSeeds.assign(parameter.pftCount, 0);
+    recruitment.outgoingSeeds.assign(parameter.pftCount, 0);
+    recruitment.successfullGerminatedSeeds.assign(parameter.pftCount, 0);
 
     // 2. Light availability, crowding (interaction)
-    interaction.LAI.clear();
-    interaction.LAIwithLightExtinction.clear();
-    for (int layerindex = 0; layerindex <= maximumHeightLayer; layerindex++)
-    {
-        interaction.LAI.push_back(0.0);
-        interaction.LAIwithLightExtinction.push_back(0.0);
-    }
+    interaction.LAI.assign(maximumHeightLayer + 1, 0.0);
+    interaction.LAIwithLightExtinction.assign(maximumHeightLayer + 1, 0.0); 
     community.maximumHeightOfAllPlants = 0;
     community.totalLeafAreaIndexOfPlantsInCommunity = 0;
     community.greenleafAreaIndexOfPlantsInCommunity = 0;
@@ -112,27 +101,16 @@ void INIT::resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &rec
     // 4. Soil water demand and uptake
     community.totalSoilWaterDemand = 0.0;
     community.totalSoilWaterUptake = 0.0;
-    community.totalSoilWaterDemandPerSoilLayer.clear();
-    community.totalSoilWaterUptakePerSoilLayer.clear();
-    for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
-    {
-        community.totalSoilWaterDemandPerSoilLayer.push_back(0);
-        community.totalSoilWaterUptakePerSoilLayer.push_back(0);
-    }
+    community.totalSoilWaterDemandPerSoilLayer.assign(parameter.numberOfSoilLayers, 0.0);
+    community.totalSoilWaterUptakePerSoilLayer.assign(parameter.numberOfSoilLayers, 0.0);
 
     // 5. Soil nitrogen demand and uptake
     /* reset total nitrogen demand and competing plants per soil layer */
     community.totalSoilNitrogenDemand = 0;
     community.totalSoilNitrogenUptake = 0;
-    community.numberOfPlantsCompetingForSoilNitrogenPerSoilLayer.clear();
-    community.totalSoilNitrogenDemandPerSoilLayer.clear();
-    community.totalSoilNitrogenUptakePerSoilLayer.clear();
-    for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
-    {
-        community.numberOfPlantsCompetingForSoilNitrogenPerSoilLayer.push_back(0);
-        community.totalSoilNitrogenDemandPerSoilLayer.push_back(0);
-        community.totalSoilNitrogenUptakePerSoilLayer.push_back(0);
-    }
+    community.numberOfPlantsCompetingForSoilNitrogenPerSoilLayer.assign(parameter.numberOfSoilLayers, 0);
+    community.totalSoilNitrogenDemandPerSoilLayer.assign(parameter.numberOfSoilLayers, 0.0);
+    community.totalSoilNitrogenUptakePerSoilLayer.assign(parameter.numberOfSoilLayers, 0.0);
 
     /// Output-related variables
     community.totalNumberOfPlantsInCommunity = 0;
@@ -140,44 +118,25 @@ void INIT::resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &rec
     community.brownBiomassYield = 0.0;
     community.biomassYield = 0.0;
 
-    community.numberOfPlantsPerPFT.clear();
-    community.pftComposition.clear();
-    community.coveredAreaOfPlantsPerPFT.clear();
-    community.shootBiomassOfPlantsPerPFT.clear();
-    community.brownShootBiomassOfPlantsPerPFT.clear();
-    community.greenShootBiomassOfPlantsPerPFT.clear();
-    community.clippedShootBiomassOfPlantsPerPFT.clear();
-    community.rootBiomassOfPlantsPerPFT.clear();
-    community.recruitmentBiomassOfPlantsPerPFT.clear();
-    community.exudationBiomassOfPlantsPerPFT.clear();
-    community.gppOfPlantsPerPFT.clear();
-    community.nppOfPlantsPerPFT.clear();
-    community.carbonRespirationOfPlantsPerPFT.clear();
-    community.greenBiomassYieldPerPFT.clear();
-    community.brownBiomassYieldPerPFT.clear();
-    community.biomassYieldPerPFT.clear();
+    community.pftComposition.assign(parameter.pftCount, 0);
+    community.numberOfPlantsPerPFT.assign(parameter.pftCount, 0);
 
-    for (int pft = 0; pft < parameter.pftCount; pft++)
-    {
-        community.pftComposition.push_back(0);
-        community.numberOfPlantsPerPFT.push_back(0);
+    community.coveredAreaOfPlantsPerPFT.assign(parameter.pftCount, 0.0);
+    community.shootBiomassOfPlantsPerPFT.assign(parameter.pftCount, 0.0);
+    community.brownShootBiomassOfPlantsPerPFT.assign(parameter.pftCount, 0.0);
+    community.greenShootBiomassOfPlantsPerPFT.assign(parameter.pftCount, 0.0);
+    community.clippedShootBiomassOfPlantsPerPFT.assign(parameter.pftCount, 0.0);
+    community.rootBiomassOfPlantsPerPFT.assign(parameter.pftCount, 0.0);
+    community.recruitmentBiomassOfPlantsPerPFT.assign(parameter.pftCount, 0.0);
+    community.exudationBiomassOfPlantsPerPFT.assign(parameter.pftCount, 0.0);
 
-        community.coveredAreaOfPlantsPerPFT.push_back(0);
-        community.shootBiomassOfPlantsPerPFT.push_back(0);
-        community.brownShootBiomassOfPlantsPerPFT.push_back(0);
-        community.greenShootBiomassOfPlantsPerPFT.push_back(0);
-        community.clippedShootBiomassOfPlantsPerPFT.push_back(0);
-        community.rootBiomassOfPlantsPerPFT.push_back(0);
-        community.recruitmentBiomassOfPlantsPerPFT.push_back(0);
-        community.exudationBiomassOfPlantsPerPFT.push_back(0);
-        community.gppOfPlantsPerPFT.push_back(0);
-        community.nppOfPlantsPerPFT.push_back(0);
-        community.carbonRespirationOfPlantsPerPFT.push_back(0);
+    community.gppOfPlantsPerPFT.assign(parameter.pftCount, 0.0);
+    community.nppOfPlantsPerPFT.assign(parameter.pftCount, 0.0);
+    community.carbonRespirationOfPlantsPerPFT.assign(parameter.pftCount, 0.0);
 
-        community.greenBiomassYieldPerPFT.push_back(0);
-        community.brownBiomassYieldPerPFT.push_back(0);
-        community.biomassYieldPerPFT.push_back(0);
-    }
+    community.greenBiomassYieldPerPFT.assign(parameter.pftCount, 0.0);
+    community.brownBiomassYieldPerPFT.assign(parameter.pftCount, 0.0);
+    community.biomassYieldPerPFT.assign(parameter.pftCount, 0.0);
 }
 
 /**
@@ -280,11 +239,7 @@ void INIT::resetSoilResourceProcessAndFluxVariables(PARAMETER parameter, SOIL &s
     soil.evaporation = 0.0;   // snow evaporation [mm/day]
     soil.surfaceRunOff = 0.0; // run-off above-ground [mm/day]
     soil.soilRunOff = 0.0;    // run-off below-ground [mm/day]
-    soil.soilWaterFluxDownwardsOutOfSoilLayer.clear();
-    for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
-    {
-        soil.soilWaterFluxDownwardsOutOfSoilLayer.push_back(0);
-    }
+    soil.soilWaterFluxDownwardsOutOfSoilLayer.assign(parameter.numberOfSoilLayers, 0.0);
 
     /* carbon fluxes */
     soil.carbonFlux_surfaceStructuralLitterPool_to_soilMicrobesPool = 0;

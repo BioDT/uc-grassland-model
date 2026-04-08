@@ -15,6 +15,7 @@ cdef extern from "../src/pythoninterface/pythoninterface.h":
     cdef cppclass PYTHONINTERFACE:
         PYTHONINTERFACE() except + nogil
         void initializeSimulation(string path) except + nogil
+        void setRandomNumberGeneratorSeed(unsigned int seed) except + nogil
         void runSimulationStep() except + nogil
         void writeResultsToOutputFiles() except + nogil
         double getShootBiomassAboveClippingHeightPerSquaremeter() except + nogil
