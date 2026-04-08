@@ -32,6 +32,8 @@ cdef class GrassmindModel():
         self.py_grassmind.initializeSimulation(path)
         self.initialized = True
 
+    def set_random_number_generator_seed(self, unsigned int seed):
+        self.py_grassmind.setRandomNumberGeneratorSeed(seed)
 
     def step(self):
         if self.initialized:

@@ -57,6 +57,7 @@ public:
     void initializeCouplingVariables(PARAMETER &parameter, SOIL &soil);
     void resetCouplingVariablesFluxes(PARAMETER &parameter, SOIL &soil);
     void runSimulationStep();
+    void setRandomNumberGeneratorSeed(unsigned int seed);
     void writeResultsToOutputFiles();
 
     // get output variables

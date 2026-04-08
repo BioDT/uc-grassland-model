@@ -85,6 +85,13 @@ void PYTHONINTERFACE::resetCouplingVariablesFluxes(PARAMETER &parameter, SOIL &s
     std::fill(soil.couplingInterface_plantNo3UptakePerSoilLayer.begin(), soil.couplingInterface_plantNo3UptakePerSoilLayer.end(), 0.0);
 }
 
+void PYTHONINTERFACE::setRandomNumberGeneratorSeed(unsigned int seed)
+{
+    parameter.randomNumberGeneratorSeed = seed;
+    std::cout << "Seed of random number generator is changed to: " << std::to_string(seed) << std::endl
+              << std::endl;
+}
+
 void PYTHONINTERFACE::runSimulationStep()
 {
     resetCouplingVariablesFluxes(parameter, soil);
