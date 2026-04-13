@@ -132,7 +132,7 @@ plantShootRootRatio	3.41
 \unit:g(odm) g(odm)-1
 \description:shoot to root ratio (organic dry matter of biomass)
 
-plantRootDepthParamIntercept	0.60471778
+plantRootDepthParamIntercept	4.97561694
 \datatype:float-array
 \description:intercept of power-law relationship of shoot biomass with rooting depth
 

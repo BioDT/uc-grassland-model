@@ -18,7 +18,7 @@ MORTALITY::~MORTALITY() {};
  *       vector. It performs checks to ensure that plant cohorts in the vector still have
  *       a minimum of one plant after applying the mortality processes.
  */
-void MORTALITY::doPlantMortality(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry, GROWTH growth, INTERACTION interaction, SOIL soil)
+void MORTALITY::doPlantMortality(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry, GROWTH growth, INTERACTION interaction, SOIL &soil)
 {
     for (int cohortIndex = 0; cohortIndex < community.totalNumberOfCohortsInCommunity; cohortIndex++)
     {
@@ -62,7 +62,7 @@ void MORTALITY::doPlantMortality(UTILS utils, PARAMETER parameter, COMMUNITY &co
 }
 
 /* Leaf and root senescence and litter fall */
-void MORTALITY::doSenescenceAndLitterFall(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry, GROWTH growth, INTERACTION interaction, SOIL soil, int cohortIndex, int pft)
+void MORTALITY::doSenescenceAndLitterFall(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry, GROWTH growth, INTERACTION interaction, SOIL &soil, int cohortIndex, int pft)
 {
     /// Leaf senescence
     double browningLeafBiomass = doLeafSenescence(community, parameter, growth, interaction, cohortIndex, pft);
@@ -78,7 +78,8 @@ void MORTALITY::doSenescenceAndLitterFall(UTILS utils, PARAMETER parameter, COMM
 double MORTALITY::doLeafSenescence(COMMUNITY &community, PARAMETER parameter, GROWTH growth, INTERACTION interaction, int cohortIndex, int pft)
 {
     double effectOfDayTimeTemperature = growth.calculateEffectOfAirTemperatureOnGPP(interaction.dayTimeAirTemperature);
-    double browningLeafBiomass = effectOfDayTimeTemperature * (community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves / parameter.leafLifeSpan[pft]); // to be added: effect of community.allPlants.at(cohortIndex)->limitingFactorGppWater
+    double effectOfWaterLimitation = 1 - community.allPlants.at(cohortIndex)->limitingFactorGppWater;
+    double browningLeafBiomass = effectOfDayTimeTemperature * effectOfWaterLimitation * (community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves / parameter.leafLifeSpan[pft]);
 
     community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves += browningLeafBiomass;
     community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves -= browningLeafBiomass;
@@ -93,7 +94,7 @@ double MORTALITY::doLeafSenescence(COMMUNITY &community, PARAMETER parameter, GR
     return (browningLeafBiomass);
 }
 
-void MORTALITY::doLeafLitterFall(UTILS utils, COMMUNITY &community, ALLOMETRY allometry, PARAMETER parameter, SOIL soil, int cohortIndex, int pft)
+void MORTALITY::doLeafLitterFall(UTILS utils, COMMUNITY &community, ALLOMETRY allometry, PARAMETER parameter, SOIL &soil, int cohortIndex, int pft)
 {
     if (community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves > 0.0)
     {
@@ -147,7 +148,7 @@ void MORTALITY::updatePlantSize(UTILS utils, COMMUNITY &community, ALLOMETRY all
     community.allPlants.at(cohortIndex)->lai = community.allPlants.at(cohortIndex)->laiBrown + community.allPlants.at(cohortIndex)->laiGreen;
 }
 
-void MORTALITY::doRootSenescenceAndLitterFall(UTILS utils, COMMUNITY &community, PARAMETER parameter, SOIL soil, int cohortIndex, int pft)
+void MORTALITY::doRootSenescenceAndLitterFall(UTILS utils, COMMUNITY &community, PARAMETER parameter, SOIL &soil, int cohortIndex, int pft)
 {
     double dyingRootBiomass = community.allPlants.at(cohortIndex)->rootBiomass * (1.0 / parameter.rootLifeSpan[pft]);
 
