@@ -74,7 +74,7 @@ add_executable(GRASSMIND3 ${SOURCES} ${HEADERS})
 target_include_directories(GRASSMIND3 PUBLIC include)
 
 #Create library target
-add_library(grassmind3 STATIC
+add_library(grassmind3lib STATIC
     src/utils/utils.cpp
     src/module_output/output.cpp
     src/module_input/input.cpp
@@ -93,6 +93,6 @@ add_library(grassmind3 STATIC
     src/module_interaction/interaction.cpp
     src/pythoninterface/pythoninterface.cpp
 )
-set_target_properties(grassmind3 PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_include_directories(grassmind3 PUBLIC include)
+set_target_properties(grassmind3lib PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_include_directories(grassmind3lib PUBLIC include)
 

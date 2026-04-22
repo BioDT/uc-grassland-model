@@ -24,12 +24,9 @@ include_dirs = [packageDir, sourceDir, numpy.get_include()]
 libDirs = [currentFolder, buildDir]
 
 if sys.platform == "win32":
-    libraries = ["Bodium", "winmm", "Advapi32", "Qt6Widgets", "Qt6Core", "Qt6Gui"]
-    extra_compile_args = ["/std:c++17", "/O2", "/Zc:__cplusplus"]
-    define_macros = [("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]
-
+    raise RuntimeError("Python binding not yet adapted for windows!")
 else:
-    libraries = ["grassmind3"]
+    libraries = ["grassmind3lib"]
     extra_compile_args = ["-O0", "-g", "-DCYTHON_TRACE=1"]
     define_macros = []
 
@@ -52,7 +49,7 @@ setup(
     name=packageName + "." + NAME,
     ext_modules=cythonize(
         extensions,
-        gdb_debug=True,  # 🔥 THIS IS CRITICAL
+        gdb_debug=True,
         compiler_directives={
             "linetrace": True,
             "binding": True,
