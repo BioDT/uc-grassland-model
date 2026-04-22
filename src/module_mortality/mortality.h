@@ -28,6 +28,7 @@ public:
    void updatePlantSize(UTILS utils, COMMUNITY &community, ALLOMETRY allometry, PARAMETER parameter, int fractionLeavesFalling, int cohortIndex, int pft);
    void doNitrogenRelocation(UTILS utils, PARAMETER parameter, COMMUNITY &community, double browningLeafBiomass, int cohortIndex, int pft);
    void doRootSenescenceAndLitterFall(UTILS utils, COMMUNITY &community, PARAMETER parameter, SOIL &soil, int cohortIndex, int pft);
+   void updateCoveredAreaOfAllPlants(PARAMETER parameter, COMMUNITY &community);
    void doPlantCrowding(PARAMETER parameter, UTILS utils, SOIL &soil, COMMUNITY &community, int cohortIndex, int pft);
    void doBasicMortality(UTILS utils, PARAMETER parameter, SOIL &soil, COMMUNITY &community, int cohortIndex, int pft);
    double getPlantMortalityProbability(PARAMETER parameter, COMMUNITY community, int cohortIndex, int pft);

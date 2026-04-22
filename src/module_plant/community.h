@@ -42,6 +42,7 @@ public:
 
     // required for crowding, calculated in
     double coveredAreaOfAllPlants;
+    std::vector<double> coveredAreaOfAllPlantsPerHeightLayer;
 
     // required for carbon balance, calculated in
     double carbonRespirationOfAllPlants;

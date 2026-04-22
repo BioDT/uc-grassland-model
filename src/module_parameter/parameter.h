@@ -70,7 +70,7 @@ public:
          "plantGppReductionBySoilWaterApproach", "lowerSoilWaterFractionForPlantGppReduction",
          "lowerSoilWaterContentForPlantGppReduction", "upperSoilWaterContentForPlantGppReduction",
          "plantResponseToTemperatureQ10Base", "plantResponseToTemperatureQ10Reference",
-         "h2L", "h2H", "minLayerReductionFactorFromTopLayer", "minLayerReductionFactorFromAverage", "disableRunoff"};
+         "h2L", "h2H", "crowdingCalculationFromPlantTopLayer", "minLayerReductionFactorFromAverage", "disableRunoff"};
 
     int pftCount;
     std::vector<double> maximumPlantHeight;
@@ -125,7 +125,7 @@ public:
     /* parameters relevant for coupling */
     double h2L;
     double h2H;
-    int minLayerReductionFactorFromTopLayer;
+    int crowdingCalculationFromPlantTopLayer;
     int minLayerReductionFactorFromAverage;
     int disableRunoff;
 

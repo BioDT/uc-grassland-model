@@ -282,7 +282,7 @@ h2H	-20000
 \unit:
 \description:waterpotential maximal uptake high Respiration (only required for BODIUM coupling)
 
-minLayerReductionFactorFromTopLayer	1
+crowdingCalculationFromPlantTopLayer	1
 \datatype:integer
 \unit:
 \description:use top layer for calculation and not fullest layer (only required for BODIUM coupling)

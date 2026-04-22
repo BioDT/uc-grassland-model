@@ -559,7 +559,7 @@ void INPUT::transferPlantTraitsParameterValueToModelParameter(PARAMETER &paramet
     /* parameter relevant for coupling */
     parameter.h2L = configParFloat["h2L"];
     parameter.h2H = configParFloat["h2H"];
-    parameter.minLayerReductionFactorFromTopLayer = configParInt["minLayerReductionFactorFromTopLayer"];
+    parameter.crowdingCalculationFromPlantTopLayer = configParInt["crowdingCalculationFromPlantTopLayer"];
     parameter.minLayerReductionFactorFromAverage = configParInt["minLayerReductionFactorFromAverage"];
     parameter.disableRunoff = configParBool["disableRunoff"];
 
