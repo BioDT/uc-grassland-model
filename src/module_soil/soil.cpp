@@ -545,7 +545,7 @@ void SOIL::calculateSoilWaterDemandPerPlant(UTILS utils, PARAMETER parameter, CO
             {
                 utils.handleError("Water-use-efficiency is zero. Please check the plant traits file!");
             }
-            community.totalSoilWaterDemand += community.allPlants.at(cohortindex)->soilWaterDemand;
+            community.totalSoilWaterDemand += community.allPlants.at(cohortindex)->amount *  community.allPlants.at(cohortindex)->soilWaterDemand;
 
             // demand per plant and community distributed uniformly among rooting layers
             for (int soilLayer = 0; soilLayer < rootingSoilLayers; soilLayer++)
@@ -1198,7 +1198,7 @@ void SOIL::calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, C
 
     double meanRootDiameter = 5e-4; // m
     double meanSpecificRootLength =
-        120000 * 1000; // bodium config summeroats (m per kg) , coversion to m per ton
+        120000; // bodium config summeroats (m per kg)
 
     for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
     {
@@ -1251,16 +1251,16 @@ void SOIL::calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, C
                     ratio_nh4 = (std::isnan(ratio_nh4)) ? 0 : ratio_nh4;
                     couplingInterface_plantNh4UptakePerSoilLayer[soilLayer] += community.allPlants.at(cohortindex)->amount * (new_nup * ratio_nh4);       // kg
                     couplingInterface_plantNo3UptakePerSoilLayer[soilLayer] += community.allPlants.at(cohortindex)->amount * (new_nup * (1 - ratio_nh4)); // kg
-                    community.allPlants.at(cohortindex)->soilNitrogenUptakePerSoilLayer[soilLayer] += new_nup / 1000;                                     // in tons
-                    community.allPlants.at(cohortindex)->totalSoilNitrogenUptake += new_nup / 1000;                                                       // tons
+                    community.allPlants.at(cohortindex)->soilNitrogenUptakePerSoilLayer[soilLayer] += new_nup * 1000;                                     // in g
+                    community.allPlants.at(cohortindex)->totalSoilNitrogenUptake += new_nup * 1000;                                                       // g
                 }
                 else
                 {
                     couplingInterface_plantNh4UptakePerSoilLayer[soilLayer] += community.allPlants.at(cohortindex)->amount * (water_up_n * nh4conc); // kg
                     couplingInterface_plantNo3UptakePerSoilLayer[soilLayer] += community.allPlants.at(cohortindex)->amount * (water_up_n * no3conc); // kg
                     community.allPlants.at(cohortindex)->soilNitrogenUptakePerSoilLayer[soilLayer] +=
-                        water_up_n * (nh4conc + no3conc) * 1 / 1000;                                                             // in tons
-                    community.allPlants.at(cohortindex)->totalSoilNitrogenUptake += water_up_n * (nh4conc + no3conc) * 1 / 1000; // tons
+                        water_up_n * (nh4conc + no3conc) * 1000;                                                             // in g
+                    community.allPlants.at(cohortindex)->totalSoilNitrogenUptake += water_up_n * (nh4conc + no3conc) * 1000; // g
                 }
             }
             n_conv = (n_conv > n_lim) ? n_lim : n_conv;

@@ -34,7 +34,7 @@ void PYTHONINTERFACE::initializeSimulation(std::string path)
     /**
      * @brief Prepares output files for writing simulation results.
      */
-    output.prepareModelOutput(path, utils, parameter);
+    //output.prepareModelOutput(path, utils, parameter);
 
     /**
      * @brief Prints a summary of the simulation settings to the console.
@@ -88,6 +88,7 @@ void PYTHONINTERFACE::resetCouplingVariablesFluxes(PARAMETER &parameter, SOIL &s
 void PYTHONINTERFACE::setRandomNumberGeneratorSeed(unsigned int seed)
 {
     parameter.randomNumberGeneratorSeed = seed;
+    init.initRandomNumberGeneratorSeed(parameter, community);
     std::cout << "Seed of random number generator is changed to: " << std::to_string(seed) << std::endl
               << std::endl;
 }

@@ -223,18 +223,15 @@ double GROWTH::calculateEffectOfAirTemperatureOnGPP(double dayTimeAirTemperature
     {
         reductionFactor = 0;
     }
-
-    if (dayTimeAirTemperature > -5 && dayTimeAirTemperature <= 2)
+    else if (dayTimeAirTemperature <= 2)
     {
         reductionFactor = (0.02857 * dayTimeAirTemperature + 0.142);
     }
-
-    if (dayTimeAirTemperature > 2 && dayTimeAirTemperature <= 10)
+    else if (dayTimeAirTemperature <= 10)
     {
         reductionFactor = (0.1 * dayTimeAirTemperature);
     }
-
-    if (dayTimeAirTemperature > 10)
+    else
     {
         reductionFactor = 1.0;
     }

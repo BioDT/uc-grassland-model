@@ -132,7 +132,7 @@ plantShootRootRatio	3.41
 \unit:g(odm) g(odm)-1
 \description:shoot to root ratio (organic dry matter of biomass)
 
-plantRootDepthParamIntercept	0.60471778
+plantRootDepthParamIntercept	4.97561694
 \datatype:float-array
 \description:intercept of power-law relationship of shoot biomass with rooting depth
 
@@ -282,7 +282,7 @@ h2H	-20000
 \unit:
 \description:waterpotential maximal uptake high Respiration (only required for BODIUM coupling)
 
-minLayerReductionFactorFromTopLayer	1
+crowdingCalculationFromPlantTopLayer	1
 \datatype:integer
 \unit:
 \description:use top layer for calculation and not fullest layer (only required for BODIUM coupling)
