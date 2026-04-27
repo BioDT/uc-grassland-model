@@ -18,7 +18,7 @@ SOIL::~SOIL() {};
  * @param pft Plant functional type index
  * @param numberOfTargetSoilLayers Number of soil layer litter material is distributed over (only required for external soil module)
  */
-void SOIL::transferDyingPlantPartsToLitterPools(UTILS utils, PARAMETER parameter, int number, double biomass, std::string typeOfMaterial, int pft, int numberOfTargetSoilLayers)
+void SOIL::transferDyingPlantPartsToLitterPools(UTILS utils, PARAMETER parameter, double number, double biomass, std::string typeOfMaterial, int pft, int numberOfTargetSoilLayers)
 {
 
     double carbonFlux = number * (biomass * carbonContentOdm);

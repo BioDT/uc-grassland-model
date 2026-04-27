@@ -159,7 +159,7 @@ void RECRUITMENT::getIncomingSeedsByPlantReproduction(PARAMETER parameter, COMMU
         {
             if (community.allPlants[cohortIndex]->recruitmentBiomass > 0)
             {
-                numberOfSeeds = (int)floor((community.allPlants[cohortIndex]->recruitmentBiomass / parameter.seedMasses[pft]) + 0.5);
+                numberOfSeeds = (int)floor((community.allPlants[cohortIndex]->amount * community.allPlants[cohortIndex]->recruitmentBiomass / parameter.seedMasses[pft]) + 0.5);
                 if (parameter.seedsFromMaturePlantsActivated)
                 {
                     incomingSeeds[pft] += numberOfSeeds;

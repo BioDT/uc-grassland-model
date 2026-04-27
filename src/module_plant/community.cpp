@@ -27,14 +27,15 @@ void COMMUNITY::checkPlantsAreAliveInCommunity(UTILS utils)
       /* go through all plant cohorts in the community vector and save indices of dying cohorts */
       for (int cohortIndex = 0; cohortIndex < allPlants.size(); cohortIndex++)
       {
-         if (allPlants[cohortIndex]->amount == 0)
-         {
-            idsOfDeadPlantCohorts.push_back(cohortIndex);
-         }
-         else if (allPlants[cohortIndex]->amount < 0)
+         if (allPlants[cohortIndex]->amount < 0)
          {
             utils.handleError("Error (allPlants vector): there is an invalid negative amount of plants within a cohort.");
          }
+         else if (allPlants[cohortIndex]->amount <= 0.000001)
+         {
+            idsOfDeadPlantCohorts.push_back(cohortIndex);
+         }
+         
       }
 
       /* throw an error if more cohorts should die than existing in the community vector */
