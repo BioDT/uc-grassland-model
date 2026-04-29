@@ -1,6 +1,7 @@
 #include <iostream>
 #include <ctime>
 #include <vector>
+#include <numeric>
 
 #include "../module_input/input.h"
 #include "../module_output/output.h"

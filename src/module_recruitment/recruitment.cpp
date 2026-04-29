@@ -159,7 +159,7 @@ void RECRUITMENT::getIncomingSeedsByPlantReproduction(PARAMETER parameter, COMMU
         {
             if (community.allPlants[cohortIndex]->recruitmentBiomass > 0)
             {
-                numberOfSeeds = (int)floor((community.allPlants[cohortIndex]->recruitmentBiomass / parameter.seedMasses[pft]) + 0.5);
+                numberOfSeeds = (int)floor((community.allPlants[cohortIndex]->amount * community.allPlants[cohortIndex]->recruitmentBiomass / parameter.seedMasses[pft]) + 0.5);
                 if (parameter.seedsFromMaturePlantsActivated)
                 {
                     incomingSeeds[pft] += numberOfSeeds;
@@ -352,9 +352,9 @@ void RECRUITMENT::seedlingCrowdingMortality(UTILS utils, PARAMETER parameter, CO
 
     newCoveredAreaOfAllPlants = community.coveredAreaOfAllPlants + requiredSpaceForNewSeedlings;
 
-    if (newCoveredAreaOfAllPlants > SIMULATIONAREA)
+    if (newCoveredAreaOfAllPlants > kSimulationArea)
     {
-        availableSpaceForNewSeedlings = std::max(SIMULATIONAREA - community.coveredAreaOfAllPlants, 0.0);
+        availableSpaceForNewSeedlings = std::max(kSimulationArea - community.coveredAreaOfAllPlants, 0.0);
         reductionOfNewSeedlingsByCrowding = availableSpaceForNewSeedlings / requiredSpaceForNewSeedlings;
 
         for (int pft = 0; pft < parameter.pftCount; pft++)
