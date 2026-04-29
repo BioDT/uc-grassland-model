@@ -1292,7 +1292,7 @@ void SOIL::calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, C
                                   meanSpecificRootLength * 2 * PI * (meanRootDiameter / 2);
                     }
                     // double surface=2*(theRoot->getVolume()/(mean_dia/2)); // pi r² -> 2pi r, m²/Node
-                    n_diff_node = surface * diff_coeff * DAYINSECONDS *
+                    n_diff_node = surface * diff_coeff * kDayInSeconds *
                                   (couplingInterface_soilWaterNh4Concentration[soilLayer] +
                                    couplingInterface_soilWaterNo3Concentration[soilLayer]);
                     // total N uptake per diffusion
@@ -1317,7 +1317,7 @@ void SOIL::calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, C
                                   meanSpecificRootLength * 2 * PI * (meanRootDiameter / 2);
                     }
                     // double surface=2*(theRoot->getVolume()/(mean_dia/2));
-                    n_diff_node = surface * diff_coeff * DAYINSECONDS *
+                    n_diff_node = surface * diff_coeff * kDayInSeconds *
                                   (couplingInterface_soilWaterNh4Concentration[soilLayer] +
                                    couplingInterface_soilWaterNo3Concentration[soilLayer]);
 

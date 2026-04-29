@@ -54,8 +54,8 @@ void MANAGEMENT::checkIfTodayAndDoMowing(UTILS utils, COMMUNITY &community, ALLO
             for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
             {
                 // state variable updates for soil evaporation
-                community.greenleafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->amount * community.allPlants[cohortindex]->laiGreen * community.allPlants[cohortindex]->coveredArea/SIMULATIONAREA;
-                community.totalLeafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->lai * community.allPlants[cohortindex]->coveredArea * community.allPlants[cohortindex]->amount/SIMULATIONAREA;
+                community.greenleafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->amount * community.allPlants[cohortindex]->laiGreen * community.allPlants[cohortindex]->coveredArea/kSimulationArea;
+                community.totalLeafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->lai * community.allPlants[cohortindex]->coveredArea * community.allPlants[cohortindex]->amount/kSimulationArea;
             }
         }
         index++;

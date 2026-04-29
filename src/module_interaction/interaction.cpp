@@ -57,7 +57,7 @@ void INTERACTION::calculateCumulativeLeafAreaIndexAcrossHeightLayers(UTILS utils
         {
             /// search for height layer up to which the plant cohort is reaching to
             /// Note: floor is used because first height layer 0-1 cm has index 0
-            int topHeightLayerIndexOfPlant = (int)std::floor((plantHeight / heightLayerWidth));
+            int topHeightLayerIndexOfPlant = (int)std::floor((plantHeight / heightLayerWidth) + kNumericTolerance);
 
             /// calculate weights for the plants' contribution to height layers based on plant height
             calculateWeightsOfPlantHeightContributionToHeightLayers(topHeightLayerIndexOfPlant, plantHeight);
@@ -93,8 +93,8 @@ void INTERACTION::addPlantLeafAreaToHeightLayers(int topHeightLayerIndexOfPlant,
 {
     for (int layerindex = 0; layerindex <= topHeightLayerIndexOfPlant; layerindex++)
     {
-        LAI.at(layerindex) += (leafAreaOfPlantCohort * weightsForPlantContributionToHeightLayer.at(layerindex)/SIMULATIONAREA);
-        LAIwithLightExtinction.at(layerindex) += (leafAreaOfPlantCohort * plantLightExtinctionCoefficient * weightsForPlantContributionToHeightLayer.at(layerindex)/SIMULATIONAREA);
+        LAI.at(layerindex) += (leafAreaOfPlantCohort * weightsForPlantContributionToHeightLayer.at(layerindex)/kSimulationArea);
+        LAIwithLightExtinction.at(layerindex) += (leafAreaOfPlantCohort * plantLightExtinctionCoefficient * weightsForPlantContributionToHeightLayer.at(layerindex)/kSimulationArea);
     }
 }
 
