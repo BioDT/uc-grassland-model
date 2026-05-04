@@ -70,7 +70,7 @@ public:
          "plantGppReductionBySoilWaterApproach", "lowerSoilWaterFractionForPlantGppReduction",
          "lowerSoilWaterContentForPlantGppReduction", "upperSoilWaterContentForPlantGppReduction",
          "plantResponseToTemperatureQ10Base", "plantResponseToTemperatureQ10Reference",
-         "h2L", "h2H", "crowdingCalculationFromPlantTopLayer", "minLayerReductionFactorFromAverage", "disableRunoff"};
+         "h2L", "h2H", "crowdingCalculationFromPlantTopLayer", "minLayerReductionFactorFromAverage", "disableRunoff", "tresholdCohortDeathDeterministic"};
 
     int pftCount;
     std::vector<double> maximumPlantHeight;
@@ -140,6 +140,7 @@ public:
     bool useExternalSoilModule_selfCoupled_getVariables;
     bool useInternalSoilModule_selfCoupled_setVariables;
     bool stochasticSimulation;
+    float tresholdCohortDeathDeterministic;
 
     /* parameters derived from other input parameters in the code (not listed in the input files) */
     // these are derived from the soilFile

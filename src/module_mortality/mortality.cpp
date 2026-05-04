@@ -290,7 +290,7 @@ void MORTALITY::doBasicMortality(UTILS utils, PARAMETER parameter, SOIL &soil, C
             /* deterministic basic mortality */
             amountOfPlantsToDie = community.allPlants[cohortIndex]->amount * mortalityProbability;
             /* if cohort falls below treshold, dieout of all plants */
-            if ((community.allPlants[cohortIndex]->amount - amountOfPlantsToDie) < 0.1)
+            if ((community.allPlants[cohortIndex]->amount - amountOfPlantsToDie) < parameter.tresholdCohortDeathDeterministic)
             {
                 amountOfPlantsToDie = community.allPlants[cohortIndex]->amount;
             }

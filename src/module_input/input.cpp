@@ -555,6 +555,7 @@ void INPUT::transferPlantTraitsParameterValueToModelParameter(PARAMETER &paramet
     parameter.maintenanceRespirationRate = configParFloat["maintenanceRespirationRate"];
     parameter.communityShadingInGppCalculation = configParBool["communityShadingInGppCalculation"];
     parameter.plantGppReductionBySoilWaterApproach = configParString["plantGppReductionBySoilWaterApproach"];
+    parameter.tresholdCohortDeathDeterministic = configParFloat["tresholdCohortDeathDeterministic"];
 
     /* parameter relevant for coupling */
     parameter.h2L = configParFloat["h2L"];
