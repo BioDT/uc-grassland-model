@@ -216,6 +216,8 @@ void MORTALITY::doPlantCrowding(PARAMETER parameter, UTILS utils, SOIL &soil, CO
             {
                 amountOfTooManyPlants = community.allPlants[cohortIndex]->amount * (1.0 - (kSimulationArea / community.coveredAreaOfAllPlants));
             }
+            /* avoid negative values from compuational precision */
+            amountOfTooManyPlants = std::max(0.0, amountOfTooManyPlants);
             
             /* decide if either stochastic or deterministic mortality */
             if (parameter.stochasticSimulation)

@@ -87,44 +87,45 @@ void GROWTH::doPlantPhotosynthesis(UTILS utils, PARAMETER parameter, COMMUNITY &
 double GROWTH::calculateGPPOfPlantWithCommunityShading(UTILS utils, INTERACTION interaction, PARAMETER parameter, int pft, double plantHeight, double plantLAI)
 {
     double CO2UptakePerSecondAndSquareMeter = 0.0;
+    double plantGreenLaiContributionToLayer;
+    double communityLightExtinctionExponentInLayer;
 
-    int up = (int)floor(plantHeight / heightLayerWidth + tolerance);
-    int down = 0;
+    int topHeightLayerIndexOfPlant = (int)std::floor((plantHeight / heightLayerWidth) + kNumericTolerance);
 
-    for (int heightLayer = down; heightLayer <= up; heightLayer++)
+    for (int heightLayerIndex = 0; heightLayerIndex <= topHeightLayerIndexOfPlant; heightLayerIndex++)
     {
         // TODO: clarify suitable naming
-        double leafAreIndexAboveBottomOfHeightLayer = interaction.LAIwithLightExtinction.at(heightLayer + 1);
-        double incomingRadiationTopOfHeightLayer = interaction.getRadiationByLightExtinctionLaw(leafAreIndexAboveBottomOfHeightLayer, interaction.fullSunLight);
+        double extinctionExponentTopOfHeightLayer = interaction.LAIwithLightExtinction.at(heightLayerIndex + 1);
+        double incomingRadiationTopOfHeightLayer = interaction.getRadiationByLightExtinctionLaw(extinctionExponentTopOfHeightLayer, interaction.fullSunLight);
         incomingRadiationTopOfHeightLayer *= (24.0 / interaction.dayLength);
 
         // remove this part as it is only for the output but less meaningful here
-        /*if (heightLayer == up)
+        /*if (heightLayerIndex == topHeightLayerIndexOfPlant)
         {
             community.allPlants.at(cohortindex)->incomingRadiation = incomingRadiationTopOfHeightLayer;
             // relevant for output: plant->limitingFactorLightShading (now with different (less useful) meaning)
         }*/
 
-        double plantGreenLaiContributionToLayer;
-        if (heightLayer == up)
+        
+        if (heightLayerIndex == topHeightLayerIndexOfPlant)
         {
-            plantGreenLaiContributionToLayer = plantLAI / plantHeight * (plantHeight - up * heightLayerWidth);
+            plantGreenLaiContributionToLayer = plantLAI / plantHeight * (plantHeight - topHeightLayerIndexOfPlant * heightLayerWidth);
         }
         else
         {
             plantGreenLaiContributionToLayer = plantLAI / plantHeight * heightLayerWidth;
         }
 
-        double communityLightExtinctionInLayer = interaction.LAIwithLightExtinction.at(heightLayer) - interaction.LAIwithLightExtinction.at(heightLayer + 1);
-        if (!(plantHeight - heightLayer * heightLayerWidth < tolerance))
+        communityLightExtinctionExponentInLayer = interaction.LAIwithLightExtinction.at(heightLayerIndex) - interaction.LAIwithLightExtinction.at(heightLayerIndex + 1);
+        if (!(plantHeight - heightLayerIndex * heightLayerWidth < kNumericTolerance))
         {
-            if (communityLightExtinctionInLayer == 0)
+            if (communityLightExtinctionExponentInLayer == 0)
             {
                 utils.handleError("Light extinction is zero while plant LAI is not!");
             }
 
             // calculate photosynthesis [mumolCO2 s-1 m-2]
-            CO2UptakePerSecondAndSquareMeter += calculateCO2UptakePerSecondAndSquareMeterWithCommunityShading(parameter, pft, communityLightExtinctionInLayer, plantGreenLaiContributionToLayer,
+            CO2UptakePerSecondAndSquareMeter += calculateCO2UptakePerSecondAndSquareMeterWithCommunityShading(parameter, pft, communityLightExtinctionExponentInLayer, plantGreenLaiContributionToLayer,
                                                                                                               incomingRadiationTopOfHeightLayer);
         }
     }
@@ -175,7 +176,7 @@ double GROWTH::calculateCO2UptakePerSecondAndSquareMeter(PARAMETER parameter, in
     }
 }
 
-double GROWTH::calculateCO2UptakePerSecondAndSquareMeterWithCommunityShading(PARAMETER parameter, int pft, double lightExtinction, double photoactiveLai, double plantRadiation)
+double GROWTH::calculateCO2UptakePerSecondAndSquareMeterWithCommunityShading(PARAMETER parameter, int pft, double lightExtinctionExponent, double photoactiveLai, double plantRadiation)
 {
     if (plantRadiation == 0)
     {
@@ -189,7 +190,7 @@ double GROWTH::calculateCO2UptakePerSecondAndSquareMeterWithCommunityShading(PAR
 
         const double calcPart1 = alpha * k * plantRadiation;
         const double calcPart2 = pmax * (1 - lightTransmissionCoefficient);
-        double CO2UptakePerSecondsAndSquareMeter = (photoactiveLai / lightExtinction * pmax * log((calcPart1 + calcPart2) / (calcPart1 * exp(-lightExtinction) + calcPart2)));
+        double CO2UptakePerSecondsAndSquareMeter = (photoactiveLai / lightExtinctionExponent * pmax * log((calcPart1 + calcPart2) / (calcPart1 * exp(-lightExtinctionExponent) + calcPart2)));
 
         return CO2UptakePerSecondsAndSquareMeter;
     }

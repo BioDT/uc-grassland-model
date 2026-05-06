@@ -704,7 +704,7 @@ void SOIL::calculateSoilWaterUptakePerPlant(UTILS utils, COMMUNITY &community)
         if (community.allPlants.at(cohortindex)->amount > 0)
         {
             community.allPlants.at(cohortindex)->soilWaterUptake = community.allPlants.at(cohortindex)->soilWaterDemand * community.allPlants.at(cohortindex)->limitingFactorGppWater;
-            community.totalSoilWaterUptake += community.allPlants.at(cohortindex)->soilWaterUptake;
+            community.totalSoilWaterUptake += community.allPlants.at(cohortindex)->soilWaterUptake * community.allPlants.at(cohortindex)->amount;
 
             int rootingSoilLayers = community.allPlants.at(cohortindex)->numberOfSoilLayersRooting;
             for (int soilLayer = 0; soilLayer < rootingSoilLayers; soilLayer++)
@@ -1198,7 +1198,7 @@ void SOIL::calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, C
 
     double meanRootDiameter = 5e-4; // m
     double meanSpecificRootLength =
-        120000; // bodium config summeroats (m per kg)
+        120000 / 1000; // bodium config summeroats (m per kg), conversion to m per g
 
     for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
     {
@@ -1283,7 +1283,7 @@ void SOIL::calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, C
                     if (soilLayer < (community.allPlants.at(cohortindex)->numberOfSoilLayersRooting - 1))
                     {
                         surface = community.allPlants.at(cohortindex)->rootBiomass * parameter.soilLayerWidth[soilLayer] / community.allPlants.at(cohortindex)->rootingDepth *
-                                  meanSpecificRootLength * 2 * PI * (meanRootDiameter / 2);
+                                  meanSpecificRootLength * 2 * PI * (meanRootDiameter / 2); // m^2
                         depth += parameter.soilLayerWidth[soilLayer];
                     }
                     else

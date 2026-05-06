@@ -31,7 +31,7 @@ public:
     void calculateCumulativeLeafAreaIndexAcrossHeightLayers(UTILS utils, COMMUNITY &community, PARAMETER parameter);
     void calculateWeightsOfPlantHeightContributionToHeightLayers(int topHeightLayerIndexOfPlant, double plantHeight);
     void addPlantLeafAreaToHeightLayers(int topHeightLayerIndexOfPlant, double leafAreaOfPlantCohort, double plantLightExtinctionCoefficient);
-    void accumulateLeafAreaFromTopToBottomHeightLayers(int maximumHeightLayerReachedByPlants);
+    void accumulateLeafAreaFromTopToBottomHeightLayers(int maximumHeightLayerIndexReachedByPlants);
 
     void calculateLightAvailabilityForPlants(UTILS utils, COMMUNITY &community, PARAMETER parameter, double fullSunLight);
     void getOvertoppingCumulativeLeafAreaIndexOfPlant(COMMUNITY &community, int cohortindex, int top);
