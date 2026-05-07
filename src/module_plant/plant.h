@@ -50,13 +50,13 @@ public:
         shootBiomassAboveClippingHeight = 0.0;
 
         /* carbon content of plant pools */
-        shootCarbonGreenLeaves = shootBiomassGreenLeaves * carbonContentOdm;
-        shootCarbonBrownLeaves = shootBiomassBrownLeaves * carbonContentOdm;
+        shootCarbonGreenLeaves = shootBiomassGreenLeaves * CARBON_CONTENT_ODM;
+        shootCarbonBrownLeaves = shootBiomassBrownLeaves * CARBON_CONTENT_ODM;
         shootCarbon = shootCarbonBrownLeaves + shootCarbonGreenLeaves;
-        rootCarbon = rootBiomass * carbonContentOdm;
-        recruitmentCarbon = recruitmentBiomass * carbonContentOdm;
-        exudationCarbon = exudationBiomass * carbonContentOdm;
-        plantCarbon = plantBiomass * carbonContentOdm;
+        rootCarbon = rootBiomass * CARBON_CONTENT_ODM;
+        recruitmentCarbon = recruitmentBiomass * CARBON_CONTENT_ODM;
+        exudationCarbon = exudationBiomass * CARBON_CONTENT_ODM;
+        plantCarbon = plantBiomass * CARBON_CONTENT_ODM;
 
         /* nitrogen content of plant pools */
         if (parameter.plantCNRatioGreenLeaves[pft] > 0.0)

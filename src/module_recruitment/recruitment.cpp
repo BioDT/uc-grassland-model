@@ -358,9 +358,9 @@ void RECRUITMENT::seedlingCrowdingMortality(UTILS utils, PARAMETER parameter, CO
     }
     newCoveredAreaOfAllPlants = coveredAreaOfAllPlants + requiredSpaceForNewSeedlings;
 
-    if (newCoveredAreaOfAllPlants > kSimulationArea)
+    if (newCoveredAreaOfAllPlants > SIMULATION_AREA)
     {
-        availableSpaceForNewSeedlings = std::max(kSimulationArea - community.coveredAreaOfAllPlants, 0.0);
+        availableSpaceForNewSeedlings = std::max(SIMULATION_AREA - community.coveredAreaOfAllPlants, 0.0);
         reductionOfNewSeedlingsByCrowding = availableSpaceForNewSeedlings / requiredSpaceForNewSeedlings;
 
         for (int pft = 0; pft < parameter.pftCount; pft++)
@@ -408,7 +408,7 @@ void RECRUITMENT::transferFailedToGerminateSeedsToLitterPool(UTILS utils, PARAME
     failedToGerminateSeeds = seedPool[pft].at(seedCohortIndex) - successfullGerminatedSeeds.at(pft);
 
     /* check for consistency */
-    if (std::abs((successfullGerminatedSeeds.at(pft) + failedToGerminateSeeds) - seedPool[pft].at(seedCohortIndex)) >= tolerance)
+    if (std::abs((successfullGerminatedSeeds.at(pft) + failedToGerminateSeeds) - seedPool[pft].at(seedCohortIndex)) >= TOLERANCE)
     {
         utils.handleWarning("There is more numerical variation in the rounding of germinated / non-germinated seeds than expected.");
     }

@@ -81,13 +81,13 @@ void INIT::resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &rec
     recruitment.successfullGerminatedSeeds.assign(parameter.pftCount, 0);
 
     // 2. Light availability, crowding (interaction)
-    interaction.LAI.assign(maximumHeightLayer + 1, 0.0);
-    interaction.LAIwithLightExtinction.assign(maximumHeightLayer + 1, 0.0); 
+    interaction.LAI.assign(MAXIMUM_HEIGHT_LAYER + 1, 0.0);
+    interaction.LAIwithLightExtinction.assign(MAXIMUM_HEIGHT_LAYER + 1, 0.0); 
     community.maximumHeightOfAllPlants = 0;
     community.totalLeafAreaIndexOfPlantsInCommunity = 0;
     community.greenleafAreaIndexOfPlantsInCommunity = 0;
     community.coveredAreaOfAllPlants = 0.0;
-    community.coveredAreaOfAllPlantsPerHeightLayer.assign(maximumHeightLayer + 1, 0.0);
+    community.coveredAreaOfAllPlantsPerHeightLayer.assign(MAXIMUM_HEIGHT_LAYER + 1, 0.0);
     community.abovegroundBiomassOfAllPlants = 0.0;
     community.abovegroundLitterBiomass = 0.0;
 

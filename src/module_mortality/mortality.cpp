@@ -83,8 +83,8 @@ double MORTALITY::doLeafSenescence(COMMUNITY &community, PARAMETER parameter, GR
     community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves -= browningLeafBiomass;
     // community.allPlants.at(cohortIndex)->shootBiomass remains unchanged here
 
-    community.allPlants.at(cohortIndex)->shootCarbonBrownLeaves = community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves * carbonContentOdm;
-    community.allPlants.at(cohortIndex)->shootCarbonGreenLeaves = community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves * carbonContentOdm;
+    community.allPlants.at(cohortIndex)->shootCarbonBrownLeaves = community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves * CARBON_CONTENT_ODM;
+    community.allPlants.at(cohortIndex)->shootCarbonGreenLeaves = community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves * CARBON_CONTENT_ODM;
 
     community.allPlants.at(cohortIndex)->shootNitrogenBrownLeaves = community.allPlants.at(cohortIndex)->shootCarbonBrownLeaves / parameter.plantCNRatioBrownLeaves[pft];
     community.allPlants.at(cohortIndex)->shootNitrogenGreenLeaves = community.allPlants.at(cohortIndex)->shootCarbonGreenLeaves / parameter.plantCNRatioGreenLeaves[pft];
@@ -106,7 +106,7 @@ void MORTALITY::doLeafLitterFall(UTILS utils, COMMUNITY &community, ALLOMETRY al
             community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves -= fallingLeafBiomass;
             community.allPlants.at(cohortIndex)->shootBiomass = community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves + community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves;
 
-            community.allPlants[cohortIndex]->shootCarbonBrownLeaves = community.allPlants[cohortIndex]->shootBiomassBrownLeaves * carbonContentOdm;
+            community.allPlants[cohortIndex]->shootCarbonBrownLeaves = community.allPlants[cohortIndex]->shootBiomassBrownLeaves * CARBON_CONTENT_ODM;
             community.allPlants[cohortIndex]->shootCarbon = community.allPlants[cohortIndex]->shootCarbonGreenLeaves + community.allPlants[cohortIndex]->shootCarbonBrownLeaves;
 
             community.allPlants[cohortIndex]->shootNitrogenBrownLeaves = community.allPlants[cohortIndex]->shootCarbonBrownLeaves / parameter.plantCNRatioBrownLeaves[pft];
@@ -152,13 +152,13 @@ void MORTALITY::doRootSenescenceAndLitterFall(UTILS utils, COMMUNITY &community,
 
     soil.transferDyingPlantPartsToLitterPools(utils, parameter, community.allPlants.at(cohortIndex)->amount, dyingRootBiomass, "soil_root", pft, community.allPlants.at(cohortIndex)->numberOfSoilLayersRooting);
     community.allPlants.at(cohortIndex)->rootBiomass -= dyingRootBiomass;
-    community.allPlants.at(cohortIndex)->rootCarbon = community.allPlants.at(cohortIndex)->rootBiomass * carbonContentOdm;
+    community.allPlants.at(cohortIndex)->rootCarbon = community.allPlants.at(cohortIndex)->rootBiomass * CARBON_CONTENT_ODM;
     community.allPlants.at(cohortIndex)->rootNitrogen = community.allPlants.at(cohortIndex)->rootCarbon / parameter.plantCNRatioRoots[pft];
 }
 
 void MORTALITY::doNitrogenRelocation(UTILS utils, PARAMETER parameter, COMMUNITY &community, double browningLeafBiomass, int cohortIndex, int pft)
 {
-    double carbonContentBrowningLeaves = browningLeafBiomass * carbonContentOdm;
+    double carbonContentBrowningLeaves = browningLeafBiomass * CARBON_CONTENT_ODM;
     double previousNitrogenContentBrowningLeaves = carbonContentBrowningLeaves / parameter.plantCNRatioGreenLeaves[pft];
     double currentNitrogenContentBrowningLeaves = carbonContentBrowningLeaves / parameter.plantCNRatioBrownLeaves[pft];
 
@@ -179,7 +179,7 @@ void MORTALITY::updateCoveredAreaOfAllPlants(PARAMETER parameter, COMMUNITY &com
                 {   
                     /// search for height layer up to which the plant cohort is reaching to
                     /// Note: floor is used because first height layer 0-1 cm has index 0
-                    int topHeightLayerIndexOfPlant = (int)std::floor((community.allPlants.at(cohortIndex)->height / heightLayerWidth) + kNumericTolerance);
+                    int topHeightLayerIndexOfPlant = (int)std::floor((community.allPlants.at(cohortIndex)->height / HEIGHT_LAYER_WIDTH) + NUMERIC_TOLERANCE);
                     for (int layerindex = 0; layerindex <= topHeightLayerIndexOfPlant; layerindex++)
                     {
                         community.coveredAreaOfAllPlantsPerHeightLayer.at(layerindex) += community.allPlants[cohortIndex]->coveredArea * parameter.plantShootOverlapFactors[community.allPlants[cohortIndex]->pft] * community.allPlants[cohortIndex]->amount;
@@ -195,7 +195,7 @@ void MORTALITY::doPlantCrowding(PARAMETER parameter, UTILS utils, SOIL &soil, CO
 {
     if (community.allPlants[cohortIndex]->amount > 0)
     {
-        if (community.coveredAreaOfAllPlants > kSimulationArea)
+        if (community.coveredAreaOfAllPlants > SIMULATION_AREA)
         {
             /* amount of plants that shall die due to crowding */
             double amountOfTooManyPlants;
@@ -203,10 +203,10 @@ void MORTALITY::doPlantCrowding(PARAMETER parameter, UTILS utils, SOIL &soil, CO
             {
                 /// search for height layer up to which the plant cohort is reaching to
                 /// Note: floor is used because first height layer 0-1 cm has index 0
-                int topHeightLayerIndexOfPlant = (int)std::floor((community.allPlants.at(cohortIndex)->height / heightLayerWidth) + kNumericTolerance);
-                if (community.coveredAreaOfAllPlantsPerHeightLayer.at(topHeightLayerIndexOfPlant) > kSimulationArea)
+                int topHeightLayerIndexOfPlant = (int)std::floor((community.allPlants.at(cohortIndex)->height / HEIGHT_LAYER_WIDTH) + NUMERIC_TOLERANCE);
+                if (community.coveredAreaOfAllPlantsPerHeightLayer.at(topHeightLayerIndexOfPlant) > SIMULATION_AREA)
                 {
-                    amountOfTooManyPlants = community.allPlants[cohortIndex]->amount * (1.0 - (kSimulationArea / community.coveredAreaOfAllPlantsPerHeightLayer.at(topHeightLayerIndexOfPlant)));
+                    amountOfTooManyPlants = community.allPlants[cohortIndex]->amount * (1.0 - (SIMULATION_AREA / community.coveredAreaOfAllPlantsPerHeightLayer.at(topHeightLayerIndexOfPlant)));
                 }
                 else{
                     amountOfTooManyPlants = 0.0;
@@ -214,7 +214,7 @@ void MORTALITY::doPlantCrowding(PARAMETER parameter, UTILS utils, SOIL &soil, CO
             } 
             else 
             {
-                amountOfTooManyPlants = community.allPlants[cohortIndex]->amount * (1.0 - (kSimulationArea / community.coveredAreaOfAllPlants));
+                amountOfTooManyPlants = community.allPlants[cohortIndex]->amount * (1.0 - (SIMULATION_AREA / community.coveredAreaOfAllPlants));
             }
             /* avoid negative values from compuational precision */
             amountOfTooManyPlants = std::max(0.0, amountOfTooManyPlants);

@@ -1194,7 +1194,7 @@ void INPUT::openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parame
         file.close();
 
         double contentSum = soil.sandContent + soil.siltContent + soil.clayContent;
-        if ((contentSum < (1.0 - tolerance)) || (contentSum > (1.0 + tolerance)))
+        if ((contentSum < (1.0 - TOLERANCE)) || (contentSum > (1.0 + TOLERANCE)))
         {
             utils.handleError("Error (soil input): sand, silt and clay content do not sum up to one. Please check the soil file.");
         }
