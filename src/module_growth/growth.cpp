@@ -75,7 +75,7 @@ void GROWTH::doPlantPhotosynthesis(UTILS utils, PARAMETER parameter, COMMUNITY &
         }
 
         // conversion
-        double OdmUptakePerSecondAndSquareMeter = CO2UptakePerSecondAndSquareMeter * CO2ConversionToOdm * molarMassOfCO2; // conversion from CO2 to Odm
+        double OdmUptakePerSecondAndSquareMeter = CO2UptakePerSecondAndSquareMeter * CO2_CONVERSION_TO_ODM * MOLAR_MASS_OF_CO2; // conversion from CO2 to Odm
         double OdmUptakePerSecondAndSquareCentimeter = OdmUptakePerSecondAndSquareMeter / (100.0 * 100.0);
         double secondsPerDay = interaction.dayLength * 60 * 60;                                                      // scaling from seconds to day
         double plantPhotosynthesisPerDay = OdmUptakePerSecondAndSquareCentimeter * secondsPerDay * plantCoveredArea; // scaling to plant
@@ -87,44 +87,45 @@ void GROWTH::doPlantPhotosynthesis(UTILS utils, PARAMETER parameter, COMMUNITY &
 double GROWTH::calculateGPPOfPlantWithCommunityShading(UTILS utils, INTERACTION interaction, PARAMETER parameter, int pft, double plantHeight, double plantLAI)
 {
     double CO2UptakePerSecondAndSquareMeter = 0.0;
+    double plantGreenLaiContributionToLayer;
+    double communityLightExtinctionExponentInLayer;
 
-    int up = (int)floor(plantHeight / heightLayerWidth + tolerance);
-    int down = 0;
+    int topHeightLayerIndexOfPlant = (int)std::floor((plantHeight / HEIGHT_LAYER_WIDTH) + NUMERIC_TOLERANCE);
 
-    for (int heightLayer = down; heightLayer <= up; heightLayer++)
+    for (int heightLayerIndex = 0; heightLayerIndex <= topHeightLayerIndexOfPlant; heightLayerIndex++)
     {
         // TODO: clarify suitable naming
-        double leafAreIndexAboveBottomOfHeightLayer = interaction.LAIwithLightExtinction.at(heightLayer + 1);
-        double incomingRadiationTopOfHeightLayer = interaction.getRadiationByLightExtinctionLaw(leafAreIndexAboveBottomOfHeightLayer, interaction.fullSunLight);
+        double extinctionExponentTopOfHeightLayer = interaction.LAIwithLightExtinction.at(heightLayerIndex + 1);
+        double incomingRadiationTopOfHeightLayer = interaction.getRadiationByLightExtinctionLaw(extinctionExponentTopOfHeightLayer, interaction.fullSunLight);
         incomingRadiationTopOfHeightLayer *= (24.0 / interaction.dayLength);
 
         // remove this part as it is only for the output but less meaningful here
-        /*if (heightLayer == up)
+        /*if (heightLayerIndex == topHeightLayerIndexOfPlant)
         {
             community.allPlants.at(cohortindex)->incomingRadiation = incomingRadiationTopOfHeightLayer;
             // relevant for output: plant->limitingFactorLightShading (now with different (less useful) meaning)
         }*/
 
-        double plantGreenLaiContributionToLayer;
-        if (heightLayer == up)
+        
+        if (heightLayerIndex == topHeightLayerIndexOfPlant)
         {
-            plantGreenLaiContributionToLayer = plantLAI / plantHeight * (plantHeight - up * heightLayerWidth);
+            plantGreenLaiContributionToLayer = plantLAI / plantHeight * (plantHeight - topHeightLayerIndexOfPlant * HEIGHT_LAYER_WIDTH);
         }
         else
         {
-            plantGreenLaiContributionToLayer = plantLAI / plantHeight * heightLayerWidth;
+            plantGreenLaiContributionToLayer = plantLAI / plantHeight * HEIGHT_LAYER_WIDTH;
         }
 
-        double communityLightExtinctionInLayer = interaction.LAIwithLightExtinction.at(heightLayer) - interaction.LAIwithLightExtinction.at(heightLayer + 1);
-        if (!(plantHeight - heightLayer * heightLayerWidth < tolerance))
+        communityLightExtinctionExponentInLayer = interaction.LAIwithLightExtinction.at(heightLayerIndex) - interaction.LAIwithLightExtinction.at(heightLayerIndex + 1);
+        if (!(plantHeight - heightLayerIndex * HEIGHT_LAYER_WIDTH < NUMERIC_TOLERANCE))
         {
-            if (communityLightExtinctionInLayer == 0)
+            if (communityLightExtinctionExponentInLayer == 0)
             {
                 utils.handleError("Light extinction is zero while plant LAI is not!");
             }
 
             // calculate photosynthesis [mumolCO2 s-1 m-2]
-            CO2UptakePerSecondAndSquareMeter += calculateCO2UptakePerSecondAndSquareMeterWithCommunityShading(parameter, pft, communityLightExtinctionInLayer, plantGreenLaiContributionToLayer,
+            CO2UptakePerSecondAndSquareMeter += calculateCO2UptakePerSecondAndSquareMeterWithCommunityShading(parameter, pft, communityLightExtinctionExponentInLayer, plantGreenLaiContributionToLayer,
                                                                                                               incomingRadiationTopOfHeightLayer);
         }
     }
@@ -168,14 +169,14 @@ double GROWTH::calculateCO2UptakePerSecondAndSquareMeter(PARAMETER parameter, in
         const double pmax = parameter.maximumGrossLeafPhotosynthesisRate.at(pft);
 
         const double calcPart1 = alpha * k * plantRadiation;
-        const double calcPart2 = pmax * (1 - lightTransmissionCoefficient);
+        const double calcPart2 = pmax * (1 - LIGHT_TRANSMISSION_COEFFICIENT);
 
         double CO2UptakePerSecondsAndSquareMeter = ((pmax / k) * log((calcPart1 + calcPart2) / (calcPart1 * exp(-k * plantLAI) + calcPart2)));
         return (CO2UptakePerSecondsAndSquareMeter);
     }
 }
 
-double GROWTH::calculateCO2UptakePerSecondAndSquareMeterWithCommunityShading(PARAMETER parameter, int pft, double lightExtinction, double photoactiveLai, double plantRadiation)
+double GROWTH::calculateCO2UptakePerSecondAndSquareMeterWithCommunityShading(PARAMETER parameter, int pft, double lightExtinctionExponent, double photoactiveLai, double plantRadiation)
 {
     if (plantRadiation == 0)
     {
@@ -188,8 +189,8 @@ double GROWTH::calculateCO2UptakePerSecondAndSquareMeterWithCommunityShading(PAR
         const double pmax = parameter.maximumGrossLeafPhotosynthesisRate.at(pft);
 
         const double calcPart1 = alpha * k * plantRadiation;
-        const double calcPart2 = pmax * (1 - lightTransmissionCoefficient);
-        double CO2UptakePerSecondsAndSquareMeter = (photoactiveLai / lightExtinction * pmax * log((calcPart1 + calcPart2) / (calcPart1 * exp(-lightExtinction) + calcPart2)));
+        const double calcPart2 = pmax * (1 - LIGHT_TRANSMISSION_COEFFICIENT);
+        double CO2UptakePerSecondsAndSquareMeter = (photoactiveLai / lightExtinctionExponent * pmax * log((calcPart1 + calcPart2) / (calcPart1 * exp(-lightExtinctionExponent) + calcPart2)));
 
         return CO2UptakePerSecondsAndSquareMeter;
     }
@@ -403,29 +404,29 @@ void GROWTH::doPlantNPPAllocation(UTILS utils, PARAMETER parameter, COMMUNITY &c
             /// aboveground shoot allocation
             community.allPlants.at(cohortindex)->shootBiomassGreenLeaves += biomassIncrementForAllocation * community.allPlants.at(cohortindex)->nppAllocationShoot;
             community.allPlants.at(cohortindex)->shootBiomass = community.allPlants.at(cohortindex)->shootBiomassGreenLeaves + community.allPlants.at(cohortindex)->shootBiomassBrownLeaves;
-            community.allPlants.at(cohortindex)->shootCarbonGreenLeaves = community.allPlants.at(cohortindex)->shootBiomassGreenLeaves * carbonContentOdm;
-            community.allPlants.at(cohortindex)->shootCarbon = community.allPlants.at(cohortindex)->shootBiomass * carbonContentOdm;
+            community.allPlants.at(cohortindex)->shootCarbonGreenLeaves = community.allPlants.at(cohortindex)->shootBiomassGreenLeaves * CARBON_CONTENT_ODM;
+            community.allPlants.at(cohortindex)->shootCarbon = community.allPlants.at(cohortindex)->shootBiomass * CARBON_CONTENT_ODM;
             community.allPlants.at(cohortindex)->shootNitrogenGreenLeaves = community.allPlants.at(cohortindex)->shootBiomassGreenLeaves / parameter.plantCNRatioGreenLeaves[pft];
             community.allPlants.at(cohortindex)->shootNitrogen = community.allPlants.at(cohortindex)->shootNitrogenGreenLeaves + community.allPlants.at(cohortindex)->shootNitrogenBrownLeaves;
 
             /// belowground root allocation
             community.allPlants.at(cohortindex)->rootBiomass += biomassIncrementForAllocation * community.allPlants.at(cohortindex)->nppAllocationRoot;
-            community.allPlants.at(cohortindex)->rootCarbon = community.allPlants.at(cohortindex)->rootBiomass * carbonContentOdm;
+            community.allPlants.at(cohortindex)->rootCarbon = community.allPlants.at(cohortindex)->rootBiomass * CARBON_CONTENT_ODM;
             community.allPlants.at(cohortindex)->rootNitrogen = community.allPlants.at(cohortindex)->rootCarbon / parameter.plantCNRatioRoots[pft];
 
             /// plant biomass update
             community.allPlants.at(cohortindex)->plantBiomass = community.allPlants.at(cohortindex)->shootBiomass + community.allPlants.at(cohortindex)->rootBiomass;
-            community.allPlants.at(cohortindex)->plantCarbon = community.allPlants.at(cohortindex)->plantBiomass * carbonContentOdm;
+            community.allPlants.at(cohortindex)->plantCarbon = community.allPlants.at(cohortindex)->plantBiomass * CARBON_CONTENT_ODM;
             community.allPlants.at(cohortindex)->plantNitrogen = community.allPlants.at(cohortindex)->shootNitrogen + community.allPlants.at(cohortindex)->rootNitrogen;
 
             /// allocation to recruitment biomass pool for seed production
             community.allPlants.at(cohortindex)->recruitmentBiomass += biomassIncrementForAllocation * community.allPlants.at(cohortindex)->nppAllocationRecruitment;
-            community.allPlants.at(cohortindex)->recruitmentCarbon = community.allPlants.at(cohortindex)->recruitmentBiomass * carbonContentOdm;
+            community.allPlants.at(cohortindex)->recruitmentCarbon = community.allPlants.at(cohortindex)->recruitmentBiomass * CARBON_CONTENT_ODM;
             community.allPlants.at(cohortindex)->recruitmentNitrogen = community.allPlants.at(cohortindex)->recruitmentCarbon / parameter.plantCNRatioSeeds[pft];
 
             /// allocation to exudates
             community.allPlants.at(cohortindex)->exudationBiomass = biomassIncrementForAllocation * community.allPlants.at(cohortindex)->nppAllocationExudation;
-            community.allPlants.at(cohortindex)->exudationCarbon = community.allPlants.at(cohortindex)->exudationBiomass * carbonContentOdm;
+            community.allPlants.at(cohortindex)->exudationCarbon = community.allPlants.at(cohortindex)->exudationBiomass * CARBON_CONTENT_ODM;
             community.allPlants.at(cohortindex)->exudationNitrogen = community.allPlants.at(cohortindex)->exudationCarbon / parameter.plantCNRatioExudates[pft];
 
             // transfer exudation to interfaces to external soil module
@@ -487,8 +488,8 @@ void GROWTH::doPlantGrowthInSizeAndAging(UTILS utils, PARAMETER parameter, COMMU
         community.allPlants.at(cohortindex)->lai = community.allPlants.at(cohortindex)->laiBrown + community.allPlants.at(cohortindex)->laiGreen;
 
         // state variable updates for soil evaporation
-        community.greenleafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->amount * community.allPlants[cohortindex]->laiGreen * community.allPlants[cohortindex]->coveredArea/kSimulationArea;
-        community.totalLeafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->lai * community.allPlants[cohortindex]->coveredArea * community.allPlants[cohortindex]->amount/kSimulationArea;
+        community.greenleafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->amount * community.allPlants[cohortindex]->laiGreen * community.allPlants[cohortindex]->coveredArea/SIMULATION_AREA;
+        community.totalLeafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->lai * community.allPlants[cohortindex]->coveredArea * community.allPlants[cohortindex]->amount/SIMULATION_AREA;
     }
 }
 
@@ -538,7 +539,7 @@ void GROWTH::adjustAllocationRates(UTILS utils, PARAMETER parameter, COMMUNITY &
         }
 
         if (abs(community.allPlants.at(cohortindex)->nppAllocationShoot + community.allPlants.at(cohortindex)->nppAllocationRoot + community.allPlants.at(cohortindex)->nppAllocationRecruitment +
-                community.allPlants.at(cohortindex)->nppAllocationExudation - 1) > tolerance)
+                community.allPlants.at(cohortindex)->nppAllocationExudation - 1) > TOLERANCE)
         {
             utils.handleError("Sum of alloction rates (shoot, root, recruitment, exudates does not equal one as required!");
         }

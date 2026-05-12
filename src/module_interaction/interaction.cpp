@@ -29,14 +29,14 @@ void INTERACTION::calculateNumberOfHeightLayersFromLargestPlant(UTILS utils, COM
         }
     }
     /// predefined maximum height layer (see module_init/constants.h)
-    if (community.maximumHeightOfAllPlants > maximumHeightLayer)
+    if (community.maximumHeightOfAllPlants > MAXIMUM_HEIGHT_LAYER)
     {
-        utils.handleError("Maximum plant height is exceeding the constant parameter maximumHeightLayer. The parameter should be set up in module_init/constants.h!");
+        utils.handleError("Maximum plant height is exceeding the constant parameter MAXIMUM_HEIGHT_LAYER. The parameter should be set up in module_init/constants.h!");
     }
     else
     {
         /// reduce for-loops by calculating maximum height layer reached by currently largest plant in community
-        maximumHeightLayerIndexReachedByPlants = (int)std::ceil(community.maximumHeightOfAllPlants / heightLayerWidth);
+        maximumHeightLayerIndexReachedByPlants = (int)std::floor(community.maximumHeightOfAllPlants / HEIGHT_LAYER_WIDTH + NUMERIC_TOLERANCE);
     }
 }
 
@@ -57,7 +57,7 @@ void INTERACTION::calculateCumulativeLeafAreaIndexAcrossHeightLayers(UTILS utils
         {
             /// search for height layer up to which the plant cohort is reaching to
             /// Note: floor is used because first height layer 0-1 cm has index 0
-            int topHeightLayerIndexOfPlant = (int)std::floor((plantHeight / heightLayerWidth) + kNumericTolerance);
+            int topHeightLayerIndexOfPlant = (int)std::floor((plantHeight / HEIGHT_LAYER_WIDTH) + NUMERIC_TOLERANCE);
 
             /// calculate weights for the plants' contribution to height layers based on plant height
             calculateWeightsOfPlantHeightContributionToHeightLayers(topHeightLayerIndexOfPlant, plantHeight);
@@ -79,28 +79,28 @@ void INTERACTION::calculateWeightsOfPlantHeightContributionToHeightLayers(int to
     for (int layerindex = 0; layerindex < topHeightLayerIndexOfPlant; layerindex++)
     {
         /// plant parts fully cover the respective height layer
-        plantPartInHeightLayer = heightLayerWidth / plantHeight;
+        plantPartInHeightLayer = HEIGHT_LAYER_WIDTH / plantHeight;
         weightsForPlantContributionToHeightLayer.push_back(plantPartInHeightLayer);
     }
 
     /// plant parts at top layer (topHeightLayerIndexOfPlant) may not fully cover the entire height layer
     /// downward correction is required
-    plantPartInHeightLayer = ((plantHeight / heightLayerWidth) - std::floor(plantHeight / heightLayerWidth));
-    weightsForPlantContributionToHeightLayer.push_back((plantPartInHeightLayer / plantHeight));
+    plantPartInHeightLayer = (plantHeight - std::floor(plantHeight / HEIGHT_LAYER_WIDTH + NUMERIC_TOLERANCE) * HEIGHT_LAYER_WIDTH) / plantHeight;
+    weightsForPlantContributionToHeightLayer.push_back(plantPartInHeightLayer);
 }
 
 void INTERACTION::addPlantLeafAreaToHeightLayers(int topHeightLayerIndexOfPlant, double leafAreaOfPlantCohort, double plantLightExtinctionCoefficient)
 {
     for (int layerindex = 0; layerindex <= topHeightLayerIndexOfPlant; layerindex++)
     {
-        LAI.at(layerindex) += (leafAreaOfPlantCohort * weightsForPlantContributionToHeightLayer.at(layerindex)/kSimulationArea);
-        LAIwithLightExtinction.at(layerindex) += (leafAreaOfPlantCohort * plantLightExtinctionCoefficient * weightsForPlantContributionToHeightLayer.at(layerindex)/kSimulationArea);
+        LAI.at(layerindex) += (leafAreaOfPlantCohort * weightsForPlantContributionToHeightLayer.at(layerindex)/SIMULATION_AREA);
+        LAIwithLightExtinction.at(layerindex) += (leafAreaOfPlantCohort * plantLightExtinctionCoefficient * weightsForPlantContributionToHeightLayer.at(layerindex)/SIMULATION_AREA);
     }
 }
 
-void INTERACTION::accumulateLeafAreaFromTopToBottomHeightLayers(int maximumHeightLayerReachedByPlants)
+void INTERACTION::accumulateLeafAreaFromTopToBottomHeightLayers(int maximumHeightLayerIndexReachedByPlants)
 {
-    for (int layerindex = maximumHeightLayerReachedByPlants - 1; layerindex >= 0; layerindex--)
+    for (int layerindex = maximumHeightLayerIndexReachedByPlants - 1; layerindex >= 0; layerindex--)
     {
         LAI.at(layerindex) += LAI.at(layerindex + 1);
         LAIwithLightExtinction.at(layerindex) += LAIwithLightExtinction.at(layerindex + 1);
@@ -119,7 +119,7 @@ void INTERACTION::calculateLightAvailabilityForPlants(UTILS utils, COMMUNITY &co
 
         if (plantAmount > 0)
         {
-            lowestOvertoppingHeightLayerIndexOfPlant = (int)std::ceil(plantHeight / heightLayerWidth);
+            lowestOvertoppingHeightLayerIndexOfPlant = (int)std::ceil(plantHeight / HEIGHT_LAYER_WIDTH - NUMERIC_TOLERANCE);
 
             getOvertoppingCumulativeLeafAreaIndexOfPlant(community, cohortindex, lowestOvertoppingHeightLayerIndexOfPlant);
             calculateAvailableLightReachingAPlant(parameter, community, cohortindex, fullSunLight);

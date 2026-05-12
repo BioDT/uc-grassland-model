@@ -299,7 +299,7 @@ int UTILS::parseIntegerOrNaN(const std::string &str)
 
 void UTILS::checkForNegativeValue(double valueToCheck, const std::string context)
 {
-    if (valueToCheck < -tolerance)
+    if (valueToCheck < -TOLERANCE)
     {
         handleError(context + "is negative!");
     }

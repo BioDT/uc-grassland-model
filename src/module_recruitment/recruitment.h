@@ -32,7 +32,7 @@ public:
     std::vector<std::vector<int>> seedGerminationTimeCounter;
 
     /// vector that keeps track of successfully germinated seeds at each time step for each PFT
-    std::vector<int> successfullGerminatedSeeds;
+    std::vector<double> successfullGerminatedSeeds;
 
     void doPlantRecruitment(UTILS utils, PARAMETER parameter, ALLOMETRY allometry, COMMUNITY &community, MANAGEMENT management, SOIL &soil);
     void getIncomingSeedsByExternalInflux(PARAMETER parameter);
@@ -40,9 +40,9 @@ public:
     void getIncomingSeedsByPlantReproduction(PARAMETER parameter, COMMUNITY &community);
     void saveIncomingSeedsInSeedPool(PARAMETER parameter);
     void calculateSeedGerminationToSeedlings(UTILS utils, PARAMETER parameter, ALLOMETRY allometry, COMMUNITY &community, SOIL &soil);
-    void calculateNumberOfGerminatingSeeds(UTILS utils, PARAMETER parameter, COMMUNITY &community, int pft, int cohortindex);
-    void transferFailedToGerminateSeedsToLitterPool(UTILS utils, PARAMETER parameter, SOIL &soil, int pft, int cohortindex);
-    void updateSeedPool(int pft, int cohortindex);
+    void calculateNumberOfGerminatingSeeds(UTILS utils, PARAMETER parameter, COMMUNITY &community, int pft, int seedCohortIndex);
+    void transferFailedToGerminateSeedsToLitterPool(UTILS utils, PARAMETER parameter, SOIL &soil, int pft, int seedCohortIndex);
+    void updateSeedPool(int pft, int seedCohortIndex);
     void addGerminatedSeedlingsToCommunity(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry, SOIL soil, int pft);
     void seedlingCrowdingMortality(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry);
 };

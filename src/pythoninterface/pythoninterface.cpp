@@ -260,7 +260,7 @@ std::vector<double> PYTHONINTERFACE::getRootLitter()
     std::vector<double> fluxInOdm(soil.couplingInterface_rootLitterFluxCarbon.size());
     std::transform(soil.couplingInterface_rootLitterFluxCarbon.begin(), soil.couplingInterface_rootLitterFluxCarbon.end(), fluxInOdm.begin(),
                    [](double x)
-                   { return x / carbonContentOdm; });
+                   { return x / CARBON_CONTENT_ODM; });
     return fluxInOdm;
 }
 std::vector<double> PYTHONINTERFACE::getRootLitterCnRatio()
@@ -285,7 +285,7 @@ std::vector<double> PYTHONINTERFACE::getRootExudates()
     std::vector<double> fluxInOdm(soil.couplingInterface_rootExudatesCarbon.size());
     std::transform(soil.couplingInterface_rootExudatesCarbon.begin(), soil.couplingInterface_rootExudatesCarbon.end(), fluxInOdm.begin(),
                    [](double x)
-                   { return x / carbonContentOdm; });
+                   { return x / CARBON_CONTENT_ODM; });
     return fluxInOdm;
 }
 std::vector<double> PYTHONINTERFACE::getRootExudatesCnRatio()
@@ -306,7 +306,7 @@ std::vector<double> PYTHONINTERFACE::getRootExudatesCnRatio()
 }
 double PYTHONINTERFACE::getSurfaceLitter()
 {
-    return soil.couplingInterface_surfaceLitterFluxCarbon / carbonContentOdm;
+    return soil.couplingInterface_surfaceLitterFluxCarbon / CARBON_CONTENT_ODM;
 }
 double PYTHONINTERFACE::getSurfaceLitterCnRatio()
 {

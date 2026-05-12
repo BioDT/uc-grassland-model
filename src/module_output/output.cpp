@@ -49,8 +49,8 @@ void OUTPUT::updateVegetationStateVariablesForOutput(PARAMETER parameter, COMMUN
 
             // Community-wide calculations
             community.totalNumberOfPlantsInCommunity += community.allPlants[cohortindex]->amount;
-            community.carbonRespirationOfAllPlants += community.allPlants[cohortindex]->totalRespiration * community.allPlants[cohortindex]->amount * carbonContentOdm;
-            community.carbonNPPOfAllPlants += community.allPlants[cohortindex]->npp * community.allPlants[cohortindex]->amount * carbonContentOdm;
+            community.carbonRespirationOfAllPlants += community.allPlants[cohortindex]->totalRespiration * community.allPlants[cohortindex]->amount * CARBON_CONTENT_ODM;
+            community.carbonNPPOfAllPlants += community.allPlants[cohortindex]->npp * community.allPlants[cohortindex]->amount * CARBON_CONTENT_ODM;
             community.abovegroundBiomassOfAllPlants += community.allPlants[cohortindex]->shootBiomass * community.allPlants[cohortindex]->amount;
         }
 
@@ -65,19 +65,19 @@ void OUTPUT::updateVegetationStateVariablesForOutput(PARAMETER parameter, COMMUN
 
     }
     // calculations from soil state variables
-    community.abovegroundLitterBiomass += (soil.carbonContent_surfaceStructuralLitterPool + soil.carbonContent_surfaceMetabolicLitterPool) * (1.0 / carbonContentOdm);
+    community.abovegroundLitterBiomass += (soil.carbonContent_surfaceStructuralLitterPool + soil.carbonContent_surfaceMetabolicLitterPool) * (1.0 / CARBON_CONTENT_ODM);
     
 
     // Summing up PFT-specific variables for community-based variables
     for (int pft = 0; pft < parameter.pftCount; pft++)
     {
-        community.carbonSeedlingIngrowthOfAllPlants += recruitment.successfullGerminatedSeeds.at(pft) * parameter.seedMasses[pft] * carbonContentOdm;
+        community.carbonSeedlingIngrowthOfAllPlants += recruitment.successfullGerminatedSeeds.at(pft) * parameter.seedMasses[pft] * CARBON_CONTENT_ODM;
     }
 
     // Summing up community-specific variables for ecosystem-based variables
     community.ecosystemNitrogenBalance = soil.nitrogenNetMineralization - soil.nitrogenVolatilization + soil.nitrogenFixationToSoil + soil.addedMineralNitrogenToSoilByFertilization;
     community.ecosystemCarbonRespiration = soil.respirationCarbon_litter + soil.respirationCarbon_soilpools + community.carbonRespirationOfAllPlants;
-    community.ecosystemCarbonBalance = community.carbonNPPOfAllPlants + community.carbonSeedlingIngrowthOfAllPlants - community.ecosystemCarbonRespiration - soil.carbonContent_leachedFromSoil - (carbonContentOdm * community.biomassYield);
+    community.ecosystemCarbonBalance = community.carbonNPPOfAllPlants + community.carbonSeedlingIngrowthOfAllPlants - community.ecosystemCarbonRespiration - soil.carbonContent_leachedFromSoil - (CARBON_CONTENT_ODM * community.biomassYield);
 }
 
 /**

@@ -21,7 +21,7 @@ SOIL::~SOIL() {};
 void SOIL::transferDyingPlantPartsToLitterPools(UTILS utils, PARAMETER parameter, double number, double biomass, std::string typeOfMaterial, int pft, int numberOfTargetSoilLayers)
 {
 
-    double carbonFlux = number * (biomass * carbonContentOdm);
+    double carbonFlux = number * (biomass * CARBON_CONTENT_ODM);
 
     if (parameter.useInternalSoilModule || parameter.useInternalSoilModule_selfCoupled_setVariables)
     {
@@ -157,7 +157,7 @@ void SOIL::calculateSoilWaterDynamics(UTILS utils, PARAMETER parameter, WEATHER 
            nitrogenContent_soilMineralPoolPerSoilLayer.at(0) -= nitrogenVolatilizationLoss;
            nitrogenVolatilization += nitrogenVolatilizationLoss;
 
-           if (nitrogenContent_soilMineralPoolPerSoilLayer.at(0) + tolerance < 0.0)
+           if (nitrogenContent_soilMineralPoolPerSoilLayer.at(0) + TOLERANCE < 0.0)
            {
               utils.handleError("Soil nitrogen in upper soil layer is negative!");
               nitrogenContent_soilMineralPoolPerSoilLayer.at(0) = 0.0;
@@ -373,7 +373,7 @@ void SOIL::leachingOfNitrogenCoupledToWaterPercolation(UTILS utils, PARAMETER pa
 
             // subtract from soil layer
             nitrogenContent_soilMineralPoolPerSoilLayer.at(soilLayer) -= amountOfLeachingNitrogen;
-            if (nitrogenContent_soilMineralPoolPerSoilLayer.at(soilLayer) + tolerance < 0.0)
+            if (nitrogenContent_soilMineralPoolPerSoilLayer.at(soilLayer) + TOLERANCE < 0.0)
             {
                 nitrogenContent_soilMineralPoolPerSoilLayer.at(soilLayer) = 0.0;
                 // utils.handleError("Plants do not have access to soil nitrogen or soil nitrogen pool is negative!");
@@ -387,7 +387,7 @@ void SOIL::leachingOfNitrogenCoupledToWaterPercolation(UTILS utils, PARAMETER pa
             else if (indexOfNextSoilLayer < parameter.numberOfSoilLayers)
             {
                 nitrogenContent_soilMineralPoolPerSoilLayer.at(indexOfNextSoilLayer) += amountOfLeachingNitrogen;
-                if (nitrogenContent_soilMineralPoolPerSoilLayer.at(indexOfNextSoilLayer) + tolerance < 0.0)
+                if (nitrogenContent_soilMineralPoolPerSoilLayer.at(indexOfNextSoilLayer) + TOLERANCE < 0.0)
                 {
                     // utils.handleError("Plants do not have access to soil nitrogen or soil nitrogen pool is negative!");
                     nitrogenContent_soilMineralPoolPerSoilLayer.at(indexOfNextSoilLayer) = 0.0;
@@ -704,7 +704,7 @@ void SOIL::calculateSoilWaterUptakePerPlant(UTILS utils, COMMUNITY &community)
         if (community.allPlants.at(cohortindex)->amount > 0)
         {
             community.allPlants.at(cohortindex)->soilWaterUptake = community.allPlants.at(cohortindex)->soilWaterDemand * community.allPlants.at(cohortindex)->limitingFactorGppWater;
-            community.totalSoilWaterUptake += community.allPlants.at(cohortindex)->soilWaterUptake;
+            community.totalSoilWaterUptake += community.allPlants.at(cohortindex)->soilWaterUptake * community.allPlants.at(cohortindex)->amount;
 
             int rootingSoilLayers = community.allPlants.at(cohortindex)->numberOfSoilLayersRooting;
             for (int soilLayer = 0; soilLayer < rootingSoilLayers; soilLayer++)
@@ -1037,7 +1037,7 @@ void SOIL::calculateSoilNitrogenDemandPerPlant(UTILS utils, COMMUNITY &community
     {
         if (community.allPlants.at(cohortindex)->amount > 0)
         {
-            double carbonContentOfPotentialNPP = community.allPlants.at(cohortindex)->npp * carbonContentOdm;
+            double carbonContentOfPotentialNPP = community.allPlants.at(cohortindex)->npp * CARBON_CONTENT_ODM;
 
             /* substract rhizobia costs from potential carbon increment for legumes */
             carbonContentOfPotentialNPP = calculateNitrogenUptakeByRhizobiaAndSubtractCostsFromPotentialNPP(utils, parameter, community, cohortindex, carbonContentOfPotentialNPP);
@@ -1198,7 +1198,7 @@ void SOIL::calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, C
 
     double meanRootDiameter = 5e-4; // m
     double meanSpecificRootLength =
-        120000; // bodium config summeroats (m per kg)
+        120000 / 1000; // bodium config summeroats (m per kg), conversion to m per g
 
     for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
     {
@@ -1283,7 +1283,7 @@ void SOIL::calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, C
                     if (soilLayer < (community.allPlants.at(cohortindex)->numberOfSoilLayersRooting - 1))
                     {
                         surface = community.allPlants.at(cohortindex)->rootBiomass * parameter.soilLayerWidth[soilLayer] / community.allPlants.at(cohortindex)->rootingDepth *
-                                  meanSpecificRootLength * 2 * PI * (meanRootDiameter / 2);
+                                  meanSpecificRootLength * 2 * PI * (meanRootDiameter / 2); // m^2
                         depth += parameter.soilLayerWidth[soilLayer];
                     }
                     else
@@ -1292,7 +1292,7 @@ void SOIL::calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, C
                                   meanSpecificRootLength * 2 * PI * (meanRootDiameter / 2);
                     }
                     // double surface=2*(theRoot->getVolume()/(mean_dia/2)); // pi r² -> 2pi r, m²/Node
-                    n_diff_node = surface * diff_coeff * kDayInSeconds *
+                    n_diff_node = surface * diff_coeff * DAY_IN_SECONDS *
                                   (couplingInterface_soilWaterNh4Concentration[soilLayer] +
                                    couplingInterface_soilWaterNo3Concentration[soilLayer]);
                     // total N uptake per diffusion
@@ -1317,7 +1317,7 @@ void SOIL::calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, C
                                   meanSpecificRootLength * 2 * PI * (meanRootDiameter / 2);
                     }
                     // double surface=2*(theRoot->getVolume()/(mean_dia/2));
-                    n_diff_node = surface * diff_coeff * kDayInSeconds *
+                    n_diff_node = surface * diff_coeff * DAY_IN_SECONDS *
                                   (couplingInterface_soilWaterNh4Concentration[soilLayer] +
                                    couplingInterface_soilWaterNo3Concentration[soilLayer]);
 
@@ -1613,7 +1613,7 @@ double SOIL::calculateNitrogenFraction(UTILS utils, double dirabs, std::string t
         nitrogenFlux = nitrogenContent_soilRootLitterPool + nitrogenContent_soilSeedLitterPool;
     }
 
-    fractionOfNitrogen = (nitrogenFlux + dirabs) / (carbonFlux / carbonContentOdm);
+    fractionOfNitrogen = (nitrogenFlux + dirabs) / (carbonFlux / CARBON_CONTENT_ODM);
     return (fractionOfNitrogen);
 }
 
@@ -1690,7 +1690,7 @@ void SOIL::processLitterFluxes(UTILS utils, double dirabs, double carbonAddedToS
     }
 
     nitrogenContent_soilMineralPoolPerSoilLayer.at(0) -= dirabs;
-    if (nitrogenContent_soilMineralPoolPerSoilLayer.at(0) + tolerance < 0.0)
+    if (nitrogenContent_soilMineralPoolPerSoilLayer.at(0) + TOLERANCE < 0.0)
     {
         nitrogenContent_soilMineralPoolPerSoilLayer.at(0) = 0;
         // utils.handleError("Plants do not have access to soil nitrogen or soil nitrogen pool is negative!");
@@ -1750,7 +1750,7 @@ void SOIL::calculateDecisiveCarbonNitrogenRatiosForDecomposition(UTILS utils, st
 
     if (transferFromPool == "surface_structural")
     {
-        double biomassContent = carbonContent_surfaceStructuralLitterPool / carbonContentOdm;
+        double biomassContent = carbonContent_surfaceStructuralLitterPool / CARBON_CONTENT_ODM;
         double nitrogenContentInBiomass = (biomassContent > 0) ? (nitrogenContent_surfaceStructuralLitterPool / biomassContent) : 0;
 
         // for decomposition of surface structural litter to soil microbes pool
@@ -1772,7 +1772,7 @@ void SOIL::calculateDecisiveCarbonNitrogenRatiosForDecomposition(UTILS utils, st
     {
         // transfer to soil microbes pool
         // decisive carbon nitrogen ratio is dependent on nitrogen content (% of biomass) of surface metabolic litter pool
-        double biomassContent_surfaceMetabolicLitterPool = carbonContent_surfaceMetabolicLitterPool / carbonContentOdm;
+        double biomassContent_surfaceMetabolicLitterPool = carbonContent_surfaceMetabolicLitterPool / CARBON_CONTENT_ODM;
         double nitrogenContentInBiomass = (biomassContent_surfaceMetabolicLitterPool > 0) ? (nitrogenContent_surfaceMetabolicLitterPool / biomassContent_surfaceMetabolicLitterPool) : 0;
         decisiveCNRatio_surfaceMetabolicLitterPool_soilMicrobesPool = std::min(16.0 + nitrogenContentInBiomass * ((10.0 - 16.0) / 0.02), 10.0);
     }
@@ -3034,7 +3034,7 @@ void SOIL::calculateNonsymbioticNitrogenFixationAndAthmosphericDeposition(UTILS 
     nitrogenContent_soilMineralPoolPerSoilLayer.at(0) += (athomsphericDeposition + nonsymbioticNitrogenFixation);
     nitrogenFixationToSoil += (athomsphericDeposition + nonsymbioticNitrogenFixation);
 
-    if (nitrogenContent_soilMineralPoolPerSoilLayer.at(0) + tolerance < 0.0)
+    if (nitrogenContent_soilMineralPoolPerSoilLayer.at(0) + TOLERANCE < 0.0)
     {
         nitrogenContent_soilMineralPoolPerSoilLayer.at(0) = 0.0;
         // utils.handleError("Soil mineral nitrogen in the top soil layer is negative!");
@@ -3050,7 +3050,7 @@ void SOIL::calculateNitrogenLossByVolatilization(UTILS utils)
     nitrogenContent_soilMineralPoolPerSoilLayer.at(0) -= nitrogenLossByVolatilization;
     nitrogenVolatilization += nitrogenLossByVolatilization;
 
-    if (nitrogenContent_soilMineralPoolPerSoilLayer.at(0) + tolerance < 0.0)
+    if (nitrogenContent_soilMineralPoolPerSoilLayer.at(0) + TOLERANCE < 0.0)
     {
         nitrogenContent_soilMineralPoolPerSoilLayer.at(0) = 0.0;
         // utils.handleError("Soil mineral nitrogen in the top soil layer is negative!");

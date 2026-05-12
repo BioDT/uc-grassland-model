@@ -249,13 +249,13 @@ void RECRUITMENT::calculateSeedGerminationToSeedlings(UTILS utils, PARAMETER par
 {
     for (int pft = 0; pft < parameter.pftCount; pft++)
     {
-        for (int cohortindex = 0; cohortindex < seedGerminationTimeCounter[pft].size(); cohortindex++)
+        for (int seedCohortIndex = 0; seedCohortIndex < seedGerminationTimeCounter[pft].size(); seedCohortIndex++)
         {
-            seedGerminationTimeCounter[pft].at(cohortindex) -= 1;     // account for this day for germination by decreasing counter by one
-            if (seedGerminationTimeCounter[pft].at(cohortindex) == 0) /* only if counter is 0 seeds are now ready to germinate as seedlings */
+            seedGerminationTimeCounter[pft].at(seedCohortIndex) -= 1;     // account for this day for germination by decreasing counter by one
+            if (seedGerminationTimeCounter[pft].at(seedCohortIndex) == 0) /* only if counter is 0 seeds are now ready to germinate as seedlings */
             {
                 // calculate number of successful germinated seeds from seedpool
-                calculateNumberOfGerminatingSeeds(utils, parameter, community, pft, cohortindex);
+                calculateNumberOfGerminatingSeeds(utils, parameter, community, pft, seedCohortIndex);
                 // check if there is enough space left for all seedlings to establish
 
                 if (parameter.crowdingMortalityActivated)
@@ -265,10 +265,10 @@ void RECRUITMENT::calculateSeedGerminationToSeedlings(UTILS utils, PARAMETER par
                 addGerminatedSeedlingsToCommunity(utils, parameter, community, allometry, soil, pft);
 
                 // calculate number of failed germinated seeds from seedpool and transfer to litter pool
-                transferFailedToGerminateSeedsToLitterPool(utils, parameter, soil, pft, cohortindex);
+                transferFailedToGerminateSeedsToLitterPool(utils, parameter, soil, pft, seedCohortIndex);
 
                 // update seed pool after germination
-                updateSeedPool(pft, cohortindex);
+                updateSeedPool(pft, seedCohortIndex);
             }
         }
     }
@@ -290,7 +290,7 @@ void RECRUITMENT::calculateSeedGerminationToSeedlings(UTILS utils, PARAMETER par
  *                  including seed germination rates for each PFT.
  * @param pft An integer representing the index of the plant functional type
  *            for which the germination is calculated.
- * @param cohortindex An integer representing the index of the seed cohort
+ * @param seedCohortIndex An integer representing the index of the seed cohort
  *                    within the seed pool for the specified PFT.
  *
  * @return The number of successfully germinated seeds.
@@ -298,11 +298,11 @@ void RECRUITMENT::calculateSeedGerminationToSeedlings(UTILS utils, PARAMETER par
  * @throw std::runtime_error If the calculated number of successfully
  *                            germinated seeds is negative.
  */
-void RECRUITMENT::calculateNumberOfGerminatingSeeds(UTILS utils, PARAMETER parameter, COMMUNITY &community, int pft, int cohortindex)
+void RECRUITMENT::calculateNumberOfGerminatingSeeds(UTILS utils, PARAMETER parameter, COMMUNITY &community, int pft, int seedCohortIndex)
 {
     int integerPartOfCalculatedNumberOfSeeds;
     double calculatedNumberOfSeeds;
-    calculatedNumberOfSeeds = seedPool[pft].at(cohortindex) * parameter.seedGerminationRates[pft];
+    calculatedNumberOfSeeds = seedPool[pft].at(seedCohortIndex) * parameter.seedGerminationRates[pft];
     integerPartOfCalculatedNumberOfSeeds = std::floor(calculatedNumberOfSeeds);
 
     // stochasticity in ceiling or flooring of the calculated number of germinating seeds if not integer
@@ -325,7 +325,7 @@ void RECRUITMENT::calculateNumberOfGerminatingSeeds(UTILS utils, PARAMETER param
     }
     else
     {
-        successfullGerminatedSeeds.at(pft) = integerPartOfCalculatedNumberOfSeeds;
+        successfullGerminatedSeeds.at(pft) = calculatedNumberOfSeeds;
     }
 
     if (successfullGerminatedSeeds.at(pft) < 0)
@@ -349,12 +349,18 @@ void RECRUITMENT::seedlingCrowdingMortality(UTILS utils, PARAMETER parameter, CO
 
         requiredSpaceForNewSeedlings += (successfullGerminatedSeeds.at(pft) * parameter.plantShootOverlapFactors[pft] * seedlingCoveredArea);
     }
-
-    newCoveredAreaOfAllPlants = community.coveredAreaOfAllPlants + requiredSpaceForNewSeedlings;
-
-    if (newCoveredAreaOfAllPlants > kSimulationArea)
+    // calculate covered area of all plants (community variable is not calculated in this timestep yet)
+    double coveredAreaOfAllPlants = 0.0;
+    for (int cohortIndex = 0; cohortIndex < community.allPlants.size(); cohortIndex++)
     {
-        availableSpaceForNewSeedlings = std::max(kSimulationArea - community.coveredAreaOfAllPlants, 0.0);
+        int pft = community.allPlants[cohortIndex]->pft;
+        coveredAreaOfAllPlants += community.allPlants[cohortIndex]->coveredArea * parameter.plantShootOverlapFactors[pft] * community.allPlants[cohortIndex]->amount;
+    }
+    newCoveredAreaOfAllPlants = coveredAreaOfAllPlants + requiredSpaceForNewSeedlings;
+
+    if (newCoveredAreaOfAllPlants > SIMULATION_AREA)
+    {
+        availableSpaceForNewSeedlings = std::max(SIMULATION_AREA - community.coveredAreaOfAllPlants, 0.0);
         reductionOfNewSeedlingsByCrowding = availableSpaceForNewSeedlings / requiredSpaceForNewSeedlings;
 
         for (int pft = 0; pft < parameter.pftCount; pft++)
@@ -388,21 +394,21 @@ void RECRUITMENT::seedlingCrowdingMortality(UTILS utils, PARAMETER parameter, CO
  *                                    germinated.
  * @param pft An integer representing the index of the plant functional type
  *            for which the seeds are processed.
- * @param cohortindex An integer representing the index of the seed cohort
+ * @param seedCohortIndex An integer representing the index of the seed cohort
  *                    within the seed pool for the specified PFT.
  *
  * @throw std::runtime_error If the sum of germinated and failed seeds does
  *                            not match the total seeds, a warning is logged
  *                            for numerical consistency.
  */
-void RECRUITMENT::transferFailedToGerminateSeedsToLitterPool(UTILS utils, PARAMETER parameter, SOIL &soil, int pft, int cohortindex)
+void RECRUITMENT::transferFailedToGerminateSeedsToLitterPool(UTILS utils, PARAMETER parameter, SOIL &soil, int pft, int seedCohortIndex)
 {
     /* calculate number of failed germinated seeds from seedpool */
-    int failedToGerminateSeeds;
-    failedToGerminateSeeds = seedPool[pft].at(cohortindex) - successfullGerminatedSeeds.at(pft);
+    double failedToGerminateSeeds;
+    failedToGerminateSeeds = seedPool[pft].at(seedCohortIndex) - successfullGerminatedSeeds.at(pft);
 
     /* check for consistency */
-    if (std::abs((successfullGerminatedSeeds.at(pft) + failedToGerminateSeeds) - seedPool[pft].at(cohortindex)) >= tolerance)
+    if (std::abs((successfullGerminatedSeeds.at(pft) + failedToGerminateSeeds) - seedPool[pft].at(seedCohortIndex)) >= TOLERANCE)
     {
         utils.handleWarning("There is more numerical variation in the rounding of germinated / non-germinated seeds than expected.");
     }
@@ -422,14 +428,14 @@ void RECRUITMENT::transferFailedToGerminateSeedsToLitterPool(UTILS utils, PARAME
  *
  * @param pft An integer representing the index of the plant functional type
  *            whose seed pool and germination time counter are being updated.
- * @param cohortindex An integer representing the index of the seed cohort
+ * @param seedCohortIndex An integer representing the index of the seed cohort
  *                    to be removed from the seed pool and time counter.
  */
-void RECRUITMENT::updateSeedPool(int pft, int cohortindex)
+void RECRUITMENT::updateSeedPool(int pft, int seedCohortIndex)
 {
     // delete entry in both vectors (as germination process is now completed for those seeds from the seedpool)
-    seedGerminationTimeCounter[pft].erase(seedGerminationTimeCounter[pft].begin() + cohortindex);
-    seedPool[pft].erase(seedPool[pft].begin() + cohortindex);
+    seedGerminationTimeCounter[pft].erase(seedGerminationTimeCounter[pft].begin() + seedCohortIndex);
+    seedPool[pft].erase(seedPool[pft].begin() + seedCohortIndex);
 }
 
 /**

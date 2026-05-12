@@ -103,6 +103,10 @@ crowdingMortalityActivated	false
 \datatype:boolean
 \description:de-/activation self-thinning in crowded stand
 
+tresholdCohortDeathDeterministic 0.2
+\datatype:float
+\description: amount of plants in a cohort under which a cohort dies out in simulations with stochasticSimulation = false
+
 # =============================================================================
 # 		Plant geometry (single plant)
 # =============================================================================

@@ -66,7 +66,7 @@ void STEP::runModelSimulationStep(UTILS utils, PARAMETER &parameter, INIT init, 
     init.resetSoilResourceProcessAndFluxVariables(parameter, soil);
 
     /* Environmental conditions of the day */
-    double abovegroundLitterBiomass = (soil.carbonContent_surfaceStructuralLitterPool + soil.carbonContent_surfaceMetabolicLitterPool) * (1.0 / carbonContentOdm);
+    double abovegroundLitterBiomass = (soil.carbonContent_surfaceStructuralLitterPool + soil.carbonContent_surfaceMetabolicLitterPool) * (1.0 / CARBON_CONTENT_ODM);
     interaction.getEnvironmentalConditionsOfDay(weather, community, parameter.day, abovegroundLitterBiomass);
 
     /* Calculation of ecological and plant processes */

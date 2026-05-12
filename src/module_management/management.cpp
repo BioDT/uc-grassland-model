@@ -54,8 +54,8 @@ void MANAGEMENT::checkIfTodayAndDoMowing(UTILS utils, COMMUNITY &community, ALLO
             for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
             {
                 // state variable updates for soil evaporation
-                community.greenleafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->amount * community.allPlants[cohortindex]->laiGreen * community.allPlants[cohortindex]->coveredArea/kSimulationArea;
-                community.totalLeafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->lai * community.allPlants[cohortindex]->coveredArea * community.allPlants[cohortindex]->amount/kSimulationArea;
+                community.greenleafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->amount * community.allPlants[cohortindex]->laiGreen * community.allPlants[cohortindex]->coveredArea/SIMULATION_AREA;
+                community.totalLeafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->lai * community.allPlants[cohortindex]->coveredArea * community.allPlants[cohortindex]->amount/SIMULATION_AREA;
             }
         }
         index++;
@@ -87,8 +87,8 @@ void MANAGEMENT::cutPlantsAndTrackYieldAndUpdatePlantAttributes(UTILS utils, COM
             community.allPlants[cohortIndex]->shootBiomassGreenLeaves -= cutGreenLeaves;
             community.allPlants[cohortIndex]->shootBiomassBrownLeaves -= cutBrownLeaves;
 
-            community.allPlants[cohortIndex]->shootCarbonGreenLeaves = community.allPlants[cohortIndex]->shootBiomassGreenLeaves * carbonContentOdm;
-            community.allPlants[cohortIndex]->shootCarbonBrownLeaves = community.allPlants[cohortIndex]->shootBiomassBrownLeaves * carbonContentOdm;
+            community.allPlants[cohortIndex]->shootCarbonGreenLeaves = community.allPlants[cohortIndex]->shootBiomassGreenLeaves * CARBON_CONTENT_ODM;
+            community.allPlants[cohortIndex]->shootCarbonBrownLeaves = community.allPlants[cohortIndex]->shootBiomassBrownLeaves * CARBON_CONTENT_ODM;
             community.allPlants[cohortIndex]->shootCarbon = community.allPlants[cohortIndex]->shootCarbonGreenLeaves + community.allPlants[cohortIndex]->shootCarbonBrownLeaves;
 
             community.allPlants[cohortIndex]->shootNitrogenGreenLeaves = community.allPlants[cohortIndex]->shootCarbonGreenLeaves / parameter.plantCNRatioGreenLeaves[pft];
