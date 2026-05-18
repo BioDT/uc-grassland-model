@@ -140,3 +140,5 @@ cdef class GrassmindModel():
         self.py_grassmind.setNh4Concentration(values)
     def set_no3_concentration_per_soil_layer(self, vector[double] values):
         self.py_grassmind.setNo3Concentration(values)
+    def set_diffusion_factor_per_soil_layer(self, vector[double] values):
+        self.py_grassmind.setDiffusionFactor(values)

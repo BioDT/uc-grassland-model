@@ -61,5 +61,6 @@ cdef extern from "../src/pythoninterface/pythoninterface.h":
         void setWaterPotential(vector[double] values) except + nogil
         void setNh4Concentration(vector[double] values) except + nogil
         void setNo3Concentration(vector[double] values) except + nogil
+        void setDiffusionFactor(vector[double] values) except + nogil
 
 

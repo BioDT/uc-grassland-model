@@ -1196,7 +1196,7 @@ void SOIL::calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, C
     \output     plant.NitrogenUptakePerLayer, NH4uptake, NO3Uptake
     */
 
-    double meanRootDiameter = 5e-4; // m
+    double meanRootDiameter = 7e-4; // m
     double meanSpecificRootLength =
         120000 / 1000; // bodium config summeroats (m per kg), conversion to m per g
 
@@ -1274,6 +1274,7 @@ void SOIL::calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, C
                 double n_diff_pot = n_demand - n_conv;
                 bool usepot;
                 double depth = 0.0;
+                double rootBiomassInLayer;
 
                 //  calculate max diffusion  (all layers)
                 for (int soilLayer = 0; soilLayer < community.allPlants.at(cohortindex)->numberOfSoilLayersRooting; soilLayer++)
@@ -1282,19 +1283,17 @@ void SOIL::calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, C
 
                     if (soilLayer < (community.allPlants.at(cohortindex)->numberOfSoilLayersRooting - 1))
                     {
-                        surface = community.allPlants.at(cohortindex)->rootBiomass * parameter.soilLayerWidth[soilLayer] / community.allPlants.at(cohortindex)->rootingDepth *
-                                  meanSpecificRootLength * 2 * PI * (meanRootDiameter / 2); // m^2
+                        rootBiomassInLayer = community.allPlants.at(cohortindex)->rootBiomass * parameter.soilLayerWidth[soilLayer] / community.allPlants.at(cohortindex)->rootingDepth;
                         depth += parameter.soilLayerWidth[soilLayer];
                     }
                     else
                     {
-                        surface = community.allPlants.at(cohortindex)->rootBiomass * (1 - (depth / community.allPlants.at(cohortindex)->rootingDepth)) *
-                                  meanSpecificRootLength * 2 * PI * (meanRootDiameter / 2);
+                        rootBiomassInLayer = community.allPlants.at(cohortindex)->rootBiomass * (1 - (depth / community.allPlants.at(cohortindex)->rootingDepth));
                     }
+                    surface = rootBiomassInLayer * meanSpecificRootLength * 2 * PI * (meanRootDiameter / 2); // m^2
                     // double surface=2*(theRoot->getVolume()/(mean_dia/2)); // pi r² -> 2pi r, m²/Node
-                    n_diff_node = surface * diff_coeff * DAY_IN_SECONDS *
-                                  (couplingInterface_soilWaterNh4Concentration[soilLayer] +
-                                   couplingInterface_soilWaterNo3Concentration[soilLayer]);
+                    n_diff_node = (surface * couplingInterface_diffusionFactor[soilLayer]*(couplingInterface_soilWaterNh4Concentration[soilLayer]+couplingInterface_soilWaterNo3Concentration[soilLayer])/std::pow(M_PI*rootBiomassInLayer*meanSpecificRootLength,-0.5));
+                    
                     // total N uptake per diffusion
                     n_diff += n_diff_node;
                 }
@@ -1317,9 +1316,6 @@ void SOIL::calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, C
                                   meanSpecificRootLength * 2 * PI * (meanRootDiameter / 2);
                     }
                     // double surface=2*(theRoot->getVolume()/(mean_dia/2));
-                    n_diff_node = surface * diff_coeff * DAY_IN_SECONDS *
-                                  (couplingInterface_soilWaterNh4Concentration[soilLayer] +
-                                   couplingInterface_soilWaterNo3Concentration[soilLayer]);
 
                     double ratio_NH4 = (couplingInterface_soilWaterNh4Concentration[soilLayer] +
                                             couplingInterface_soilWaterNo3Concentration[soilLayer] >
@@ -1328,6 +1324,8 @@ void SOIL::calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, C
                                                  (couplingInterface_soilWaterNh4Concentration[soilLayer] +
                                                   couplingInterface_soilWaterNo3Concentration[soilLayer])
                                            : 0;
+
+                    n_diff_node = (surface * couplingInterface_diffusionFactor[soilLayer]*(couplingInterface_soilWaterNh4Concentration[soilLayer]+couplingInterface_soilWaterNo3Concentration[soilLayer])/std::pow(M_PI*rootBiomassInLayer*meanSpecificRootLength,-0.5));
 
                     n_diff_node = (usepot) ? n_diff_pot * (n_diff_node / n_diff) : n_diff_node;
 

@@ -57,6 +57,7 @@ void PYTHONINTERFACE::initializeCouplingVariables(PARAMETER &parameter, SOIL &so
     soil.couplingInterface_soilWaterPotentialPerSoilLayer.assign(parameter.numberOfSoilLayers, 0.0);
     soil.couplingInterface_soilWaterNh4Concentration.assign(parameter.numberOfSoilLayers, 0.0);
     soil.couplingInterface_soilWaterNo3Concentration.assign(parameter.numberOfSoilLayers, 0.0);
+    soil.couplingInterface_diffusionFactor.assign(parameter.numberOfSoilLayers, 0.0);
     soil.couplingInterface_plantNh4UptakePerSoilLayer.assign(parameter.numberOfSoilLayers, 0.0);
     soil.couplingInterface_plantNo3UptakePerSoilLayer.assign(parameter.numberOfSoilLayers, 0.0);
     soil.couplingInterface_plantSoilWaterUptakePerLayer.assign(parameter.numberOfSoilLayers, 0.0);
@@ -335,6 +336,10 @@ void PYTHONINTERFACE::setNo3Concentration(std::vector<double> values)
 {
     soil.couplingInterface_soilWaterNo3Concentration = values;
 }
+void PYTHONINTERFACE::setDiffusionFactor(std::vector<double> values)
+{
+    soil.couplingInterface_diffusionFactor = values;
+}
 
 // helper functions
 
@@ -369,11 +374,11 @@ std::vector<double> PYTHONINTERFACE::calculateRootVolumeFromRootBiomass(
     std::vector<double> rootMassPerLayer)
 {
     // calculation of volume from mass as in bodium, such that relation of volume to mass is the same as in
-    // bodium
+    // bodium for summeroats
     // TODO: think of changing this calculation to pft specific
     // values as in bodium, such that
-    double meanRootDiameter = 5e-4;              // m
-    double meanSpecificRootLength = 10.5 * 1/1000; // m per kg * g/kg
+    double meanRootDiameter = 7e-4;              // m
+    double meanSpecificRootLength = 120000 * 1/1000; // m per kg * g/kg
     std::vector<double> rootVolumePerLayer(parameter.numberOfSoilLayers);
     std::fill(rootVolumePerLayer.begin(), rootVolumePerLayer.end(), 0.0);
 

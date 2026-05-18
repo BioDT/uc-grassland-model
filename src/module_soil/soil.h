@@ -34,6 +34,7 @@ public:
     std::vector<double> couplingInterface_soilWaterPotentialPerSoilLayer; // in bodium coupling replaces interfaces: couplingInterface_permanentWiltingPointPerSoilLayer, couplingInterface_fieldCapacityPerSoilLayer, couplingInterface_porosityPerSoilLayer, couplingInterface_waterContentPerSoilLayer
     std::vector<double> couplingInterface_soilWaterNh4Concentration;      // in bodium coupling replaces interface: couplingInterface_nitrogenContentPerSoilLayer
     std::vector<double> couplingInterface_soilWaterNo3Concentration;      // in bodium coupling replaces interface: couplingInterface_nitrogenContentPerSoilLayer
+    std::vector<double> couplingInterface_diffusionFactor;                // in bodium coupling for calculation of nitrogen uptake
     std::vector<double> couplingInterface_plantNh4UptakePerSoilLayer;     // in bodium coupling provide input to bodium
     std::vector<double> couplingInterface_plantNo3UptakePerSoilLayer;     // in bodium coupling provide input to bodium
     std::vector<double> couplingInterface_plantSoilWaterUptakePerLayer;   // in bodium coupling provide input to bodium

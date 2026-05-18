@@ -105,6 +105,7 @@ public:
     void setWaterPotential(std::vector<double> values);
     void setNh4Concentration(std::vector<double> values);
     void setNo3Concentration(std::vector<double> values);
+    void setDiffusionFactor(std::vector<double> values);
 
     // helper functions
     std::vector<double> calculateRootVolumeFromRootBiomass(std::vector<double> rootMassPerLayer);
