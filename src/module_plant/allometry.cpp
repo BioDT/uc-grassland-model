@@ -4,12 +4,17 @@ ALLOMETRY::ALLOMETRY() {};
 ALLOMETRY::~ALLOMETRY() {};
 
 /**
- * @brief Calculates the Leaf Area Index (LAI) from shoot biomass, ground area, and specific leaf area (SLA).
+ * @brief Calculates the Leaf Area Index (LAI) from shoot biomass, covered area,
+ *        and specific leaf area (SLA).
  *
- * @param biomass The total shoot biomass (in g).
- * @param area The ground area that is covered by the plant (in square cm).
- * @param sla The specific leaf area (in square cm per g).
- * @return The calculated Leaf Area Index (LAI).
+ * @f[ \text{LAI} = \frac{B_{\text{shoot}} \cdot \text{SLA}}{A} @f]
+ *
+ * @param utils        Utility object; raises an error if `area` ≤ 0.
+ * @param shootBiomass Shoot biomass of the plant (g ODM).
+ * @param area         Ground area covered by the plant (cm²); must be > 0.
+ * @param sla          Specific leaf area (cm² g⁻¹ ODM).
+ * @return Leaf Area Index (m² leaf m⁻² ground, dimensionless when area and
+ *         biomass use consistent units).
  */
 double ALLOMETRY::laiFromShootBiomassAreaSla(UTILS utils, double shootBiomass, double area, double sla)
 {
@@ -21,10 +26,13 @@ double ALLOMETRY::laiFromShootBiomassAreaSla(UTILS utils, double shootBiomass, d
 }
 
 /**
- * @brief Calculates the ground area covered by the plant based on the plant width.
+ * @brief Calculates the ground area covered by a plant from its canopy diameter.
  *
- * @param width The diameter (or width) of the plant (in cm).
- * @return The calculated ground area (in square cm).
+ * Models the plant canopy as a circle:
+ * @f[ A = \frac{\pi}{4} \cdot w^2 @f]
+ *
+ * @param width Canopy diameter (width) of the plant (cm).
+ * @return Covered ground area (cm²).
  */
 double ALLOMETRY::areaFromWidth(double width)
 {
@@ -32,15 +40,24 @@ double ALLOMETRY::areaFromWidth(double width)
 }
 
 /**
- * @brief Calculates the plant height based on shoot biomass, plant width, and shoot form factor.
+ * @brief Calculates plant height from shoot biomass, canopy width, and shoot
+ *        correction factor.
  *
- * This function computes the height of a plant using the shoot biomass,
- * the width of the plant, and a form factor that accounts for biomass fraction in the cylindric shoot.
+ * Assumes the shoot volume approximates a cylinder of base area
+ * @f$A = \frac{\pi}{4} w^2@f$ and height @f$h@f$, with biomass density
+ * scaled by `shootCorrectionFactor`:
+ * @f[ h = \frac{B_{\text{shoot}} / A}{f_{\text{shoot}}} @f]
  *
- * @param biomass The shoot biomass of the plant (in g).
- * @param width The diameter (or width) of the plant (in cm).
- * @param form The shoot form factor, which represents how much biomass is contained in the cylindric shape of the plant (g per cubic cm).
- * @return The calculated height of the plant (in cm).
+ * Used when the plant width is known but needs its height recalculated
+ * after biomass changes (e.g. following mowing).
+ *
+ * @param utils               Utility object; raises an error if `width` or
+ *                            `shootCorrectionFactor` ≤ 0.
+ * @param shootBiomass        Shoot biomass (g ODM).
+ * @param width               Canopy width / diameter (cm); must be > 0.
+ * @param shootCorrectionFactor Biomass density of the cylindrical shoot volume
+ *                            (g ODM cm⁻³); must be > 0.
+ * @return Plant height (cm).
  */
 double ALLOMETRY::heightFromShootBiomassWidthShootCorrection(UTILS utils, double shootBiomass, double width, double shootCorrectionFactor)
 {
@@ -52,14 +69,13 @@ double ALLOMETRY::heightFromShootBiomassWidthShootCorrection(UTILS utils, double
 }
 
 /**
- * @brief Calculates the plant height based on plant width and height-width ratio.
+ * @brief Calculates plant height from canopy width and the height-to-width ratio.
  *
- * This function computes the height of a plant using its width and a
- * height-width ratio.
+ * @f[ h = w \cdot r_{hw} @f]
  *
- * @param width The width of the plant (in cm).
- * @param hwr The height-width ratio of the plant (in cm per cm).
- * @return The calculated height of the plant (in cm).
+ * @param width           Canopy width / diameter (cm).
+ * @param heightWidthRatio Height-to-width allometric ratio (cm cm⁻¹, dimensionless).
+ * @return Plant height (cm).
  */
 double ALLOMETRY::heightFromWidthByRatio(double width, double heightWidthRatio)
 {
@@ -67,14 +83,14 @@ double ALLOMETRY::heightFromWidthByRatio(double width, double heightWidthRatio)
 }
 
 /**
- * @brief Calculates the plant width based on plant height and height-width ratio.
+ * @brief Calculates canopy width from plant height and the height-to-width ratio.
  *
- * This function computes the width of a plant using its height and a
- * height-width ratio.
+ * @f[ w = \frac{h}{r_{hw}} @f]
  *
- * @param height The height of the plant (in cm).
- * @param hwr The height-width ratio of the plant (in cm per cm).
- * @return The calculated width of the plant (in cm).
+ * @param utils           Utility object; raises an error if `heightWidthRatio` ≤ 0.
+ * @param height          Plant height (cm).
+ * @param heightWidthRatio Height-to-width allometric ratio (cm cm⁻¹); must be > 0.
+ * @return Canopy width / diameter (cm).
  */
 double ALLOMETRY::widthFromHeightByRatio(UTILS utils, double height, double heightWidthRatio)
 {
@@ -86,15 +102,26 @@ double ALLOMETRY::widthFromHeightByRatio(UTILS utils, double height, double heig
 }
 
 /**
- * @brief Calculates the plant height based on shoot biomass, height-width ratio, and shoot form factor.
+ * @brief Calculates plant height from shoot biomass, height-to-width ratio, and
+ *        shoot correction factor.
  *
- * This function computes the height of a plant using its shoot biomass,
- * the height-width ratio, and the shoot form factor.
+ * Derived by combining the cylindrical shoot-volume model with the allometric
+ * height-width constraint:
+ * @f[
+ *   h = \left( B_{\text{shoot}} \cdot \frac{4}{\pi}
+ *       \cdot \frac{r_{hw}^2}{f_{\text{shoot}}} \right)^{1/3}
+ * @f]
  *
- * @param biomass The shoot biomass of the plant (in g).
- * @param hwr The height-width ratio of the plant (in cm per cm).
- * @param form The shoot form factor of the plant (in g per cubic cm).
- * @return The calculated height of the plant (in cm).
+ * Used for normal proportional growth where both height and width increase
+ * simultaneously.
+ *
+ * @param utils               Utility object; raises an error if
+ *                            `shootCorrectionFactor` ≤ 0.
+ * @param shootBiomass        Shoot biomass (g ODM).
+ * @param heightWidthRatio    Height-to-width allometric ratio (cm cm⁻¹).
+ * @param shootCorrectionFactor Biomass density of the cylindrical shoot volume
+ *                            (g ODM cm⁻³); must be > 0.
+ * @return Plant height (cm).
  */
 double ALLOMETRY::heightFromShootBiomassByRatioAndShootCorrection(UTILS utils, double shootBiomass, double heightWidthRatio, double shootCorrectionFactor)
 {
@@ -106,15 +133,23 @@ double ALLOMETRY::heightFromShootBiomassByRatioAndShootCorrection(UTILS utils, d
 }
 
 /**
- * @brief Calculates the plant width based on shoot biomass, height-width ratio, and shoot form factor.
+ * @brief Calculates canopy width from shoot biomass, height-to-width ratio, and
+ *        shoot correction factor.
  *
- * This function computes the width of a plant using its shoot biomass,
- * the height-width ratio, and the shoot form factor.
+ * Inverse of `heightFromShootBiomassByRatioAndShootCorrection()` with respect to
+ * width:
+ * @f[
+ *   w = \left( \frac{B_{\text{shoot}} \cdot 4/\pi}
+ *              {r_{hw} \cdot f_{\text{shoot}}} \right)^{1/3}
+ * @f]
  *
- * @param biomass The shoot biomass of the plant (in g).
- * @param hwr The height-width ratio of the plant (in cm per cm).
- * @param form The shoot form factor of the plant (in g per cubic cm).
- * @return The calculated width of the plant (in g).
+ * @param utils               Utility object; raises an error if `heightWidthRatio`
+ *                            or `shootCorrectionFactor` ≤ 0.
+ * @param shootBiomass        Shoot biomass (g ODM).
+ * @param heightWidthRatio    Height-to-width allometric ratio (cm cm⁻¹); must be > 0.
+ * @param shootCorrectionFactor Biomass density of the cylindrical shoot volume
+ *                            (g ODM cm⁻³); must be > 0.
+ * @return Canopy width / diameter (cm).
  */
 double ALLOMETRY::widthFromShootBiomassByRatioAndShootCorrection(UTILS utils, double shootBiomass, double heightWidthRatio, double shootCorrectionFactor)
 {
@@ -130,21 +165,48 @@ double ALLOMETRY::widthFromShootBiomassByRatioAndShootCorrection(UTILS utils, do
 }
 
 /**
- * @brief Calculates the shoot biomass based on plant height, plant width, and shoot form factor.
+ * @brief Calculates shoot biomass from plant height, canopy width, and shoot
+ *        correction factor.
  *
- * This function computes the shoot biomass of a plant using its height,
- * width, and shoot form factor.
+ * Inverse of `heightFromShootBiomassWidthShootCorrection()`:
+ * @f[ B_{\text{shoot}} = A(w) \cdot h \cdot f_{\text{shoot}} @f]
+ * where @f$A(w) = \frac{\pi}{4} w^2@f$.
  *
- * @param height The height of the plant (in cm).
- * @param width The width of the plant (in cm).
- * @param form The shoot form factor of the plant (in g per cubic cm).
- * @return The calculated shoot biomass of the plant (in g).
+ * @param height              Plant height (cm).
+ * @param width               Canopy width / diameter (cm).
+ * @param shootCorrectionFactor Biomass density of the cylindrical shoot volume
+ *                            (g ODM cm⁻³).
+ * @return Shoot biomass (g ODM).
  */
 double ALLOMETRY::shootBiomassFromHeightWidthShootCorrection(double height, double width, double shootCorrectionFactor)
 {
     return areaFromWidth(width) * height * shootCorrectionFactor;
 }
 
+/**
+ * @brief Calculates plant height from total plant biomass, allometric ratios, and
+ *        shoot correction factor.
+ *
+ * Accounts for the shoot-root split when only total biomass is known:
+ * @f[
+ *   h = \left( \frac{4}{\pi} \cdot B_{\text{plant}} \cdot r_{hw}^2
+ *       \cdot \frac{1}{f_{\text{shoot}}}
+ *       \cdot \frac{1}{1 + 1/r_{\text{sr}}} \right)^{1/3}
+ * @f]
+ * where @f$r_{\text{sr}}@f$ is the shoot-root ratio.
+ *
+ * Used during plant initialisation when individual biomass pools are not yet
+ * available.
+ *
+ * @param utils               Utility object; raises an error if `shootRootRatio`
+ *                            or `shootCorrectionFactor` ≤ 0.
+ * @param plantBiomass        Total plant biomass (shoot + root, g ODM).
+ * @param heightWidthRatio    Height-to-width allometric ratio (cm cm⁻¹).
+ * @param shootCorrectionFactor Biomass density of the cylindrical shoot volume
+ *                            (g ODM cm⁻³); must be > 0.
+ * @param shootRootRatio      Target shoot-to-root biomass ratio (g g⁻¹); must be > 0.
+ * @return Plant height (cm).
+ */
 double ALLOMETRY::heightFromPlantBiomassShootCorrectionAndByRatios(UTILS utils, double plantBiomass, double heightWidthRatio, double shootCorrectionFactor, double shootRootRatio)
 {
 
@@ -157,6 +219,16 @@ double ALLOMETRY::heightFromPlantBiomassShootCorrectionAndByRatios(UTILS utils, 
     return (calcPart2);
 }
 
+/**
+ * @brief Calculates root biomass from shoot biomass and the shoot-root ratio.
+ *
+ * @f[ B_{\text{root}} = \frac{B_{\text{shoot}}}{r_{\text{sr}}} @f]
+ *
+ * @param utils          Utility object; raises an error if `shootRootRatio` ≤ 0.
+ * @param shootBiomass   Shoot biomass (g ODM).
+ * @param shootRootRatio Target shoot-to-root biomass ratio (g g⁻¹); must be > 0.
+ * @return Root biomass (g ODM).
+ */
 double ALLOMETRY::rootBiomassFromShootBiomass(UTILS utils, double shootBiomass, double shootRootRatio)
 {
     if (shootRootRatio <= 0.0)
@@ -166,6 +238,29 @@ double ALLOMETRY::rootBiomassFromShootBiomass(UTILS utils, double shootBiomass, 
     return (shootBiomass / shootRootRatio);
 }
 
+/**
+ * @brief Calculates root-zone depth from root biomass using an allometric
+ *        power-law equation.
+ *
+ * The relationship is:
+ * @f[
+ *   d_{\text{root}} = a \cdot \left(\frac{r_{\text{sr}}}{f_{\text{shoot}}}
+ *   \right)^{b} \cdot B_{\text{root}}^{b}
+ * @f]
+ * where @f$a@f$ = `parameterIntercept`, @f$b@f$ = `parameterExponent`,
+ * @f$r_{\text{sr}}@f$ = shoot-root ratio, and @f$f_{\text{shoot}}@f$ =
+ * shoot correction factor.
+ *
+ * @param utils               Utility object; raises an error if
+ *                            `shootCorrectionFactor` ≤ 0.
+ * @param rootBiomass         Root biomass (g ODM).
+ * @param parameterIntercept  Intercept of the root-depth allometric equation (cm).
+ * @param parameterExponent   Exponent of the root-depth allometric equation
+ *                            (dimensionless).
+ * @param shootRootRatio      Shoot-to-root biomass ratio (g g⁻¹).
+ * @param shootCorrectionFactor Biomass density factor (g ODM cm⁻³); must be > 0.
+ * @return Root-zone depth (cm).
+ */
 double ALLOMETRY::rootDepthFromRootBiomassParametersRatioAndShootCorrection(UTILS utils, double rootBiomass, double parameterIntercept, double parameterExponent, double shootRootRatio, double shootCorrectionFactor)
 {
     if (shootCorrectionFactor <= 0.0)
@@ -177,6 +272,19 @@ double ALLOMETRY::rootDepthFromRootBiomassParametersRatioAndShootCorrection(UTIL
     return (parameterIntercept * calcPart1 * calcPart2);
 }
 
+/**
+ * @brief Determines the number of soil layers reached by plant roots.
+ *
+ * Iterates through soil layers from the surface downward, accumulating depth
+ * until the cumulative depth equals or exceeds `plantRootingDepth`. Returns
+ * at least 1 (the topmost layer is always included even for shallow-rooted
+ * plants).
+ *
+ * @param soilLayerWidth    Vector of individual soil layer widths (cm), ordered
+ *                          from surface to deepest layer.
+ * @param plantRootingDepth Root-zone depth of the plant (cm).
+ * @return Number of soil layers reached by the roots (integer, ≥ 1).
+ */
 double ALLOMETRY::calculateNumberOfRootingSoillayer(std::vector<double> soilLayerWidth, double plantRootingDepth)
 {
     double cumulativeSoilDepth = 0.0;

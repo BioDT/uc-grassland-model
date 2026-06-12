@@ -4,31 +4,29 @@ RECRUITMENT::RECRUITMENT() {};
 RECRUITMENT::~RECRUITMENT() {};
 
 /**
- * @brief Main function for plant recruitment processes.
+ * @brief Orchestrates all plant recruitment processes for one simulation time step.
  *
- * This function orchestrates the recruitment of plants by managing seed
- * influx from various sources, storing the seeds in a local seed pool,
- * and handling the germination of seeds into seedlings.
+ * Executes the following steps in order:
+ * 1. getIncomingSeedsByPlantReproduction() — converts mature-plant recruitment
+ *    biomass to seed counts.
+ * 2. getIncomingSeedsBySowing() — adds seeds from scheduled sowing events.
+ * 3. getIncomingSeedsByExternalInflux() — adds seeds from an external source
+ *    (e.g. regional seed rain).
+ * 4. saveIncomingSeedsInSeedPool() — moves the day's seed totals into the
+ *    per-PFT seed pool with associated germination-time counters.
+ * 5. calculateSeedGerminationToSeedlings() — decrements germination counters,
+ *    germinates ready batches, applies seedling crowding mortality, creates
+ *    new cohorts, and transfers failed seeds to litter.
+ * 6. Updates `community.totalNumberOfCohortsInCommunity` after any new cohorts
+ *    have been added.
  *
- * The function performs the following steps:
- * 1. Gathers incoming seeds from plant reproduction, sowing activities,
- *    and external sources.
- * 2. Stores the collected seeds into the local seed pool.
- * 3. Calculates germination based on the stored seeds, accounting for
- *    germination times and rates to determine how many seedlings emerge.
- *
- * @param utils Utility functions for various operations including error
- *              handling and string manipulation.
- * @param parameter A `PARAMETER` object containing simulation parameters
- *                  that influence the recruitment process.
- * @param allometry An `ALLOMETRY` object used for allometric calculations
- *                  relevant to plant growth.
- * @param community Reference to a `COMMUNITY` object representing the
- *                  plant community in the simulation, which will be updated
- *                  with new seedlings.
- * @param management A `MANAGEMENT` object that contains predefined management regimes like
- *                   sowing of seeds for plant recruitment.
- * @param soil Reference to a `SOIL` object representing the soil characteristics.
+ * @param utils      Utility object for error handling.
+ * @param parameter  Model parameters; provides PFT counts, seed properties, flags.
+ * @param allometry  Allometric helper for initialising new seedling geometry.
+ * @param community  Plant community; new cohorts appended to `allPlants`,
+ *                   cohort counter updated.
+ * @param management Management state; provides sowing dates and amounts.
+ * @param soil       Soil state; litter pools updated with failed-germination seeds.
  */
 void RECRUITMENT::doPlantRecruitment(UTILS utils, PARAMETER parameter, ALLOMETRY allometry, COMMUNITY &community, MANAGEMENT management, SOIL &soil)
 {
@@ -48,24 +46,15 @@ void RECRUITMENT::doPlantRecruitment(UTILS utils, PARAMETER parameter, ALLOMETRY
 }
 
 /**
- * @brief Handles the recruitment of seeds from an external area.
+ * @brief Adds seeds from an external regional seed source to `incomingSeeds`.
  *
- * This function simulates the influx of seeds into the local seed pool
- * from an external source based on predefined parameters. The process
- * occurs only if the external seed influx feature is activated and the
- * current simulation day meets the threshold for starting the influx.
+ * Activated only when `parameter.externalSeedInfluxActivated` is `true` and
+ * the current simulation day is at or after `parameter.dayOfExternalSeedInfluxStart`.
+ * Adds `parameter.externalSeedInfluxNumber[pft]` seeds to `incomingSeeds[pft]`
+ * for every PFT.
  *
- * The function performs the following checks and operations:
- * - Verifies if the external seed influx is activated.
- * - Checks if the current day is greater than or equal to the specified
- *   start day for external seed influx as defined in the plant traits file.
- * - If both conditions are met, it iterates through the different plant
- *   functional types (PFTs) and adds the number of incoming seeds from
- *   the external influx to the local `incomingSeeds` vector for each PFT.
- *
- * @param parameter A `PARAMETER` object containing relevant simulation
- *                  parameters, including flags and numbers associated
- *                  with the external seed influx.
+ * @param parameter Read-only; provides the activation flag, start day, per-PFT
+ *                  influx numbers, and `pftCount`.
  */
 void RECRUITMENT::getIncomingSeedsByExternalInflux(PARAMETER parameter)
 {
@@ -79,27 +68,15 @@ void RECRUITMENT::getIncomingSeedsByExternalInflux(PARAMETER parameter)
 }
 
 /**
- * @brief Handles the recruitment of seeds via sowing activities.
+ * @brief Adds seeds from scheduled sowing events to `incomingSeeds`.
  *
- * This function processes the influx of seeds that are sown on specified
- * days as defined in the management file. It checks whether the current
- * simulation day matches any of the sowing days and, if so, updates the
- * local seed pool by adding the amount of sown seeds for each plant
- * functional type (PFT).
+ * Scans `management.sowingDate` for entries matching the current simulation
+ * day. On a match, adds `management.amountOfSownSeeds[pft][sowingDayIndex]`
+ * to `incomingSeeds[pft]` for every PFT. Does nothing if no sowing dates are
+ * scheduled.
  *
- * The function performs the following operations:
- * - Checks if there are any specified sowing dates in the management
- *   file.
- * - Iterates through the sowing dates to find any that match the
- *   current simulation day.
- * - If a match is found, it updates the `incomingSeeds` vector by
- *   adding the amount of seeds sown for each PFT on that day.
- *
- * @param parameter A `PARAMETER` object that contains simulation parameters,
- *                  including the current day of the simulation.
- * @param management A `MANAGEMENT` object that provides information about
- *                   sowing dates and the corresponding amounts of seeds
- *                   sown for each PFT.
+ * @param parameter  Read-only; provides `day` and `pftCount`.
+ * @param management Read-only; provides `sowingDate` and `amountOfSownSeeds`.
  */
 void RECRUITMENT::getIncomingSeedsBySowing(PARAMETER parameter, MANAGEMENT management)
 {
@@ -121,29 +98,26 @@ void RECRUITMENT::getIncomingSeedsBySowing(PARAMETER parameter, MANAGEMENT manag
 }
 
 /**
- * @brief Handles the recruitment of seeds via seed production from mature plants.
+ * @brief Converts mature-plant recruitment biomass to seed counts and adds
+ *        them to `incomingSeeds`.
  *
- * This function processes the influx of seeds produced by mature plants
- * in the community. It checks if the plant seed production is activated
- * and iterates through all plants to determine if they are mature enough
- * to produce seeds. If mature, it calculates the number of seeds based
- * on the plant's recruitment biomass and the specific seed mass for the
- * corresponding plant functional type (PFT). The produced seeds are then
- * added to the local seed pool for each PFT.
+ * Iterates over all cohorts. For each cohort that has reached maturity
+ * (`height >= maturityHeights[pft]`) and has a positive `recruitmentBiomass`,
+ * computes the number of seeds as:
+ * @f[
+ *   N_{\text{seeds}} = \left\lfloor
+ *     \frac{\text{amount} \times B_{\text{recruitment}}}{m_{\text{seed}}}
+ *     + 0.5 \right\rfloor
+ * @f]
+ * If `parameter.seedsFromMaturePlantsActivated` is `true`, adds the count to
+ * `incomingSeeds[pft]`; otherwise records them in `outgoingSeeds[pft]`
+ * (dispersed away from the plot). In both cases, `recruitmentBiomass`,
+ * `recruitmentCarbon`, and `recruitmentNitrogen` are reset to zero.
  *
- * The function performs the following operations:
- * - Checks if seed production is activated in the simulation parameters.
- * - Iterates over all plants in the community.
- * - For each plant, checks if it has reached maturity based on its height.
- * - If mature, calculates the number of seeds produced using the
- *   recruitment biomass and updates the `incomingSeeds` vector accordingly.
- * - Resets the plant's recruitment biomass to zero after seed production.
- *
- * @param parameter A `PARAMETER` object that contains simulation parameters,
- *                  including flags for seed production activation and
- *                  maturity height thresholds for each PFT.
- * @param community A `COMMUNITY` object that holds information about all
- *                  plants, including their characteristics and biomass.
+ * @param parameter Read-only; provides `seedsFromMaturePlantsActivated`,
+ *                  `maturityHeights`, `seedMasses`, and `pftCount`.
+ * @param community Plant community; `recruitmentBiomass` and derived C/N fields
+ *                  reset to zero for each producing cohort.
  */
 void RECRUITMENT::getIncomingSeedsByPlantReproduction(PARAMETER parameter, COMMUNITY &community)
 {
@@ -179,25 +153,15 @@ void RECRUITMENT::getIncomingSeedsByPlantReproduction(PARAMETER parameter, COMMU
 }
 
 /**
- * @brief Saves the incoming seeds into the local seed pool.
+ * @brief Moves the day's incoming seed counts into the per-PFT seed pool.
  *
- * This function takes the number of incoming seeds for each plant functional
- * type (PFT) and adds them to the corresponding seed pool. It also records
- * the germination time for each PFT based on the specified germination times
- * in the parameters. This allows for later tracking of seed germination
- * processes within the simulation.
+ * For each PFT with at least one incoming seed, appends the seed count to
+ * `seedPool[pft]` and appends the corresponding germination wait time
+ * (`parameter.seedGerminationTimes[pft]`) to `seedGerminationTimeCounter[pft]`.
+ * Each entry in these parallel vectors represents one "seed cohort batch"
+ * that will germinate after the required number of days.
  *
- * The function performs the following operations:
- * - Iterates over each plant functional type (PFT).
- * - Checks if there are any incoming seeds for the current PFT.
- * - If seeds are present, adds the amount of incoming seeds to the
- *   `seedPool` for that PFT.
- * - Simultaneously, the corresponding seed germination time is pushed to
- *   the `seedGerminationTimeCounter` for that PFT.
- *
- * @param parameter A `PARAMETER` object that contains simulation parameters,
- *                  including the number of plant functional types (PFTs)
- *                  and their respective germination times.
+ * @param parameter Read-only; provides `pftCount` and `seedGerminationTimes`.
  */
 void RECRUITMENT::saveIncomingSeedsInSeedPool(PARAMETER parameter)
 {
@@ -212,38 +176,27 @@ void RECRUITMENT::saveIncomingSeedsInSeedPool(PARAMETER parameter)
 }
 
 /**
- * @brief Calculates the germination of seeds from the seed pool into seedlings.
+ * @brief Processes the germination of all seed cohort batches that are ready
+ *        to germinate and adds the resulting seedlings to the community.
  *
- * This function processes the germination of seeds for each plant functional
- * type (PFT) based on their respective germination times. For each PFT,
- * the function decreases the germination time counter for each seed cohort
- * and checks if the seeds are ready to germinate. If so, it calculates the
- * number of successfully germinated seeds, transfers failed seeds to the
- * litter pool, and updates the seed pool accordingly. Additionally, it
- * adds the successfully germinated seedlings to the community.
+ * For each PFT and each stored seed-cohort batch, decrements the germination
+ * counter by 1. When the counter reaches zero the batch is ready:
+ * 1. calculateNumberOfGerminatingSeeds() — draws the number of successfully
+ *    germinated seeds from the batch (stochastic rounding if enabled).
+ * 2. seedlingCrowdingMortality() — reduces seedling counts if the plot is
+ *    already full (only when crowding mortality is active).
+ * 3. addGerminatedSeedlingsToCommunity() — creates a new PLANT cohort and
+ *    appends it to `community.allPlants`.
+ * 4. transferFailedToGerminateSeedsToLitterPool() — sends the non-germinating
+ *    seeds' C/N to the soil seed litter pool.
+ * 5. updateSeedPool() — removes the processed batch from the pool vectors.
  *
- * The function performs the following operations:
- * - Iterates over each plant functional type (PFT).
- * - For each cohort of seeds, decreases the germination time counter by one
- *   to account for the passage of a day.
- * - Checks if the counter has reached zero, indicating that the seeds are
- *   ready to germinate.
- * - Calculates the number of successfully germinated seeds and handles the
- *   transfer of failed germinated seeds to the litter pool.
- * - Updates the seed pool to reflect the number of seeds that have germinated.
- * - Adds newly germinated seedlings to the community vector of all plants.
- *
- * @param utils An object of type `UTILS` that provides utility functions
- *              used in the seed germination process.
- * @param parameter A `PARAMETER` object that contains simulation parameters,
- *                  including the number of plant functional types (PFTs) and
- *                  germination times.
- * @param allometry An `ALLOMETRY` object that contains information related
- *                  to plant growth and structure.
- * @param community A `COMMUNITY` object that represents the current plant
- *                  community, including all existing plants.
- * @param soil A `SOIL` object that contains information about the soil
- *             environment.
+ * @param utils      Utility object for error handling and random numbers.
+ * @param parameter  Model parameters; provides PFT counts, germination rates,
+ *                   crowding flag, and stochastic-mode flag.
+ * @param allometry  Allometric helper for initialising seedling geometry.
+ * @param community  Plant community; new cohorts appended to `allPlants`.
+ * @param soil       Soil state; failed-germination seed C/N transferred to litter.
  */
 void RECRUITMENT::calculateSeedGerminationToSeedlings(UTILS utils, PARAMETER parameter, ALLOMETRY allometry, COMMUNITY &community, SOIL &soil)
 {
@@ -275,28 +228,25 @@ void RECRUITMENT::calculateSeedGerminationToSeedlings(UTILS utils, PARAMETER par
 }
 
 /**
- * @brief Calculates the number of successfully germinated seeds from the seed pool.
+ * @brief Computes the number of successfully germinated seeds from a batch.
  *
- * This function determines the number of seeds that successfully germinate
- * based on the current seed pool and the germination rate specific to the
- * given plant functional type (PFT). If the calculated number of successfully
- * germinated seeds is greater than zero, it is returned. If the calculation
- * results in a negative value, an error is handled through the provided
- * utility function.
+ * Multiplies `seedPool[pft][seedCohortIndex]` by `parameter.seedGerminationRates[pft]`
+ * to obtain a potentially fractional count. In stochastic mode the fractional
+ * part is resolved probabilistically via a uniform random draw:
+ * - If `rand ≤ fractional part` → ceiling is used.
+ * - Otherwise → floor is used.
+ * In deterministic mode the raw (possibly fractional) value is stored directly.
  *
- * @param utils An object of type `UTILS` that provides utility functions
- *              used for error handling.
- * @param parameter A `PARAMETER` object that contains simulation parameters,
- *                  including seed germination rates for each PFT.
- * @param pft An integer representing the index of the plant functional type
- *            for which the germination is calculated.
- * @param seedCohortIndex An integer representing the index of the seed cohort
- *                    within the seed pool for the specified PFT.
+ * The result is written to `successfullGerminatedSeeds[pft]`. Raises an error
+ * if the result is negative.
  *
- * @return The number of successfully germinated seeds.
- *
- * @throw std::runtime_error If the calculated number of successfully
- *                            germinated seeds is negative.
+ * @param utils          Utility object for error handling.
+ * @param parameter      Read-only; provides `seedGerminationRates`, `pftCount`,
+ *                       and `stochasticSimulation` flag.
+ * @param community      Plant community; `randomNumberIndex` incremented for the
+ *                       stochastic draw.
+ * @param pft            PFT index of the batch being processed.
+ * @param seedCohortIndex Index of the seed-cohort batch in `seedPool[pft]`.
  */
 void RECRUITMENT::calculateNumberOfGerminatingSeeds(UTILS utils, PARAMETER parameter, COMMUNITY &community, int pft, int seedCohortIndex)
 {
@@ -334,6 +284,30 @@ void RECRUITMENT::calculateNumberOfGerminatingSeeds(UTILS utils, PARAMETER param
     }
 }
 
+/**
+ * @brief Reduces seedling counts if the combined covered area of the existing
+ *        community plus newly germinated seedlings exceeds SIMULATION_AREA.
+ *
+ * Computes the canopy area required by all germinating seedlings
+ * (summed over PFTs, weighted by overlap factors), adds it to the current
+ * community covered area, and checks whether the total exceeds SIMULATION_AREA.
+ * If so, scales all per-PFT seedling counts down by:
+ * @f[
+ *   f = \frac{\text{available space}}{\text{required seedling space}}
+ * @f]
+ * (floored to the nearest integer per PFT).
+ *
+ * Called by calculateSeedGerminationToSeedlings() only when
+ * `parameter.crowdingMortalityActivated` is `true`.
+ *
+ * @param utils     Utility object for error handling in allometric calls.
+ * @param parameter Read-only; provides `pftCount`, overlap factors, allometric
+ *                  parameters, and seed masses.
+ * @param community Read-only; provides `allPlants` for the current covered-area
+ *                  sum (the community accumulator is not yet updated at this
+ *                  point in the time step).
+ * @param allometry Allometric helper for computing seedling covered area.
+ */
 void RECRUITMENT::seedlingCrowdingMortality(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry)
 {
     double requiredSpaceForNewSeedlings = 0.0;
@@ -371,35 +345,24 @@ void RECRUITMENT::seedlingCrowdingMortality(UTILS utils, PARAMETER parameter, CO
 }
 
 /**
- * @brief Transfers failed-to-germinate seeds to the litter pool for decomposition.
+ * @brief Transfers the biomass C/N of seeds that failed to germinate to the
+ *        soil seed litter pool.
  *
- * This function calculates the number of seeds that failed to germinate by
- * subtracting the number of successfully germinated seeds from the total
- * number of seeds in the specified cohort of the seed pool. It then transfers
- * the carbon and nitrogen content of these failed seeds to the litter pool
- * for further decomposition.
+ * Computes the number of failed seeds as:
+ * @f[ N_{\text{failed}} = \text{seedPool}[pft][seedCohortIndex]
+ *     - \text{successfullGerminatedSeeds}[pft] @f]
+ * and delegates to `SOIL::transferDyingPlantPartsToLitterPools()` using
+ * `parameter.seedMasses[pft]` as the per-seed biomass.
  *
- * It also checks for consistency in the number of seeds, ensuring that the
- * sum of successfully germinated and failed-to-germinate seeds equals the
- * original number of seeds in the cohort. If there is significant numerical
- * variation due to rounding, a warning is issued.
+ * Issues a warning via `utils.handleWarning()` if the sum of germinated and
+ * failed seeds deviates from the cohort total by more than TOLERANCE (numerical
+ * rounding guard).
  *
- * @param utils An object of type `UTILS` used for utility functions and
- *              handling warnings.
- * @param parameter A `PARAMETER` object that holds simulation parameters,
- *                  including seed masses.
- * @param soil A reference to a `SOIL` object that manages the transfer
- *             of organic material to litter pools.
- * @param successfullGerminatedSeeds The number of seeds that successfully
- *                                    germinated.
- * @param pft An integer representing the index of the plant functional type
- *            for which the seeds are processed.
- * @param seedCohortIndex An integer representing the index of the seed cohort
- *                    within the seed pool for the specified PFT.
- *
- * @throw std::runtime_error If the sum of germinated and failed seeds does
- *                            not match the total seeds, a warning is logged
- *                            for numerical consistency.
+ * @param utils           Utility object for warnings.
+ * @param parameter       Read-only; provides `seedMasses` and `pftCount`.
+ * @param soil            Soil state; seed litter C/N pool incremented.
+ * @param pft             PFT index of the batch being processed.
+ * @param seedCohortIndex Index of the seed-cohort batch in `seedPool[pft]`.
  */
 void RECRUITMENT::transferFailedToGerminateSeedsToLitterPool(UTILS utils, PARAMETER parameter, SOIL &soil, int pft, int seedCohortIndex)
 {
@@ -418,18 +381,15 @@ void RECRUITMENT::transferFailedToGerminateSeedsToLitterPool(UTILS utils, PARAME
 }
 
 /**
- * @brief Updates the seed pool by removing entries for completed germination processes.
+ * @brief Removes a processed seed-cohort batch from the pool vectors.
  *
- * This function deletes the entries from both the seed pool and the
- * seed germination time counter vectors for the specified plant functional type
- * (PFT) and cohort index. This is done after the germination process is
- * completed, indicating that those seeds are no longer in the seed pool
- * and their germination time has been accounted for.
+ * Erases the entry at `seedCohortIndex` from both `seedPool[pft]` and
+ * `seedGerminationTimeCounter[pft]`. Must be called after
+ * transferFailedToGerminateSeedsToLitterPool() so that the batch data is
+ * no longer needed.
  *
- * @param pft An integer representing the index of the plant functional type
- *            whose seed pool and germination time counter are being updated.
- * @param seedCohortIndex An integer representing the index of the seed cohort
- *                    to be removed from the seed pool and time counter.
+ * @param pft             PFT index whose vectors are updated.
+ * @param seedCohortIndex Index of the batch to remove.
  */
 void RECRUITMENT::updateSeedPool(int pft, int seedCohortIndex)
 {
@@ -439,24 +399,23 @@ void RECRUITMENT::updateSeedPool(int pft, int seedCohortIndex)
 }
 
 /**
- * @brief Adds successfully germinated seedlings to the community.
+ * @brief Creates a new PLANT cohort from successfully germinated seedlings
+ *        and appends it to the community.
  *
- * This function creates new plant objects for the successfully germinated
- * seedlings and adds them to the community's collection of plants.
- * The new plant is initialized with the given parameters, including the
- * plant functional type (PFT) and the number of successful seedlings.
+ * If `successfullGerminatedSeeds[pft] > 0`, constructs a new PLANT object
+ * via `std::make_shared<PLANT>(utils, parameter, allometry, pft,
+ * successfullGerminatedSeeds[pft])` and emplaces it at the end of
+ * `community.allPlants`. The new cohort is initialised at seedling stage
+ * with biomass equal to `parameter.seedMasses[pft]`.
  *
- * @param parameter A reference to a PARAMETER object containing the parameters
- *                  necessary for initializing the new plant.
- * @param community A reference to the COMMUNITY object representing the
- *                  current state of the plant community. The new seedlings
- *                  will be added to this community.
- * @param allometry An ALLOMETRY object used for allometric calculations
- *                  to initialize a new seedlings state variables.
- * @param pft An integer representing the index of the plant functional type
- *            for the newly added seedlings.
- * @param successfullGerminatedSeeds An integer representing the number of
- *                                    successfully germinated seedlings to be added.
+ * @param utils     Utility object for allometric error handling inside PLANT
+ *                  constructor.
+ * @param parameter Model parameters passed to the PLANT constructor.
+ * @param community Plant community; new cohort appended to `allPlants`.
+ * @param allometry Allometric helper passed to the PLANT constructor.
+ * @param soil      Passed through (currently unused inside this function;
+ *                  reserved for future direct soil initialisation).
+ * @param pft       PFT index of the newly created cohort.
  */
 void RECRUITMENT::addGerminatedSeedlingsToCommunity(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry, SOIL soil, int pft)
 {

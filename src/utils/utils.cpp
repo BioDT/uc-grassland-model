@@ -297,6 +297,17 @@ int UTILS::parseIntegerOrNaN(const std::string &str)
     }
 }
 
+/**
+ * @brief Checks if a given value is negative and handles it according to the defined tolerance.
+ *
+ * This function checks if the input `valueToCheck` is negative. If the value is less than
+ * the negative tolerance (`-TOLERANCE`), an error is handled. If the value is negative but
+ * within the tolerance, it is set to zero.
+ *
+ * @param valueToCheck The value to be checked for negativity.
+ * @param context A string providing context for the error message if the value is negative.
+ */
+
 void UTILS::checkForNegativeValue(double valueToCheck, const std::string context)
 {
     if (valueToCheck < -TOLERANCE)

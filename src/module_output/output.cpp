@@ -5,17 +5,34 @@ OUTPUT::OUTPUT() {};
 OUTPUT::~OUTPUT() {};
 
 /**
- * @brief Calculates aggregated state variables based on dynamic changes of the community vector.
+ * @brief Aggregates per-cohort state variables into PFT-level and community-level
+ *        output accumulators, and computes ecosystem-scale balances.
  *
- * This function updates various state variables related to the plant community, including
- * PFT composition and total amount of plants. It iterates over all plant cohorts in the
- * `allPlants` vector, aggregating their amount into PFT-specific and community-wide totals values.
+ * Iterates over all plant cohorts and accumulates the following quantities:
+ * - **Per-PFT**: plant count, covered area, shoot biomass (total, green, brown,
+ *   clipped above `clippingHeightOfBiomassMeasurement`), root biomass, recruitment
+ *   biomass, exudation biomass, GPP, NPP, and respiration.
+ * - **Community-wide**: total plant count, carbon respiration, carbon NPP,
+ *   aboveground biomass, and aboveground litter biomass (from soil surface pools).
  *
- * After processing all cohorts, the function normalizes the PFT composition values to
- * reflect their proportions relative to the total amount of plants in the community.
+ * After the cohort loop:
+ * - PFT composition fractions are normalised to percentages of total plant count.
+ * - Seedling C ingrowth is summed across PFTs from successful germination counts.
+ * - Ecosystem-level N and C balances are computed:
+ *   - N balance = net mineralisation − volatilisation + fixation + fertilisation.
+ *   - C respiration = litter + soil-pool + plant respiration.
+ *   - C balance = plant NPP + seedling ingrowth − ecosystem respiration − C leaching
+ *     − harvested yield C.
  *
- * @param parameter A parameter object that provides information about the number of PFTs
- *                  (Plant Functional Types) in the simulation.
+ * @param parameter   Read-only; provides `pftCount`, `clippingHeightOfBiomassMeasurement`,
+ *                    and `seedMasses`.
+ * @param community   Plant community; per-PFT and community-level accumulators updated
+ *                    in place.
+ * @param soil        Soil state; surface litter and flux fields read for litter biomass
+ *                    and ecosystem balance calculations.
+ * @param management  Management state; `biomassYield` read for C-balance correction.
+ * @param recruitment Recruitment state; `successfullGerminatedSeeds` read for seedling
+ *                    C ingrowth.
  */
 void OUTPUT::updateVegetationStateVariablesForOutput(PARAMETER parameter, COMMUNITY &community, SOIL soil, MANAGEMENT management, RECRUITMENT recruitment)
 {
@@ -62,11 +79,9 @@ void OUTPUT::updateVegetationStateVariablesForOutput(PARAMETER parameter, COMMUN
                 community.pftComposition[pft] *= 100.0 / community.totalNumberOfPlantsInCommunity;
             }
         }
-
     }
     // calculations from soil state variables
     community.abovegroundLitterBiomass += (soil.carbonContent_surfaceStructuralLitterPool + soil.carbonContent_surfaceMetabolicLitterPool) * (1.0 / CARBON_CONTENT_ODM);
-    
 
     // Summing up PFT-specific variables for community-based variables
     for (int pft = 0; pft < parameter.pftCount; pft++)
@@ -81,19 +96,21 @@ void OUTPUT::updateVegetationStateVariablesForOutput(PARAMETER parameter, COMMUN
 }
 
 /**
- * @brief Creates the result folder, output file, and its header.
+ * @brief Prepares all model output infrastructure before the simulation loop starts.
  *
- * This method prepares the model output by performing the following steps:
- * - Creates a folder where the result files will be written if it does not already exist.
- * - Creates and opens the output files for writing.
- * - Writes the header information in the output files.
- * - Opens and reads the output writing dates from a specified file.
+ * Executes the following steps in order:
+ * 1. createOutputFolder() — creates the `output/` directory next to the config file.
+ * 2. createAndOpenOutputFiles() — constructs file names and opens `std::ofstream`
+ *    objects for each enabled output type.
+ * 3. writeHeaderInOutputFiles() — writes tab-separated column headers to each open file.
+ * 4. openAndReadOutputWritingDates() — loads optional date list controlling which days
+ *    are written; defaults to daily if no file is provided.
  *
- * @param path The base path for the output files. This is the directory where
- *             the result folder will be created and where output files will be saved.
- * @param utils Utility functions for file handling and directory management.
- * @param parameter Reference to the PARAMETER object containing simulation settings
- *                  and configurations required for output file creation and writing.
+ * @param path      Absolute path to the main configuration file; used to derive the
+ *                  output directory and the output-writing-dates file location.
+ * @param utils     Utility object for path splitting and error handling.
+ * @param parameter Model parameters; file names, flags, and coordinate strings read;
+ *                  no fields are written.
  */
 void OUTPUT::prepareModelOutput(std::string path, UTILS utils, PARAMETER &parameter)
 {
@@ -104,28 +121,33 @@ void OUTPUT::prepareModelOutput(std::string path, UTILS utils, PARAMETER &parame
 }
 
 /**
- * @brief Creates and opens the output file for writing simulation results.
+ * @brief Constructs output file names and opens one `std::ofstream` per enabled
+ *        output type.
  *
- * This method constructs a filename based on parameters such as latitude,
- * longitude, simulation years, and a random number generator seed. It uses
- * these parameters to generate a unique filename for the output file, then
- * attempts to open this file for writing. If the file cannot be opened,
- * an error is logged and handled appropriately.
+ * The file name pattern is:
+ * @code
+ * <outputDirectory>lat<lat>_lon<lon>__<firstYear>-01-01_<lastYear>-12-31
+ *     __run<NNN>__output<Type>__<parameterSuffix>
+ * @endcode
+ * where `<NNN>` is the zero-padded RNG seed (3 digits) and `<parameterSuffix>`
+ * is derived from the last two underscore-separated tokens of `plantTraitsFile`.
  *
- * The generated filename format is as follows:
+ * The following output files are opened when their respective boolean flag in
+ * `parameter` is `true`:
+ * - Community variables (`communityOutputFile`)
+ * - PFT population variables (`pftOutputFile`)
+ * - Plant cohort variables (`plantCohortOutputFile`)
+ * - Soil carbon pools and fluxes (`soilCarbonOutputFile`)
+ * - Soil nitrogen pools and fluxes (`soilNitrogenOutputFile`)
+ * - Soil water fluxes (`soilWaterOutputFile`)
+ * - Soil resources per layer (`soilResourcesPerSoilLayerOutputFile`)
+ * - Detailed soil flux breakdown (`soilFluxesDetailsOutputFile`)
  *
- * - Base output directory: `outputDirectory`
- * - Ending location: derived from latitude and longitude.
- * - Ending years: formatted as `__firstYear-01-01_lastYear-12-31`.
- * - Random seed: formatted as `__randomNumberGeneratorSeed`.
- * - Parameter ending: derived from the `plantTraitsFile`.
+ * Calls `utils.handleError()` if any enabled file cannot be opened.
  *
- * @param parameter Reference to the PARAMETER object that contains simulation
- *                  configurations, including geographical coordinates and
- *                  simulation years.
- * @param utils Utility functions for string manipulation and error handling.
- *
- * @throws std::ios_base::failure If the output file cannot be opened.
+ * @param utils     Utility object for string splitting and error handling.
+ * @param parameter Read-only; provides coordinates, year range, RNG seed, file flags,
+ *                  and `plantTraitsFile` for suffix derivation.
  */
 void OUTPUT::createAndOpenOutputFiles(UTILS utils, PARAMETER parameter)
 {
@@ -147,6 +169,7 @@ void OUTPUT::createAndOpenOutputFiles(UTILS utils, PARAMETER parameter)
     std::string filenameSoilNitrogen = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputSoilNitrogen__" + endingParameter;
     std::string filenameSoilWater = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputSoilWater__" + endingParameter;
     std::string filenameSoilResourcesPerSoilLayer = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputSoilResourcesPerSoilLayer__" + endingParameter;
+    std::string filenameSoilFluxesDetails = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputSoilFluxesDetails__" + endingParameter;
 
     if (parameter.communityOutputFile)
     {
@@ -210,26 +233,47 @@ void OUTPUT::createAndOpenOutputFiles(UTILS utils, PARAMETER parameter)
             utils.handleError("Error writing to the soil resources per soil layer output file.");
         }
     }
+
+    if (parameter.soilFluxesDetailsOutputFile)
+    {
+        outputSoilFluxesDetails.open(filenameSoilFluxesDetails);
+        if (!outputSoilFluxesDetails.is_open())
+        {
+            utils.handleError("Error writing to the soil fluxes details output file.");
+        }
+    }
 }
 
 /**
- * @brief Writes the header to the output file.
+ * @brief Writes tab-separated column headers to all open output files.
  *
- * This method writes the header line to the output file, which includes
- * column titles for the data that will be recorded during the simulation.
- * The header includes the following columns:
+ * Each enabled output file receives a single header line. The column sets are:
+ * - **Community**: Date, DayCount, NumberPlants, NumberCohorts, LeafAreaIndex,
+ *   VegetationHeight, VegetationCover, CBalance, NBalance.
+ * - **PFT**: Date, DayCount, PFT, Fraction, NumberPlants, CoveredArea, ShootBiomass,
+ *   GreenShootBiomass, BrownShootBiomass, ClippedShootBiomass, RootBiomass,
+ *   RecruitmentBiomass, ExudationBiomass, GPP, NPP, Respiration.
+ * - **Plant cohort**: Date, DayCount, PFT, Age, NumberPlants, Height, Width, LAI,
+ *   CoveredArea, RootDepth, NumberSoilLayers, ShootBiomass, GreenShootBiomass,
+ *   BrownShootBiomass, ClippedShootBiomass, RootBiomass, RecruitmentBiomass,
+ *   ExudationBiomass, GPP, NPP, Respiration, Radiation, ShadingIndicator,
+ *   LimitingFactorWater, LimitingFactorNitrogen, AllocationShoot, AllocationRoot,
+ *   AllocationRecruitment, AllocationExudation.
+ * - **Soil carbon**: Date, DayCount, all C pool contents and inter-pool C fluxes.
+ * - **Soil nitrogen**: Date, DayCount, all N pool contents, inter-pool N fluxes,
+ *   mineralisation, volatilisation, fixation, fertilisation, and leaching.
+ * - **Soil water**: Date, DayCount, irrigation input, interception, surface/soil
+ *   run-off, snow stores, evaporation, soil temperature.
+ * - **Soil resources per layer**: Date, DayCount, layer number and width, downward
+ *   water flux, water content, mineral N content.
+ * - **Soil fluxes details**: Date, DayCount, decisive C/N ratios, lignin contents,
+ *   decomposition C/N respiratory losses, immobilisation and mineralisation fluxes,
+ *   and decomposition factor.
  *
- * - Date
- * - PFT (Plant Functional Type)
- * - Fraction
- * - Number of Plants
+ * Calls `utils.handleError()` if an enabled file is not open when this method runs.
  *
- * The method checks if the output file is open before attempting to write.
- * If the file is not open, an error is logged and handled appropriately.
- *
- * @param utils Utility functions for error handling and other utilities.
- *
- * @throws std::ios_base::failure If the output file is not open.
+ * @param utils     Utility object for error handling.
+ * @param parameter Read-only; boolean output-file flags used to guard each block.
  */
 void OUTPUT::writeHeaderInOutputFiles(UTILS utils, PARAMETER parameter)
 {
@@ -242,7 +286,7 @@ void OUTPUT::writeHeaderInOutputFiles(UTILS utils, PARAMETER parameter)
         }
         else
         {
-            outputCommunity << "Date\tDayCount\tNumberPlants\tNumberCohorts\tLeafAreaIndex\tVegetationHeight\tVegetationCover\tCBalance\tNBalance";
+            outputCommunity << "Date\tDayCount\tNumberPlants(m-2)\tNumberCohorts(m-2)\tLeafAreaIndex(-)\tVegetationHeight(cm)\tVegetationCover(percent)\tCBalance(gC m-2)\tNBalance(gN m-2)";
             outputCommunity << std::endl;
         }
     }
@@ -414,19 +458,98 @@ void OUTPUT::writeHeaderInOutputFiles(UTILS utils, PARAMETER parameter)
             outputSoilResourcesPerSoilLayer << std::endl;
         }
     }
+
+    if (parameter.soilFluxesDetailsOutputFile)
+    {
+        if (!outputSoilFluxesDetails.is_open())
+        {
+            utils.handleError("Error writing to the soil fluxes details output file.");
+        }
+        else
+        {
+            outputSoilFluxesDetails << "Date\tDayCount\t";
+            outputSoilFluxesDetails << "decisiveCNRatio_soilMicrobesPool_soilSlowPool\t";
+            outputSoilFluxesDetails << "decisiveCNRatio_soilPassivePool_soilActivePool\t";
+            outputSoilFluxesDetails << "decisiveCNRatio_soilSlowPool_soilActivePool\t";
+            outputSoilFluxesDetails << "decisiveCNRatio_soilSlowPool_soilPassivePool\t";
+            outputSoilFluxesDetails << "decisiveCNRatio_soilActivePool_soilSlowPool\t";
+            outputSoilFluxesDetails << "decisiveCNRatio_soilActivePool_soilPassivePool\t";
+            outputSoilFluxesDetails << "decisiveCNRatio_soilMetabolicLitterPool_soilActivePool\t";
+            outputSoilFluxesDetails << "decisiveCNRatio_surfaceMetabolicLitterPool_soilMicrobesPool\t";
+            outputSoilFluxesDetails << "decisiveCNRatio_surfaceStructuralLitterPool_soilMicrobesPool\t";
+            outputSoilFluxesDetails << "decisiveCNRatio_surfaceStructuralLitterPool_soilSlowPool\t";
+            outputSoilFluxesDetails << "decisiveCNRatio_soilStructuralLitterPool_soilActivePool\t";
+            outputSoilFluxesDetails << "decisiveCNRatio_soilStructuralLitterPool_soilSlowPool\t";
+            outputSoilFluxesDetails << "ligninContent_surfaceStructuralLitterPool\t";
+            outputSoilFluxesDetails << "ligninContent_soilStructuralLitterPool\t";
+            outputSoilFluxesDetails << "respiration_decompositionCarbon_surfaceStructuralLitterPool_soilSlowPool\t";
+            outputSoilFluxesDetails << "respiration_decompositionCarbon_surfaceStructuralLitterPool_soilMicrobesPool\t";
+            outputSoilFluxesDetails << "respiration_decompositionCarbon_soilStructuralLitterPool_soilSlowPool\t";
+            outputSoilFluxesDetails << "respiration_decompositionCarbon_soilStructuralLitterPool_soilActivePool\t";
+            outputSoilFluxesDetails << "respiration_decompositionCarbon_surfaceMetabolicLitterPool_soilMicrobesPool\t";
+            outputSoilFluxesDetails << "respiration_decompositionCarbon_soilMetabolicLitterPool_soilActivePool\t";
+            outputSoilFluxesDetails << "respiration_decompositionCarbon_soilMicrobesPool_soilSlowPool\t";
+            outputSoilFluxesDetails << "respiration_decompositionCarbon_soilActivePool_soilPassiveAndSlowPool\t";
+            outputSoilFluxesDetails << "respiration_decompositionCarbon_soilSlowPool_soilPassiveAndActivePool\t";
+            outputSoilFluxesDetails << "respiration_decompositionCarbon_soilPassivePool_soilActivePool\t";
+            outputSoilFluxesDetails << "respirationCarbon_surface_litter\t";
+            outputSoilFluxesDetails << "respirationCarbon_soil_litter\t";
+            outputSoilFluxesDetails << "respirationCarbon_litter\t";
+            outputSoilFluxesDetails << "respirationCarbon_soilpools\t";
+
+            // respiratory nitrogen fluxes
+            outputSoilFluxesDetails << "respiration_decompositionNitrogen_surfaceStructuralLitterPool_soilSlowPool\t";
+            outputSoilFluxesDetails << "respiration_decompositionNitrogen_surfaceStructuralLitterPool_soilMicrobesPool\t";
+            outputSoilFluxesDetails << "respiration_decompositionNitrogen_soilStructuralLitterPool_soilSlowPool\t";
+            outputSoilFluxesDetails << "respiration_decompositionNitrogen_soilStructuralLitterPool_soilActivePool\t";
+            outputSoilFluxesDetails << "respiration_decompositionNitrogen_surfaceMetabolicLitterPool_soilMicrobesPool\t";
+            outputSoilFluxesDetails << "respiration_decompositionNitrogen_soilMetabolicLitterPool_soilActivePool\t";
+            outputSoilFluxesDetails << "respiration_decompositionNitrogen_soilMicrobesPool_soilSlowPool\t";
+            outputSoilFluxesDetails << "respiration_decompositionNitrogen_soilActivePool_soilPassiveAndSlowPool\t";
+            outputSoilFluxesDetails << "respiration_decompositionNitrogen_soilSlowPool_soilPassiveAndActivePool\t";
+            outputSoilFluxesDetails << "respiration_decompositionNitrogen_soilPassivePool_soilActivePool\t";
+            outputSoilFluxesDetails << "immobilize_surfaceStructuralLitterPool_to_soilSlowPool\t";
+            outputSoilFluxesDetails << "immobilize_surfaceStructuralLitterPool_to_soilMicrobesPool\t";
+            outputSoilFluxesDetails << "immobilize_soilStructuralLitterPool_to_soilSlowPool\t";
+            outputSoilFluxesDetails << "immobilize_soilStructuralLitterPool_to_soilActivePool\t";
+            outputSoilFluxesDetails << "immobilize_surfaceMetabolicLitterPool_to_soilMicrobesPool\t";
+            outputSoilFluxesDetails << "immobilize_soilMetabolicLitterPool_to_soilActivePool\t";
+            outputSoilFluxesDetails << "immobilize_soilMicrobesPool_to_soilSlowPool\t";
+            outputSoilFluxesDetails << "immobilize_soilActivePool_to_soilPassivePool\t";
+            outputSoilFluxesDetails << "immobilize_soilActivePool_to_soilSlowPool\t";
+            outputSoilFluxesDetails << "immobilize_soilSlowPool_to_soilPassivePool\t";
+            outputSoilFluxesDetails << "immobilize_soilSlowPool_to_soilActivePool\t";
+            outputSoilFluxesDetails << "immobilize_soilPassivePool_to_soilActivePool\t";
+            outputSoilFluxesDetails << "mineralize_surfaceStructuralLitterPool_to_soilSlowPool\t";
+            outputSoilFluxesDetails << "mineralize_surfaceStructuralLitterPool_to_soilMicrobesPool\t";
+            outputSoilFluxesDetails << "mineralize_soilStructuralLitterPool_to_soilSlowPool\t";
+            outputSoilFluxesDetails << "mineralize_soilStructuralLitterPool_to_soilActivePool\t";
+            outputSoilFluxesDetails << "mineralize_surfaceMetabolicLitterPool_to_soilMicrobesPool\t";
+            outputSoilFluxesDetails << "mineralize_soilMetabolicLitterPool_to_soilActivePool\t";
+            outputSoilFluxesDetails << "mineralize_soilMicrobesPool_to_soilSlowPool\t";
+            outputSoilFluxesDetails << "mineralize_soilActivePool_to_soilPassivePool\t";
+            outputSoilFluxesDetails << "mineralize_soilActivePool_to_soilSlowPool\t";
+            outputSoilFluxesDetails << "mineralize_soilSlowPool_to_soilPassivePool\t";
+            outputSoilFluxesDetails << "mineralize_soilSlowPool_to_soilActivePool\t";
+            outputSoilFluxesDetails << "mineralize_soilPassivePool_to_soilActivePool\t";
+            outputSoilFluxesDetails << "decompositionFactor";
+            outputSoilFluxesDetails << std::endl;
+        }
+    }
 }
 
 /**
- * @brief Writes daily simulation results to the output file.
+ * @brief Flushes the in-memory string buffers to the corresponding output files.
  *
- * This method writes the daily simulation results, which include state
- * variables of the community, to the output file. The results are stored
- * in a temporary buffer and are written to the file if the file is open.
- * After writing, the buffer is cleared to prepare for the next set of results.
+ * For each enabled output type, writes the content of the associated
+ * `std::ostringstream` buffer to the open `std::ofstream`, then clears the buffer
+ * so it is ready for the next time step. This batched write approach reduces
+ * the number of filesystem operations during the simulation loop.
  *
- * @param utils Utility functions for error handling and other utilities.
+ * Calls `utils.handleError()` if an enabled file is not open when this method runs.
  *
- * @throws std::ios_base::failure If the output file is not open.
+ * @param utils     Utility object for error handling.
+ * @param parameter Read-only; boolean output-file flags used to guard each block.
  */
 void OUTPUT::writeSimulationResultsToOutputFiles(UTILS utils, PARAMETER parameter)
 {
@@ -527,19 +650,31 @@ void OUTPUT::writeSimulationResultsToOutputFiles(UTILS utils, PARAMETER paramete
             utils.handleError("The output file of soil resources per soil layer variables is not open for writing.");
         }
     }
+
+    if (parameter.soilFluxesDetailsOutputFile)
+    {
+        if (outputSoilFluxesDetails.is_open())
+        {
+            outputSoilFluxesDetails << bufferSoilFluxesDetails.str();
+            bufferSoilFluxesDetails.str("");
+            bufferSoilFluxesDetails.clear();
+        }
+        else
+        {
+            utils.handleError("The output file of soil fluxes details variables is not open for writing.");
+        }
+    }
 }
 
 /**
- * @brief Closes the output file.
+ * @brief Closes all open output files at the end of the simulation.
  *
- * This method closes the output file if it is currently open. If the
- * output file is not open, it triggers an error handling function to
- * notify the user of the issue.
+ * Iterates over each enabled output type and closes its `std::ofstream`.
+ * Calls `utils.handleError()` if an enabled file is not open when this method
+ * is called (which would indicate an earlier failure to open or premature close).
  *
- * @param utils Utility functions for error handling and other utilities.
- *
- * @throws std::ios_base::failure If the output file is not open when
- *                                  attempting to close it.
+ * @param utils     Utility object for error handling.
+ * @param parameter Read-only; boolean output-file flags used to guard each block.
  */
 void OUTPUT::closeOutputFiles(UTILS utils, PARAMETER parameter)
 {
@@ -626,23 +761,32 @@ void OUTPUT::closeOutputFiles(UTILS utils, PARAMETER parameter)
             utils.handleError("The output file of soil resources per soil layer variables is not open.");
         }
     }
+
+    if (parameter.soilFluxesDetailsOutputFile)
+    {
+        if (outputSoilFluxesDetails.is_open())
+        {
+            outputSoilFluxesDetails.close();
+        }
+        else
+        {
+            utils.handleError("The output file of soil fluxes details variables is not open.");
+        }
+    }
 }
 
 /**
- * @brief Creates a folder for the output files.
+ * @brief Creates the `output/` subdirectory adjacent to the configuration file.
  *
- * This method constructs an output directory path from the provided path
- * and creates a new directory named "output" within that path. The
- * method uses a utility function to split the input path into components
- * based on the directory separator. If the directory already exists,
- * the method does nothing.
+ * Splits `path` on the platform path separator, rebuilds all components except
+ * the file name, appends `output/`, and calls `_mkdir` (Windows) or `mkdir`
+ * (POSIX) to create the directory. If the directory already exists the call
+ * is silently ignored. The resulting path is stored in `outputDirectory` for
+ * use by createAndOpenOutputFiles().
  *
- * @param path The base path where the output folder will be created.
- * @param utils Utility functions for string manipulation and other tasks.
- *
- * @note This method uses the _mkdir function to create the directory.
- *       Ensure that the application has permission to create directories
- *       in the specified location.
+ * @param path  Absolute path to the main configuration file; the last component
+ *              (the file name) is stripped to obtain the base directory.
+ * @param utils Utility object for path-separator detection and string splitting.
  */
 void OUTPUT::createOutputFolder(std::string path, UTILS utils)
 {
@@ -654,29 +798,29 @@ void OUTPUT::createOutputFolder(std::string path, UTILS utils)
     }
 
     outputDirectory = outputDirectory + "output" + pathSeparator;
-    #ifdef _WIN32
-        _mkdir(outputDirectory.c_str());
-    #else
-        mkdir(outputDirectory.c_str(), 0777);
-    #endif
+#ifdef _WIN32
+    _mkdir(outputDirectory.c_str());
+#else
+    mkdir(outputDirectory.c_str(), 0777);
+#endif
 }
 /**
- * @brief Reads output writing dates from a file.
+ * @brief Loads the optional list of simulation days on which output should be written.
  *
- * This method constructs the full path to the output writing dates file
- * using the specified path and the filename from the parameters. It opens
- * the file and reads the dates from it, storing them in the outputWritingDates
- * vector. The first line of the file is considered a header and is skipped.
- * If the file cannot be opened, a warning is issued and daily resolution
- * will be used for writing simulation results.
+ * Resolves the output-writing-dates file path relative to `path`, opens the file,
+ * skips the header row, and parses each subsequent line as a `YYYY-MM-DD` date.
+ * Each date is converted to a day-count offset from `parameter.referenceJulianDayStart`
+ * and appended to `outputWritingDates`. Windows CR artifacts are stripped.
  *
- * @param path The base path where the output writing dates file is located.
- * @param utils Utility functions for string manipulation and calculations.
- * @param parameter Reference to the PARAMETER object containing configuration details.
+ * If the file cannot be opened (e.g. the parameter is `NaN` or the file is absent),
+ * a warning is issued and `outputWritingDatesFileOpened` remains `false`, causing the
+ * simulation to fall back to daily output writing.
  *
- * @note The output writing dates file must be formatted correctly, with dates
- *       specified in the format "YYYY-MM-DD". If the file is empty or cannot
- *       be opened, daily simulation results will be written by default.
+ * @param path      Absolute path to the main configuration file; used to derive the
+ *                  directory in which the dates file resides.
+ * @param utils     Utility object for string splitting, date conversion, and warnings.
+ * @param parameter Read-only; provides `outputWritingDatesFile` name and
+ *                  `referenceJulianDayStart` for day-count conversion.
  */
 void OUTPUT::openAndReadOutputWritingDates(std::string path, UTILS utils, PARAMETER &parameter)
 {
@@ -725,20 +869,21 @@ void OUTPUT::openAndReadOutputWritingDates(std::string path, UTILS utils, PARAME
 }
 
 /**
- * @brief Prints important settings of the simulation to the console (stdout.txt).
+ * @brief Prints a summary of simulation settings and input-file status to stdout.
  *
- * This method outputs key configuration parameters of the simulation, including
- * site identification, geographical information, the first and last year of the
- * simulation, and the names of the input files. It also reports whether the input
- * files were successfully opened. Additionally, it details how and when the simulation
- * output will be written, including the random number generator seed.
+ * Outputs the following sections to `std::cout`:
+ * - Site identification: DEIMS ID, latitude, longitude, first and last year.
+ * - Input files: names of all five input files (weather, soil, management, plant
+ *   traits, process setup), each followed by a failure note if the file could
+ *   not be opened.
+ * - Output writing: the RNG seed for reproducibility, and whether results are
+ *   written daily or only on the dates listed in `outputWritingDatesFile`.
+ *   Reports if the dates file was absent, empty, or not specified.
  *
- * @param parameter Reference to the PARAMETER object containing simulation settings.
- * @param input Reference to the INPUT object containing status information about input files.
- *
- * @note If any input files fail to open, a corresponding message will be printed to
- *       the console. The method also indicates whether output writing dates are set to
- *       daily or at specified dates from the output writing dates file.
+ * @param parameter Read-only; provides site metadata, file names, year range, and
+ *                  the RNG seed.
+ * @param input     Read-only; provides `*FileOpened` boolean flags to report file
+ *                  opening success for each input file.
  */
 void OUTPUT::printSimulationSettingsToConsole(PARAMETER parameter, INPUT input)
 {

@@ -51,7 +51,7 @@ public:
 
     // coupling interface output variables, cacluated end of timestep
     std::vector<double> couplingInterface_rootBiomass; // in gODM
-    std::vector<double> couplingInterface_rootVolume; // in m^3
+    std::vector<double> couplingInterface_rootVolume;  // in m^3
 
     // base functions
     void initializeSimulation(std::string path);

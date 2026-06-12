@@ -4,7 +4,28 @@ GROWTH::GROWTH() {};
 GROWTH::~GROWTH() {};
 
 /**
- * @brief Main function of plant growth
+ * @brief Orchestrates all plant growth processes for a single simulation time step.
+ *
+ * Executes the full growth pipeline in the following order:
+ * 1. Photosynthesis (GPP calculation)
+ * 2. Soil water uptake and GPP limitation by soil water conditions
+ * 3. Maintenance and growth respiration
+ * 4. NPP calculation from GPP minus respiration
+ * 5. Soil nitrogen uptake and NPP limitation by nitrogen availability
+ * 6. Adjustment of shoot/root/recruitment/exudate allocation rates
+ * 7. NPP allocation to biomass pools
+ * 8. Plant growth in size and aging
+ *
+ * @param utils       Utility object providing error handling and helper functions.
+ * @param parameter   Struct containing all PFT-specific and global model parameters.
+ * @param weather     Struct providing current weather conditions (e.g. radiation, temperature).
+ * @param community   Reference to the COMMUNITY object holding all plant cohorts; modified in place.
+ * @param interaction Struct holding precomputed environmental interaction quantities (e.g. shading, radiation).
+ * @param allometry   Object providing allometric relationships (height, width, LAI, rooting depth).
+ * @param soil        Reference to the SOIL object; updated with water/nitrogen uptake and exudates.
+ *
+ * @see doPlantPhotosynthesis(), doPlantRespiration(), calculatePlantNPPFromGPPAndRespiration()
+ * @see adjustAllocationRates(), doPlantNPPAllocation(), doPlantGrowthInSizeAndAging()
  * @cite Concept of plant NPP based on the carbon balance of photosynthesis and respiration
  *       based on the forest model FORMIND (www.formind.org)
  */
@@ -84,6 +105,32 @@ void GROWTH::doPlantPhotosynthesis(UTILS utils, PARAMETER parameter, COMMUNITY &
     }
 }
 
+/**
+ * @brief Calculates CO₂ uptake per second and per square meter for a single plant,
+ *        accounting for community-level shading across vertical height layers.
+ *
+ * The canopy is discretised into horizontal height layers of fixed width
+ * (`HEIGHT_LAYER_WIDTH`). For each layer occupied by the plant, the function:
+ * - Derives incoming radiation at the top of the layer via the Beer-Lambert law
+ *   applied to the community LAI extinction profile,
+ * - Computes the plant's LAI contribution to that layer (proportional to plant height),
+ * - Accumulates the CO₂ uptake using
+ *   `calculateCO2UptakePerSecondAndSquareMeterWithCommunityShading()`.
+ *
+ * @param utils       Utility object for error handling (e.g. when light extinction is zero).
+ * @param interaction Struct containing the community LAI extinction profile
+ *                    (`LAIwithLightExtinction`), incident full-sun radiation, and day length.
+ * @param parameter   Struct with PFT-specific physiological parameters (alpha, k, pmax).
+ * @param pft         Index of the plant functional type.
+ * @param plantHeight Current plant height (m), used to determine the topmost height layer.
+ * @param plantLAI    Green leaf area index of the plant (m² m⁻²).
+ *
+ * @return Total CO₂ uptake rate integrated over all height layers
+ *         (µmol CO₂ s⁻¹ m⁻²).
+ *
+ * @see calculateCO2UptakePerSecondAndSquareMeterWithCommunityShading()
+ * @see INTERACTION::getRadiationByLightExtinctionLaw()
+ */
 double GROWTH::calculateGPPOfPlantWithCommunityShading(UTILS utils, INTERACTION interaction, PARAMETER parameter, int pft, double plantHeight, double plantLAI)
 {
     double CO2UptakePerSecondAndSquareMeter = 0.0;
@@ -106,7 +153,6 @@ double GROWTH::calculateGPPOfPlantWithCommunityShading(UTILS utils, INTERACTION 
             // relevant for output: plant->limitingFactorLightShading (now with different (less useful) meaning)
         }*/
 
-        
         if (heightLayerIndex == topHeightLayerIndexOfPlant)
         {
             plantGreenLaiContributionToLayer = plantLAI / plantHeight * (plantHeight - topHeightLayerIndexOfPlant * HEIGHT_LAYER_WIDTH);
@@ -154,7 +200,7 @@ double GROWTH::calculateGPPOfPlantWithCommunityShading(UTILS utils, INTERACTION 
  * @param plantLAI        Leaf Area Index of the plant (unitless).
  *
  * @return CO₂ uptake rate in mol CO₂ per second per square meter of leaf area.
- * @cite Concept of plant CO2 uptake is based on the forest model FORMIND (www.formind.org)
+ * @cite Concept of plant CO₂ uptake is based on the forest model FORMIND (www.formind.org)
  */
 double GROWTH::calculateCO2UptakePerSecondAndSquareMeter(PARAMETER parameter, int pft, double plantRadiation, double plantLAI)
 {
@@ -176,6 +222,34 @@ double GROWTH::calculateCO2UptakePerSecondAndSquareMeter(PARAMETER parameter, in
     }
 }
 
+/**
+ * @brief Calculates the CO₂ uptake rate for a single canopy height layer
+ *        under community shading conditions.
+ *
+ * Uses the same non-rectangular hyperbola photosynthesis model as
+ * `calculateCO2UptakePerSecondAndSquareMeter()`, but instead of integrating
+ * light attenuation over the full plant LAI, it applies a pre-computed
+ * community-level light extinction exponent for the given height layer and
+ * weights the result by the ratio of the plant's photoactive LAI to the
+ * community extinction exponent in that layer.
+ *
+ * @param parameter              Struct containing PFT-specific physiological parameters
+ *                               (alpha, k, pmax, light transmission coefficient).
+ * @param pft                    Index of the plant functional type.
+ * @param lightExtinctionExponent Community-level light extinction exponent for the
+ *                               current height layer (dimensionless).
+ * @param photoactiveLai         The plant's green LAI contribution to the current
+ *                               height layer (m² m⁻²).
+ * @param plantRadiation         Incoming radiation at the top of the height layer
+ *                               corrected for day length (MJ m⁻² d⁻¹).
+ *
+ * @return CO₂ uptake rate for this height layer (µmol CO₂ s⁻¹ m⁻²),
+ *         or 0 if incoming radiation is zero.
+ *
+ * @see calculateCO2UptakePerSecondAndSquareMeter()
+ * @see calculateGPPOfPlantWithCommunityShading()
+ * @cite Concept of plant CO2 uptake is based on the forest model FORMIND (www.formind.org)
+ */
 double GROWTH::calculateCO2UptakePerSecondAndSquareMeterWithCommunityShading(PARAMETER parameter, int pft, double lightExtinctionExponent, double photoactiveLai, double plantRadiation)
 {
     if (plantRadiation == 0)
@@ -321,7 +395,7 @@ double GROWTH::calculateEffectOfAirTemperatureOnRespiration(PARAMETER parameter,
  * @param community  Reference to the COMMUNITY object containing all plant cohorts.
  * @param parameter  Struct with plant functional type-specific parameters, including the growth respiration fraction.
  *
- * @note A buffer mechanism (`nppBuffer`) for carrying over negative NPP is included but currently commented out.
+ * @note A buffer mechanism (`nppBuffer`) for carrying over negative NPP is included.
  * @see doPlantRespiration(), doPlantPhotosynthesis()
  * @cite Concept of plant NPP based on the carbon balance of photosynthesis and respiration including buffer is
  *       based on the forest model FORMIND (www.formind.org)
@@ -357,7 +431,7 @@ void GROWTH::calculatePlantNPPFromGPPAndRespiration(COMMUNITY &community, PARAME
             community.allPlants.at(cohortindex)->nppBuffer = biomassIncrement;      // add negative NPP to buffer and adjust balance
             community.allPlants.at(cohortindex)->maintenanceRespiration = plantGPP; // all GPP is used for respiration
             community.allPlants.at(cohortindex)->growthRespiration = 0;
-            community.allPlants.at(cohortindex)->totalRespiration = maintenanceRespiration;
+            community.allPlants.at(cohortindex)->totalRespiration = community.allPlants.at(cohortindex)->maintenanceRespiration;
             biomassIncrement = 0;
         }
 
@@ -369,28 +443,29 @@ void GROWTH::calculatePlantNPPFromGPPAndRespiration(COMMUNITY &community, PARAME
  * @brief Allocates Net Primary Production (NPP) among various biomass pools
  *        for each plant cohort in the community.
  *
- * This function iterates through all plant cohorts in the community and
- * allocates biomass increments to aboveground shoots, belowground roots,
- * recruitment biomass for seed production, and exudates based on the
- * respective allocation fractions.
+ * Iterates through all plant cohorts and distributes the biomass increment
+ * (`npp`) to the following pools according to pre-computed allocation fractions:
+ * - Aboveground green shoot biomass (and derived carbon/nitrogen quantities),
+ * - Belowground root biomass (and derived carbon/nitrogen quantities),
+ * - Recruitment biomass pool for seed production,
+ * - Root exudates.
  *
- * @param utils A reference to a UTILS object that provides utility functions,
- *              including error handling.
- * @param community A reference to a COMMUNITY object that contains all the
- *                  plant cohorts and their associated data.
+ * When the external BODIUM soil module is active, exudate carbon and nitrogen
+ * fluxes are accumulated into the corresponding soil coupling interface arrays.
  *
- * This function performs the following operations for each plant cohort:
- * - Updates green leaf biomass based on NPP allocation.
- * - Updates total shoot biomass and calculates the fractions of green and
- *   brown biomass.
- * - Allocates biomass to belowground root systems.
- * - Updates total plant biomass as the sum of shoot and root biomass.
- * - Allocates biomass for recruitment (seed production) and exudates.
+ * @param utils      Utility object providing error handling functions.
+ * @param parameter  Struct with PFT-specific parameters (CN ratios, exudation allocation
+ *                   fractions, external soil module flag).
+ * @param community  Reference to the COMMUNITY object containing all plant cohorts;
+ *                   biomass, carbon and nitrogen pools are updated in place.
+ * @param soil       Reference to the SOIL object; root exudate C and N fluxes are
+ *                   accumulated here.
  *
- * @warning This function assumes that the NPP and allocation fractions
- *          are properly initialized and valid.
- * @throws std::runtime_error if the sum of green and brown biomass fractions
- *         does not equal 1, indicating an inconsistency in biomass allocation.
+ * @warning Assumes that `npp` and all allocation fractions are properly initialised
+ *          before this function is called.
+ * @note    Instead of throwing a C++ exception, inconsistencies are reported via
+ *          `utils.handleError()`.
+ * @see adjustAllocationRates(), calculatePlantNPPFromGPPAndRespiration()
  */
 void GROWTH::doPlantNPPAllocation(UTILS utils, PARAMETER parameter, COMMUNITY &community, SOIL &soil)
 {
@@ -438,13 +513,45 @@ void GROWTH::doPlantNPPAllocation(UTILS utils, PARAMETER parameter, COMMUNITY &c
                               { x += community.allPlants.at(cohortindex)->amount * community.allPlants.at(cohortindex)->exudationNitrogen; });
             }
 
-            // to be added: transfer exudation biomass to soil pool
-            // soil.CPool_Soil_active += community.allPlants.at(cohortindex)->amount * community.allPlants.at(cohortindex)->exudationBiomass;
-            // community.allPlants.at(cohortindex)->exudationBiomass = 0;
+            // transfer exudation biomass to soil pool
+            soil.carbonContent_soilActivePool += community.allPlants.at(cohortindex)->amount * community.allPlants.at(cohortindex)->exudationBiomass * CARBON_CONTENT_ODM;
+            soil.nitrogenContent_soilActivePool += (community.allPlants.at(cohortindex)->amount * community.allPlants.at(cohortindex)->exudationBiomass * CARBON_CONTENT_ODM) / parameter.plantCNRatioExudates[pft];
+            community.allPlants.at(cohortindex)->exudationBiomass = 0;
         }
     }
 }
 
+/**
+ * @brief Updates plant size geometry and age for all cohorts after NPP allocation.
+ *
+ * Increments each plant's age by one day and recomputes its geometric dimensions
+ * (height, width, covered area, LAI, rooting depth, number of rooting soil layers)
+ * based on the newly allocated shoot and root biomass.
+ *
+ * Two growth regimes are distinguished:
+ * - **Regrowing plants** (height below the allometric height–width ratio target,
+ *   e.g. after mowing): all biomass increment is invested solely in height until
+ *   the allometric height–width ratio is restored.
+ * - **Normal growth**: height and width increase proportionally according to the
+ *   allometric height–to–width ratio.
+ *
+ * Additionally, the community-level green and total leaf area index accumulators
+ * (`greenleafAreaIndexOfPlantsInCommunity`, `totalLeafAreaIndexOfPlantsInCommunity`)
+ * are updated to reflect the current cohort state.
+ *
+ * @param utils     Utility object used for error handling within allometry functions.
+ * @param parameter Struct containing PFT-specific allometric parameters
+ *                  (height-to-width ratio, shoot correction factor, root depth parameters,
+ *                  specific leaf area, number of soil layers).
+ * @param community Reference to the COMMUNITY object whose cohorts are updated in place.
+ * @param allometry Object providing allometric helper functions (height from biomass,
+ *                  width from biomass, area from width, LAI, rooting depth).
+ * @param soil      SOIL object passed through (currently used for soil layer width parameter).
+ *
+ * @see adjustAllocationRates(), doPlantNPPAllocation()
+ * @see ALLOMETRY::heightFromShootBiomassWidthShootCorrection()
+ * @see ALLOMETRY::widthFromShootBiomassByRatioAndShootCorrection()
+ */
 void GROWTH::doPlantGrowthInSizeAndAging(UTILS utils, PARAMETER parameter, COMMUNITY &community, ALLOMETRY allometry, SOIL soil)
 {
     for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
@@ -488,8 +595,8 @@ void GROWTH::doPlantGrowthInSizeAndAging(UTILS utils, PARAMETER parameter, COMMU
         community.allPlants.at(cohortindex)->lai = community.allPlants.at(cohortindex)->laiBrown + community.allPlants.at(cohortindex)->laiGreen;
 
         // state variable updates for soil evaporation
-        community.greenleafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->amount * community.allPlants[cohortindex]->laiGreen * community.allPlants[cohortindex]->coveredArea/SIMULATION_AREA;
-        community.totalLeafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->lai * community.allPlants[cohortindex]->coveredArea * community.allPlants[cohortindex]->amount/SIMULATION_AREA;
+        community.greenleafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->amount * community.allPlants[cohortindex]->laiGreen * community.allPlants[cohortindex]->coveredArea / SIMULATION_AREA;
+        community.totalLeafAreaIndexOfPlantsInCommunity += community.allPlants[cohortindex]->lai * community.allPlants[cohortindex]->coveredArea * community.allPlants[cohortindex]->amount / SIMULATION_AREA;
     }
 }
 

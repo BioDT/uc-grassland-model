@@ -1,11 +1,14 @@
 #include "plant.h"
 
 /**
- * @brief Represents a plant in the simulation.
+ * @brief Constructs a PLANT object with default-initialised members.
  *
- * The `PLANT` class encapsulates the attributes and behaviors of a plant,
- * including its biological and ecological properties. This class is used
- * to manage individual plant instances in the community.
+ * All member variables are value-initialised by their in-class default
+ * initialisers declared in plant.h. Actual field values are set by the
+ * recruitment module when a new cohort is created
+ * (see `RECRUITMENT::createNewPlantCohort()`).
  */
 PLANT::PLANT() {};
+
+/** @brief Destructor. No dynamic resources are owned; all members are destroyed automatically. */
 PLANT::~PLANT() {};
