@@ -58,6 +58,27 @@ public:
     void initializeCouplingVariables(PARAMETER &parameter, SOIL &soil);
     void resetCouplingVariablesFluxes(PARAMETER &parameter, SOIL &soil);
     void runSimulationStep();
+    void setInterfacesRunSimulationStepGetInterfaces(
+        const double* waterPotential,
+        const double* nh4Concentration,
+        const double* no3Concentration,
+        const double* diffusionFactor,
+        size_t numberOfSoilLayers,
+        double* rootVolume_managementTime,
+        double* rootVolume_plantTime,
+        double* waterUptake,
+        double* no3Uptake,
+        double* nh4Uptake,
+        double* rootLitterInput,
+        double* rootLitterInputCN,
+        double* exudateInput,
+        double* exudateInputCN,
+        double* rootVolume,
+        double* rootMass,
+        double& soilWaterSurfaceInput,
+        double& ETP,
+        double& surfaceLitterInput,
+        double& surfaceLitterInputCN);
     void setRandomNumberGeneratorSeed(unsigned int seed);
     void writeResultsToOutputFiles();
 

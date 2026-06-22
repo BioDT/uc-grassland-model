@@ -94,6 +94,76 @@ void PYTHONINTERFACE::setRandomNumberGeneratorSeed(unsigned int seed)
               << std::endl;
 }
 
+void PYTHONINTERFACE::setInterfacesRunSimulationStepGetInterfaces(
+    const double* waterPotential,
+    const double* nh4Concentration,
+    const double* no3Concentration,
+    const double* diffusionFactor,
+    size_t numberOfSoilLayers,
+    double* rootVolume_managementTime,
+    double* rootVolume_plantTime,
+    double* waterUptake,
+    double* no3Uptake,
+    double* nh4Uptake,
+    double* rootLitterInput,
+    double* rootLitterInputCN,
+    double* exudateInput,
+    double* exudateInputCN,
+    double* rootVolume,
+    double* rootMass,
+    double& soilWaterSurfaceInput,
+    double& ETP,
+    double& surfaceLitterInput,
+    double& surfaceLitterInputCN)
+{
+    soil.couplingInterface_soilWaterPotentialPerSoilLayer.assign(waterPotential, waterPotential + numberOfSoilLayers);
+    soil.couplingInterface_soilWaterNh4Concentration.assign(nh4Concentration, nh4Concentration + numberOfSoilLayers);
+    soil.couplingInterface_soilWaterNo3Concentration.assign(no3Concentration, no3Concentration + numberOfSoilLayers);
+    soil.couplingInterface_diffusionFactor.assign(diffusionFactor, diffusionFactor + numberOfSoilLayers);
+
+    std::copy(couplingInterface_rootVolume.begin(),
+              couplingInterface_rootVolume.end(),
+              rootVolume_managementTime);
+
+    std::copy(couplingInterface_rootVolume.begin(),
+              couplingInterface_rootVolume.end(),
+              rootVolume_plantTime);
+
+    runSimulationStep();
+
+    std::copy(soil.couplingInterface_plantSoilWaterUptakePerLayer.begin(),
+              soil.couplingInterface_plantSoilWaterUptakePerLayer.end(),
+              waterUptake);
+
+    std::copy(soil.couplingInterface_plantNo3UptakePerSoilLayer.begin(),
+              soil.couplingInterface_plantNo3UptakePerSoilLayer.end(),
+              no3Uptake);
+
+    std::copy(soil.couplingInterface_plantNh4UptakePerSoilLayer.begin(),
+              soil.couplingInterface_plantNh4UptakePerSoilLayer.end(),
+              nh4Uptake);
+
+    auto rootLitter = getRootLitter();
+    std::copy(rootLitter.begin(), rootLitter.end(), rootLitterInput);
+
+    auto rootLitterCN = getRootLitterCnRatio();
+    std::copy(rootLitterCN.begin(), rootLitterCN.end(), rootLitterInputCN);
+
+    auto exudates = getRootExudates();
+    std::copy(exudates.begin(), exudates.end(), exudateInput);
+
+    auto exudateCN = getRootExudatesCnRatio();
+    std::copy(exudateCN.begin(), exudateCN.end(), exudateInputCN);
+
+    std::copy(couplingInterface_rootVolume.begin(), couplingInterface_rootVolume.end(), rootVolume);
+    std::copy(couplingInterface_rootBiomass.begin(), couplingInterface_rootBiomass.end(), rootMass);
+
+    soilWaterSurfaceInput = soil.couplingInterface_soilWaterSurfaceInput;
+    ETP = soil.couplingInterface_potentialEvapotranspirationReducedByInterceptionSublimation;
+    surfaceLitterInput = soil.couplingInterface_surfaceLitterFluxCarbon / CARBON_CONTENT_ODM;
+    surfaceLitterInputCN = soil.couplingInterface_surfaceLitterFluxCarbon / soil.couplingInterface_surfaceLitterFluxNitrogen;
+}
+
 void PYTHONINTERFACE::runSimulationStep()
 {
     resetCouplingVariablesFluxes(parameter, soil);
