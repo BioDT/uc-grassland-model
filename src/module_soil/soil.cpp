@@ -1,22 +1,30 @@
-#include "soil.h"
+﻿#include "soil.h"
 
 SOIL::SOIL() {};
 SOIL::~SOIL() {};
 
 /**
- * @brief Transfer dying plant parts to appropriate litter pools
+ * @brief Converts dying plant biomass to C/N fluxes and adds them to the
+ *        corresponding litter pool.
  *
- * Converts plant biomass from dying plant parts into carbon and nitrogen fluxes,
- * then adds them to the corresponding surface or soil litter pools based on the
- * material type (green/brown leaves, roots, or seeds).
+ * For the **internal soil module** and self-coupling set mode, increments
+ * the relevant internal pool (surface green/brown litter, soil root litter,
+ * or soil seed litter). For the **external BODIUM module**, routes surface
+ * material to `couplingInterface_surfaceLitterFlux*` and root material to
+ * `couplingInterface_rootLitterFlux*` distributed equally over the rooting
+ * layers.
  *
- * @param utils Utility functions for error handling
- * @param parameter Parameter object containing species-specific carbon:nitrogen ratios
- * @param number Number of plants (e.g., number of individuals dy)
- * @param biomass Biomass of each plant part [g]
- * @param typeOfMaterial Type of plant material: "surface_green", "surface_brown", "soil_root", or "soil_seed"
- * @param pft Plant functional type index
- * @param numberOfTargetSoilLayers Number of soil layer litter material is distributed over (only required for external soil module)
+ * @param utils                  Utility object for error handling.
+ * @param parameter              PFT-specific C/N ratios and soil-module flags.
+ * @param number                 Number of dying individuals (or seed count).
+ * @param biomass                Per-individual biomass (g ODM).
+ * @param typeOfMaterial         Litter type: `"surface_green"`, `"surface_brown"`,
+ *                               `"soil_root"`, or `"soil_seed"`.
+ * @param pft                    Plant functional type index.
+ * @param numberOfTargetSoilLayers Number of rooting soil layers for root litter
+ *                               distribution (required only when
+ *                               `useExternalSoilModule_BODIUM` is active;
+ *                               default = 0 for surface material).
  */
 void SOIL::transferDyingPlantPartsToLitterPools(UTILS utils, PARAMETER parameter, double number, double biomass, std::string typeOfMaterial, int pft, int numberOfTargetSoilLayers)
 {
@@ -89,8 +97,20 @@ void SOIL::transferDyingPlantPartsToLitterPools(UTILS utils, PARAMETER parameter
 }
 
 /**
- * @brief Main function of soil dynamics of water, carbon and nitrogen
- * @cite Function and code has been reused from the CENTURY4.0 soil model
+ * @brief Orchestrates all soil resource dynamics for a single simulation time step.
+ *
+ * Always runs the soil water pipeline (calculateSoilWaterDynamics()).
+ * Additionally runs the soil C/N decomposition pipeline
+ * (calculateSoilCarbonNitrogenDynamics()) when the internal soil module or
+ * the self-coupling set mode is active.
+ *
+ * @param utils       Utility object for error handling.
+ * @param parameter   Model parameters; soil-module flags control which sub-modules run.
+ * @param weather     Daily weather data (precipitation, temperature, PET).
+ * @param community   Plant community; LAI accumulators read for soil evaporation.
+ * @param interaction Interaction state; soil temperature and LAI read.
+ *
+ * @cite Function and code adapted from the CENTURY 4.0 soil model.
  */
 void SOIL::calculateSoilResourceDynamics(UTILS utils, PARAMETER parameter, WEATHER weather, COMMUNITY &community, INTERACTION interaction)
 {
@@ -107,6 +127,30 @@ void SOIL::calculateSoilResourceDynamics(UTILS utils, PARAMETER parameter, WEATH
 // ##################################################################################################
 // soil water dynamics
 // ##################################################################################################
+/**
+ * @brief Executes the full daily soil water pipeline.
+ *
+ * Steps applied in order (some conditional on snow/module flags):
+ * 1. Add precipitation and irrigation to daily water input.
+ * 2. accumulateSnowWhenFreezing() — intercept input as snow at T ≤ 0 °C.
+ * 3. meltingOfSnow() — melt a fraction of the snowpack at T > 0 °C.
+ * 4. evaporationOfSnow() — sublimate snow and reduce remaining PET.
+ * 5. When no solid snow cover:
+ *    - interceptionByVegetation() — canopy interception.
+ *    - runOffAtSurface() — surface run-off.
+ * 6. If BODIUM coupling: export surface water input and PET to coupling interface.
+ * 7. If internal module / self-coupling set:
+ *    - soilWaterPercolation() — layer-by-layer downward water flow.
+ *    - leachingOfNitrogenCoupledToWaterPercolation() — N leaching with drainage.
+ *    - evaporationFromTopSoilLayer() — bare-soil evaporation from top layers.
+ *
+ * @param utils       Utility object for error handling.
+ * @param parameter   Model parameters; soil-module flags, layer properties.
+ * @param weather     Provides precipitation, PET, and air temperature.
+ * @param interaction Provides community LAI for interception calculation.
+ * @param community   Provides LAI accumulators for soil evaporation fraction.
+ * @cite Function and code adapted from the CENTURY 4.0 soil model, evaporation function adapted from BOWET model.
+ */
 void SOIL::calculateSoilWaterDynamics(UTILS utils, PARAMETER parameter, WEATHER weather, INTERACTION interaction, COMMUNITY &community)
 {
     // water input to soil [mm/day]
@@ -148,24 +192,25 @@ void SOIL::calculateSoilWaterDynamics(UTILS utils, PARAMETER parameter, WEATHER 
 
         //  evaporation from top soil layer [mm/day]
         evaporationFromTopSoilLayer(utils, parameter, community, remainingDailyPET);
-
-        // nitrogen volatilization loss
-        /*if (nitrogenContent_soilMineralPoolPerSoilLayer.at(0) > 0.0)
-        {
-           double nitrogenVolatilizationLoss = 0.0 * nitrogenContent_soilMineralPoolPerSoilLayer.at(0); // TODO: add value as parameter
-
-           nitrogenContent_soilMineralPoolPerSoilLayer.at(0) -= nitrogenVolatilizationLoss;
-           nitrogenVolatilization += nitrogenVolatilizationLoss;
-
-           if (nitrogenContent_soilMineralPoolPerSoilLayer.at(0) + TOLERANCE < 0.0)
-           {
-              utils.handleError("Soil nitrogen in upper soil layer is negative!");
-              nitrogenContent_soilMineralPoolPerSoilLayer.at(0) = 0.0;
-           }
-        }*/
     }
 }
 
+/**
+ * @brief Accumulates precipitation as solid snow when air temperature is at
+ *        or below freezing.
+ *
+ * If the full-day mean air temperature is ≤ 0 °C, all `waterInputToSoil`
+ * is added to `solidSnowContent` and the function returns 0 (no liquid water
+ * percolates into the soil). Otherwise the input is returned unchanged.
+ *
+ * @param utils            Utility object (reserved for future error handling).
+ * @param parameter        Provides `day` for indexing weather vectors.
+ * @param weather          Daily full-day air temperature vector.
+ * @param waterInputToSoil Liquid water available before snow accumulation (mm).
+ * @return Liquid water remaining after potential snow accumulation (mm);
+ *         0 when all input is frozen.
+ * @cite Function and code adapted from the CENTURY 4.0 soil model.
+ */
 double SOIL::accumulateSnowWhenFreezing(UTILS utils, PARAMETER parameter, WEATHER weather, double waterInputToSoil)
 {
     //// adding rain to solid snowpack if air temperature is below 0 degrees
@@ -184,6 +229,25 @@ double SOIL::accumulateSnowWhenFreezing(UTILS utils, PARAMETER parameter, WEATHE
     }
 }
 
+/**
+ * @brief Melts a fraction of the solid snowpack at above-freezing temperatures
+ *        and manages liquid snow storage.
+ *
+ * At T ≥ 0 °C
+ * - Melts 0.2 % of `solidSnowContent` per degree above 0 °C per day.
+ * - While a solid snowpack remains and T > 0 °C, incoming liquid water is
+ *   absorbed by the snowpack (stored as `liquidSnowContent`) rather than
+ *   percolating into the soil.
+ * - The snowpack can retain at most 5 % of `solidSnowContent` as liquid;
+ *   excess liquid is released as additional soil-water input.
+ *
+ * @param utils            Utility object for error handling.
+ * @param parameter        Provides `day` for indexing weather vectors.
+ * @param weather          Daily full-day air temperature vector.
+ * @param waterInputToSoil Liquid water entering the top of the snowpack (mm).
+ * @return Total liquid water available for soil percolation after snowmelt (mm).
+ * @cite Function and code adapted from the CENTURY 4.0 soil model.
+ */
 double SOIL::meltingOfSnow(UTILS utils, PARAMETER parameter, WEATHER weather, double waterInputToSoil)
 {
     // if air temperature is <= 0, precipitation has been accumulated as solid snow (see accumulateSnowWhenFreezing with the result of waterInputToSoil = 0)
@@ -236,6 +300,22 @@ double SOIL::meltingOfSnow(UTILS utils, PARAMETER parameter, WEATHER weather, do
     return (waterInputToSoil + meltedSnowAsAddedWaterInputToSoil);
 }
 
+/**
+ * @brief Sublimates snow from the solid and liquid snowpack using potential
+ *        evapotranspiration (PET) and returns the remaining PET.
+ *
+ * When a solid snowpack is present, 87 % of daily PET is used for snow
+ * sublimation (proportionally from solid and liquid fractions). The
+ * sublimated amount is added to the `evaporation` accumulator and deducted
+ * from the daily PET. If there is no solid snowpack, daily PET is returned
+ * unchanged for subsequent canopy and soil evaporation use.
+ *
+ * @param utils     Utility object for error handling.
+ * @param weather   Provides daily potential evapotranspiration.
+ * @param parameter Provides `day` for indexing weather vectors.
+ * @return Remaining PET after snow sublimation (mm d⁻¹).
+ * @cite Function and code adapted from the CENTURY 4.0 soil model.
+ */
 double SOIL::evaporationOfSnow(UTILS utils, WEATHER weather, PARAMETER parameter)
 {
     // sublimation: reduces solidSnowContent and liquidSnowContent and increases evaporation
@@ -282,7 +362,21 @@ double SOIL::evaporationOfSnow(UTILS utils, WEATHER weather, PARAMETER parameter
 }
 
 /**
- * @cite approach adapted from FORMIND model
+ * @brief Calculates canopy interception of precipitation by the plant community.
+ *
+ * Maximum interception is the lesser of incoming water and
+ * 0.2 × community LAI. The actual interception is scaled by canopy closure
+ * (1 − e^⁻^LAI_ext) and capped at `remainingDailyPET`. Reduces
+ * `dailyWaterInputToSoil` accordingly and updates `interception`.
+ *
+ * @param utils                 Utility object (reserved for future error handling).
+ * @param interaction           Community LAI (index 0) and light-extinction-weighted
+ *                              LAI used for canopy closure.
+ * @param dailyWaterInputToSoil Water input before interception (mm).
+ * @param remainingDailyPET     Remaining PET available for interception (mm).
+ * @return Water input after subtracting interception (mm).
+ *
+ * @cite Approach adapted from the FORMIND forest model (www.formind.org)
  */
 double SOIL::interceptionByVegetation(UTILS utils, INTERACTION interaction, double dailyWaterInputToSoil, double remainingDailyPET)
 {
@@ -296,7 +390,18 @@ double SOIL::interceptionByVegetation(UTILS utils, INTERACTION interaction, doub
 }
 
 /**
- * @cite approach adapted from CENTURY4.0 model
+ * @brief Calculates surface run-off from incoming water using a linear threshold model.
+ *
+ * Run-off is computed as: surfaceRunOff = max(0, 0.41 × input − 28.7/30).
+ * Skipped entirely when `parameter.disableRunoff` is set. Updates `surfaceRunOff`
+ * and returns the remaining water available for soil infiltration.
+ *
+ * @param utils                 Utility object (reserved for future error handling).
+ * @param parameter             Provides the `disableRunoff` flag.
+ * @param dailyWaterInputToSoil Water input after interception (mm).
+ * @return Water remaining for soil infiltration after run-off (mm).
+ *
+ * @cite Approach adapted from the CENTURY 4.0 model.
  */
 double SOIL::runOffAtSurface(UTILS utils, PARAMETER parameter, double dailyWaterInputToSoil)
 {
@@ -311,7 +416,25 @@ double SOIL::runOffAtSurface(UTILS utils, PARAMETER parameter, double dailyWater
 }
 
 /**
- * @cite approach adapted from CENTURY4.0 model
+ * @brief Simulates vertical water percolation through soil layers and an
+ *        underground groundwater storage layer.
+ *
+ * Starting at the surface, adds the incoming water to each layer in turn.
+ * If the layer water content exceeds field capacity, excess water percolates
+ * to the next layer using a non-linear conductance equation:
+ * @f[
+ *   q = \frac{\lambda (\theta - \text{FC})^2}{1 + \lambda (\theta - \text{FC})}
+ * @f]
+ * where @f$\lambda = 0.01 \cdot K_{\text{sat}} / (\phi - \text{FC})@f$.
+ * Below the lowest soil layer, excess water enters a groundwater storage pool.
+ * Downward fluxes per layer are stored in `soilWaterFluxDownwardsOutOfSoilLayer`.
+ *
+ * @param utils            Utility object for error handling.
+ * @param parameter        Provides layer count, field capacity, porosity, and
+ *                         saturated hydraulic conductivity per layer.
+ * @param waterInputToSoil Total liquid water entering the top layer (mm).
+ *
+ * @cite Approach adapted from the CENTURY 4.0 model.
  */
 void SOIL::soilWaterPercolation(UTILS utils, PARAMETER parameter, double waterInputToSoil)
 {
@@ -343,10 +466,20 @@ void SOIL::soilWaterPercolation(UTILS utils, PARAMETER parameter, double waterIn
 }
 
 /**
- * brief Leaching of mineral nitrogen coupled to water percolation through soil layers
- * param utils Utility functions for error handling
- * @cite approach adapted from CENTURY4.0 model
+ * @brief Leaches mineral nitrogen downward through soil layers coupled to
+ *        the previous day's downward water fluxes.
  *
+ * For each layer with a positive downward water flux and positive mineral
+ * nitrogen, computes the leaching fraction using a soil-texture factor
+ * (0.6 + 0.4 × sand fraction) and a non-linear coupling to water flux
+ * (clamped to [0, 1]). Leached N is deducted from the source layer and
+ * either added to the next layer or accumulated in `nitrogenContent_leachedFromSoil`
+ * when it exits the bottom of the soil column.
+ *
+ * @param utils     Utility object for error handling.
+ * @param parameter Provides layer count, sand content, and soil layer widths.
+ *
+ * @cite Approach adapted from the CENTURY 4.0 model.
  */
 void SOIL::leachingOfNitrogenCoupledToWaterPercolation(UTILS utils, PARAMETER parameter)
 {
@@ -399,6 +532,19 @@ void SOIL::leachingOfNitrogenCoupledToWaterPercolation(UTILS utils, PARAMETER pa
     nitrogenVolatilization += streamOfNitrogen;
 }
 
+/**
+ * @brief Estimates the fraction of the soil surface exposed to direct evaporation.
+ *
+ * Returns `1 − canopyClosure` where `canopyClosure` is the ratio of green
+ * to total community LAI (clamped to [0, 1]). A fully closed green canopy
+ * yields 0 (no bare-soil evaporation); a leafless community yields 1.
+ *
+ * @param utils     Utility object; issues a warning if canopy closure exceeds 1.
+ * @param community Read-only; provides `greenleafAreaIndexOfPlantsInCommunity`
+ *                  and `totalLeafAreaIndexOfPlantsInCommunity`.
+ * @return Open-canopy fraction (dimensionless, 0–1).
+ * @cite Approach adapted from BOWET model.
+ */
 double SOIL::estimateSoilSurfaceAffectedBySoilEvaporation(UTILS utils, COMMUNITY community)
 {
     double canopyClosure = 0.0;
@@ -416,6 +562,18 @@ double SOIL::estimateSoilSurfaceAffectedBySoilEvaporation(UTILS utils, COMMUNITY
     return (1.0 - canopyClosure);
 }
 
+/**
+ * @brief Computes the cumulative soil depth affected by evaporation.
+ *
+ * Sums the widths of the top `numberOfTopSoilLayersAffectedByEvaporation`
+ * soil layers from `parameter.soilLayerWidth`.
+ *
+ * @param utils                                  Utility object (reserved).
+ * @param parameter                              Provides `soilLayerWidth`.
+ * @param numberOfTopSoilLayersAffectedByEvaporation Number of topmost layers
+ *                                               to include.
+ * @return Cumulative depth of the evaporation-affected soil horizon (cm).
+ */
 double SOIL::calculateSoilHorizonAffectedBySoilEvaporation(UTILS utils, PARAMETER parameter, int numberOfTopSoilLayersAffectedByEvaporation)
 {
     double soilDepthAffectedByEvaporation = 0; // cm
@@ -426,6 +584,25 @@ double SOIL::calculateSoilHorizonAffectedBySoilEvaporation(UTILS utils, PARAMETE
     return soilDepthAffectedByEvaporation;
 }
 
+/**
+ * @brief Calculates the per-layer distribution of soil evaporation using an
+ *        exponential depth-weighting function.
+ *
+ * Evaporation decreases exponentially with depth. A drainage-proportion
+ * parameter (currently hard-coded at 20) controls the rate of decrease.
+ * The per-layer fractions are normalised so they sum to 1.
+ *
+ * @param utils                                  Utility object (reserved).
+ * @param parameter                              Provides `soilLayerWidth`.
+ * @param numberOfTopSoilLayersAffectedByEvaporation Number of affected layers.
+ * @param soilDepthAffectedByEvaporation         Total depth of the evaporation
+ *                                               horizon (cm).
+ * @param remainingDailyPET                      Remaining PET for soil
+ *                                               evaporation (mm; not used
+ *                                               directly here but passed through).
+ * @return Vector of dimensionless per-layer evaporation fractions summing to 1.
+ * @cite Function adapted from BOWET model.
+ */
 std::vector<double> SOIL::calculateDistributionOfEvaporationAcrossAffectedSoilLayers(UTILS utils, PARAMETER parameter, int numberOfTopSoilLayersAffectedByEvaporation, double soilDepthAffectedByEvaporation, double remainingDailyPET)
 {
     std::vector<double> proportionOfEvaporationPerSoilLayer(numberOfTopSoilLayersAffectedByEvaporation, 0.0);
@@ -455,6 +632,27 @@ std::vector<double> SOIL::calculateDistributionOfEvaporationAcrossAffectedSoilLa
     return proportionOfEvaporationPerSoilLayer;
 }
 
+/**
+ * @brief Calculates actual soil evaporation per layer, limited by soil water
+ *        availability above permanent wilting point.
+ *
+ * For each affected layer with water content > PWP, actual evaporation is:
+ * `openCanopy × reductionFactor × proportionOfEvaporation × remainingPET`
+ * where `reductionFactor` scales linearly from 0 (at PWP) to 1 (at
+ * 70 % of field capacity) and is clamped to 1 above that threshold.
+ *
+ * @param utils                                  Utility object (reserved).
+ * @param parameter                              Provides PWP and field capacity
+ *                                               per layer.
+ * @param numberOfTopSoilLayersAffectedByEvaporation Number of affected layers.
+ * @param proportionOfEvaporationPerSoilLayer    Normalised per-layer fractions
+ *                                               from calculateDistributionOf…().
+ * @param openCanopy                             Open-canopy fraction (0–1).
+ * @param remainingDailyPET                      Available PET for soil
+ *                                               evaporation (mm).
+ * @return Vector of actual soil evaporation per layer (mm).
+ * @cite Function adapted from BOWET model.
+ */
 std::vector<double> SOIL::calculateSoilEvaporationPerSoilLayer(UTILS utils, PARAMETER parameter, int numberOfTopSoilLayersAffectedByEvaporation, std::vector<double> proportionOfEvaporationPerSoilLayer, double openCanopy, double remainingDailyPET)
 {
     std::vector<double> soilEvaporation(numberOfTopSoilLayersAffectedByEvaporation, 0.0);
@@ -473,6 +671,20 @@ std::vector<double> SOIL::calculateSoilEvaporationPerSoilLayer(UTILS utils, PARA
     return soilEvaporation;
 }
 
+/**
+ * @brief Subtracts per-layer soil evaporation from the soil water pool.
+ *
+ * Deducts `soilEvaporation[i]` from `waterContent_soilWaterPoolPerSoilLayer[i]`
+ * and adds it to the `evaporation` accumulator. Enforces a lower bound of
+ * permanent wilting point for each layer.
+ *
+ * @param utils                                  Utility object (reserved).
+ * @param parameter                              Provides `permanentWiltingPoint`
+ *                                               per layer.
+ * @param numberOfTopSoilLayersAffectedByEvaporation Number of affected layers.
+ * @param soilEvaporation                        Per-layer evaporation amounts
+ *                                               (mm) from calculateSoilEvaporation…().
+ */
 void SOIL::subtractSoilEvaporationFromSoilWaterPool(UTILS utils, PARAMETER parameter, int numberOfTopSoilLayersAffectedByEvaporation, std::vector<double> soilEvaporation)
 {
     for (int soilLayer = 0; soilLayer < numberOfTopSoilLayersAffectedByEvaporation; soilLayer++)
@@ -486,8 +698,20 @@ void SOIL::subtractSoilEvaporationFromSoilWaterPool(UTILS utils, PARAMETER param
     }
 }
 /**
- * @cite approach adapted from BOWET model (https://pdf.sciencedirectassets.com/271743/1-s2.0-S0304380000X00142/1-s2.0-030438009400160J/main.pdf?X-Amz-Security-Token=IQoJb3JpZ2luX2VjEGYaCXVzLWVhc3QtMSJIMEYCIQDuwipX8QK68P1nXwQAqnGhkqTaAlubnrE3xhUdTWpBSwIhAIvDfer7qtYGKlRvtzfnbeJ89ZqTHM%2FC8NiaKsTtfQzhKrIFCC8QBRoMMDU5MDAzNTQ2ODY1IgyIliwA2Dfnd54xeXMqjwXVSmg0x9y%2BPL3wsOZuLwjSASVir0VI2K%2BlR4KwiOjA2fPbGCs%2FsWlIP%2B1IVrPL25LJRcsSEtEkaABRyfpfFv7TgNI%2FEx0XjBTYdYBogYUiCa54MuZ%2BrB2OEz4%2B8CgyZSVf5XW4ZiT7ao03W%2F%2B%2FTYQvGnnQ6m7a7MJXEQiTsae3U09KER7MXmagn54%2B%2Fr1zm5ghtcYNGXd2OInBR%2FErfRNX%2BQ4fzDhcIhRphHBTyU98Bncy3x0L%2BGbRA%2FacLcptUgKUDJySx41yaX%2Bx3ucemR5ZS6tPqd4IGY02WKgGTtAAhRP3rhNNgoI%2BxM1XF4VAMNTnQSzyQazPCl1MnXPKu7PYFDObbtSM2E5XoERUbypnwzvVif%2FjPrjLpE3mWaS3vTKvGMZ6Nu%2FONtwhwGvKvpx7HCYzQy%2FWtJQs3SRQc9jy7fjUDtlpQq1%2BhqjSJ1TXqUqQ%2FiWPExB0vURo38DkSMWJfXHuwjjsOeV4Li7egk8qwh0Srm6O3JIC2C6agjSC%2BGpJDO9a%2BPR9zNKpwSDGhdjOeCMyVU53OzbXkEP5F%2BY7VMUboHKQdcWWRjW6mlK%2BKPH1K%2BjQnkdQ2UjK79MtGANADeseqqF37W%2FqOLxYIQ8S18Q2w%2BIwmQFeiFsXina%2BGy8g%2FgscffhgE14bXJU57LayjTrbH4iLr2nATncYaKL%2FFG8BFk%2BgZRuD0assV4wwzAM0bw6SBtmIBxutoAYbgRK0UCxdPl1o8%2BwogM34cRPzl65OPwi3UDT1q3ERN%2F%2FBszP4gT2FTsg%2BFqd0v6ln53wrtEPnEFoUBzApKXUfC%2Bed%2B5wU1xJYMaZM4BELf0dhssZNhGX8GORAZ2jRGYRC69g2E6ahPa1n%2FTcqfgLq40pJMIy8kswGOrABvwFD3Adpp9lAP34mzgLtY1Y%2FSgTq%2BbW08za3C8YdMuz9JwTZxpqtTsKw7KtKSCgEfGnQg9zbKdvuUiY1dHcP7GjsQpOeXasSWHippHmFVsNBYCnOA5acj8aMuP%2FPY%2FQfUt2GTxV2VS8g4vsBA7A8VriucMWSD5qZbJAn4Q%2BA%2BteVaRO8roulm2HVborAY3Goe8MuHjfkMG9OfOsY0C5W6duFfmfxMxvgaIaVM5BEIk0%3D&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260205T150222Z&X-Amz-SignedHeaders=host&X-Amz-Expires=300&X-Amz-Credential=ASIAQ3PHCVTYXC4X7SOS%2F20260205%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=1aacef28e8da96be7e74f4c03630f8d5eb16852ffe158997bb7ad1859b4868bf&hash=e5ac8d9af2e4f438fe54150cf99ce692c3ca7c3f7c74368db73c536da3645486&host=68042c943591013ac2b2430a89b270f6af2c76d8dfd086a07176afe7c76c2c61&pii=030438009400160J&tid=spdf-7a3e919f-ed7f-4a75-a129-bb1471b6207f&sid=1c2d420171867746c34b386-1c2440f5943agxrqb&type=client&tsoh=d3d3LnNjaWVuY2VkaXJlY3QuY29t&rh=d3d3LnNjaWVuY2VkaXJlY3QuY29t&ua=1e075c035c515b5d0657&rr=9c9349d53f0b1eca&cc=de)
- * @brief constant extraction of evaporative water to maximum soil depth of 40 cm
+ * @brief Orchestrates bare-soil evaporation from the top soil layers.
+ *
+ * 1. estimateSoilSurfaceAffectedBySoilEvaporation() - fraction of open canopy.
+ * 2. calculateSoilHorizonAffectedBySoilEvaporation() - depth of top 4 layers.
+ * 3. calculateDistributionOfEvaporationAcrossAffectedSoilLayers() - per-layer fractions.
+ * 4. calculateSoilEvaporationPerSoilLayer() - actual mm per layer.
+ * 5. subtractSoilEvaporationFromSoilWaterPool() - update pools.
+ *
+ * @param utils            Utility object for error handling.
+ * @param parameter        Provides layer widths, PWP, and field capacity.
+ * @param community        Provides LAI accumulators for open-canopy estimate.
+ * @param remainingDailyPET PET remaining after snow and interception (mm).
+ *
+ * @cite Approach adapted from the BOWET model.
  */
 void SOIL::evaporationFromTopSoilLayer(UTILS utils, PARAMETER parameter, COMMUNITY &community, double remainingDailyPET)
 {
@@ -507,6 +731,26 @@ void SOIL::evaporationFromTopSoilLayer(UTILS utils, PARAMETER parameter, COMMUNI
     subtractSoilEvaporationFromSoilWaterPool(utils, parameter, numberOfTopSoilLayersAffectedByEvaporation, soilEvaporation);
 }
 
+/**
+ * @brief Orchestrates soil water demand, uptake, and GPP limitation by soil
+ *        water availability for all plant cohorts.
+ *
+ * Steps in order:
+ * 1. calculateSoilWaterDemandPerPlant() — compute per-plant and per-layer demand.
+ * 2. calculateSoilWaterUptakeByAvailableSoilWaterContentAndLimitPlantGpp() —
+ *    compute uptake and reduce GPP by soil-water limitation factor.
+ * 3. limitPlantGppAndSoilWaterUptakeByPotentialEvapotranspiration() —
+ *    apply PET upper bound on transpiration.
+ * 4. limitPlantGppAndSoilWaterUptakeByPermanentWiltingPoint() —
+ *    prevent soil water from falling below PWP.
+ * 5. subtractPlantWaterUptakeFromSoilWaterPool() — update soil pools.
+ *
+ * @param utils     Utility object for error handling.
+ * @param parameter Model parameters; WUE, module flags, layer count.
+ * @param weather   Daily PET for PET-limitation step.
+ * @param community Plant community; GPP and water demand/uptake updated.
+ * @cite Approach adapted from FORMIND model (www.formind.org).
+ */
 void SOIL::doPlantSoilWaterUptakeAndGppLimitationBySoilWaterConditions(UTILS utils, PARAMETER parameter, WEATHER weather, COMMUNITY &community)
 {
     /* calculate water demand for each plant in total and per soil layer */
@@ -525,6 +769,17 @@ void SOIL::doPlantSoilWaterUptakeAndGppLimitationBySoilWaterConditions(UTILS uti
     subtractPlantWaterUptakeFromSoilWaterPool(utils, community, parameter);
 }
 
+/**
+ * @brief Calculates daily soil water demand for each plant cohort.
+ *
+ * Demand per plant = GPP / water-use-efficiency. Distributed uniformly over
+ * the rooting soil layers. Community-level totals
+ * (`totalSoilWaterDemand`, `totalSoilWaterDemandPerSoilLayer`) are accumulated.
+ *
+ * @param utils     Utility object; raises errors for zero WUE or zero rooting depth.
+ * @param parameter Provides `plantWaterUseEfficiency` and `numberOfSoilLayers`.
+ * @param community Plant community; per-cohort and community-level demand fields updated.
+ */
 void SOIL::calculateSoilWaterDemandPerPlant(UTILS utils, PARAMETER parameter, COMMUNITY &community)
 {
 
@@ -545,7 +800,7 @@ void SOIL::calculateSoilWaterDemandPerPlant(UTILS utils, PARAMETER parameter, CO
             {
                 utils.handleError("Water-use-efficiency is zero. Please check the plant traits file!");
             }
-            community.totalSoilWaterDemand += community.allPlants.at(cohortindex)->amount *  community.allPlants.at(cohortindex)->soilWaterDemand;
+            community.totalSoilWaterDemand += community.allPlants.at(cohortindex)->amount * community.allPlants.at(cohortindex)->soilWaterDemand;
 
             // demand per plant and community distributed uniformly among rooting layers
             for (int soilLayer = 0; soilLayer < rootingSoilLayers; soilLayer++)
@@ -564,6 +819,21 @@ void SOIL::calculateSoilWaterDemandPerPlant(UTILS utils, PARAMETER parameter, CO
     }
 }
 
+/**
+ * @brief Selects and runs the soil-water limitation approach for GPP and
+ *        applies the resulting limitation factor to plant GPP.
+ *
+ * Routes to `calculateBodiumSoilWaterLimitationAndWaterUptake()` for BODIUM
+ * coupling, or the internal/self-coupling path which calls
+ * `calculateSoilWaterLimitationFactorPerPlant()` and
+ * `calculateSoilWaterUptakePerPlant()`. In self-coupling set mode, transfers
+ * soil parameters to the interface before the calculation and resets them
+ * to NaN after.
+ *
+ * @param utils     Utility object for error handling.
+ * @param parameter Provides module-mode flags and GPP-reduction approach name.
+ * @param community Plant community; `limitingFactorGppWater` and GPP updated.
+ */
 void SOIL::calculateSoilWaterUptakeByAvailableSoilWaterContentAndLimitPlantGpp(UTILS utils, PARAMETER parameter, COMMUNITY &community)
 {
 
@@ -598,6 +868,17 @@ void SOIL::calculateSoilWaterUptakeByAvailableSoilWaterContentAndLimitPlantGpp(U
     reducePlantGppBySoilWaterLimitationFactor(utils, community);
 }
 
+/**
+ * @brief Copies internal soil parameters and water-content variables to the
+ *        self-coupling interface (set mode).
+ *
+ * Transfers `fieldCapacity`, `permanentWiltingPoint`, `porosity`, and
+ * `waterContent_soilWaterPoolPerSoilLayer` to the corresponding
+ * `couplingInterface_*` vectors so that a second model instance running in
+ * get mode can read them.
+ *
+ * @param utils Utility object (reserved for future error handling).
+ */
 void SOIL::transferSoilParametersAndVariablesToInterface(UTILS utils)
 {
     couplingInterface_fieldCapacityPerSoilLayer = fieldCapacity;
@@ -606,6 +887,16 @@ void SOIL::transferSoilParametersAndVariablesToInterface(UTILS utils)
     couplingInterface_waterContentPerSoilLayer = waterContent_soilWaterPoolPerSoilLayer;
 }
 
+/**
+ * @brief Loads soil parameters and water-content variables from the self-coupling
+ *        interface into the internal soil state (get mode).
+ *
+ * The reverse of `transferSoilParametersAndVariablesToInterface()`: reads
+ * field capacity, PWP, porosity, and water content from the coupling interface
+ * vectors into the internal soil state variables.
+ *
+ * @param utils Utility object (reserved for future error handling).
+ */
 void SOIL::transferSoilParametersAndVariablesFromInterface(UTILS utils)
 {
     fieldCapacity = couplingInterface_fieldCapacityPerSoilLayer;
@@ -614,6 +905,17 @@ void SOIL::transferSoilParametersAndVariablesFromInterface(UTILS utils)
     porosity = couplingInterface_porosityPerSoilLayer;
 }
 
+/**
+ * @brief Sets all internal soil water parameter and state variables to NaN
+ *        after they have been copied from the coupling interface (get mode).
+ *
+ * Prevents accidental use of the coupling-interface values after they have
+ * already been applied. Inserts NaN at the front of each vector for
+ * `numberOfSoilLayers` positions.
+ *
+ * @param utils     Utility object (reserved for future error handling).
+ * @param parameter Provides `numberOfSoilLayers`.
+ */
 void SOIL::setSoilParametersAndVariablesToNaN(UTILS utils, PARAMETER parameter)
 {
     fieldCapacity.insert(fieldCapacity.begin(), parameter.numberOfSoilLayers, NAN);
@@ -622,6 +924,18 @@ void SOIL::setSoilParametersAndVariablesToNaN(UTILS utils, PARAMETER parameter)
     porosity.insert(porosity.begin(), parameter.numberOfSoilLayers, NAN);
 }
 
+/**
+ * @brief Calculates the soil-water GPP limitation factor for each plant cohort.
+ *
+ * Sums water content, PWP, field capacity, and porosity over the rooting zone,
+ * then applies either a `"onesided"` (drought only) or `"twosided"` (drought +
+ * waterlogging) reduction model from `parameter.plantGppReductionBySoilWaterApproach`.
+ * Result clamped to [0, 1] and stored in `limitingFactorGppWater`.
+ *
+ * @param utils     Utility object for warnings (threshold violations) and errors.
+ * @param parameter Provides approach name, water content thresholds, and layer count.
+ * @param community Plant community; `limitingFactorGppWater` updated per cohort.
+ */
 void SOIL::calculateSoilWaterLimitationFactorPerPlant(UTILS utils, PARAMETER parameter, COMMUNITY &community)
 {
     for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
@@ -697,6 +1011,17 @@ void SOIL::calculateSoilWaterLimitationFactorPerPlant(UTILS utils, PARAMETER par
     }
 }
 
+/**
+ * @brief Calculates actual soil water uptake per cohort from demand and
+ *        limitation factor, and accumulates community totals.
+ *
+ * Uptake = demand × `limitingFactorGppWater`, distributed uniformly over
+ * rooting layers. Updates `soilWaterUptake`, `soilWaterUptakePerSoilLayer`,
+ * `totalSoilWaterUptake`, and `totalSoilWaterUptakePerSoilLayer`.
+ *
+ * @param utils     Utility object (reserved for error handling).
+ * @param community Plant community; uptake fields updated per cohort.
+ */
 void SOIL::calculateSoilWaterUptakePerPlant(UTILS utils, COMMUNITY &community)
 {
     for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
@@ -716,6 +1041,23 @@ void SOIL::calculateSoilWaterUptakePerPlant(UTILS utils, COMMUNITY &community)
     }
 }
 
+/**
+ * @brief Calculates soil water limitation factor and plant water uptake using
+ *        the BODIUM pressure-head model.
+ *
+ * Derives a plant water-stress factor from the average root-zone water
+ * potential using a piecewise-linear Feddes function with thresholds
+ * (h3, h2, h1, h0). h2 is interpolated between h2L and h2H based on
+ * potential transpiration rate. Water uptake is distributed per layer
+ * weighted by the relative water potential contribution.
+ *
+ * @param utils     Utility object (reserved).
+ * @param parameter Provides BODIUM coupling constants (h2L, h2H) and soil-layer
+ *                  widths for root-surface calculation.
+ * @param community Plant community; `limitingFactorGppWater`, `soilWaterUptake`,
+ *                  and per-layer uptake fields updated per cohort.
+ * @cite Function and code adapted from the BODIUM soil model.
+ */
 void SOIL::calculateBodiumSoilWaterLimitationAndWaterUptake(UTILS utils, PARAMETER parameter, COMMUNITY &community)
 {
     /* !
@@ -782,6 +1124,14 @@ void SOIL::calculateBodiumSoilWaterLimitationAndWaterUptake(UTILS utils, PARAMET
     }
 }
 
+/**
+ * @brief Scales GPP down by the previously computed soil-water limitation factor.
+ *
+ * Multiplies each cohort's `gpp` by `limitingFactorGppWater` (0–1).
+ *
+ * @param utils     Utility object (reserved for error handling).
+ * @param community Plant community; `gpp` updated per cohort.
+ */
 void SOIL::reducePlantGppBySoilWaterLimitationFactor(UTILS utils, COMMUNITY &community)
 {
     for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
@@ -793,13 +1143,26 @@ void SOIL::reducePlantGppBySoilWaterLimitationFactor(UTILS utils, COMMUNITY &com
     }
 }
 
+/**
+ * @brief Applies a PET-based upper bound on community water uptake and GPP.
+ *
+ * If total uptake exceeds (PET − interception), all uptake and GPP values
+ * are scaled by `(PET - interception) / totalUptake` (clamped to [0, 1]).
+ * Affects both community totals and per-cohort `gpp` and `soilWaterUptake`.
+ *
+ * @param utils     Utility object (reserved for error handling).
+ * @param parameter Provides `day` and `numberOfSoilLayers`.
+ * @param weather   Provides daily PET.
+ * @param community Plant community; GPP and water uptake fields scaled.
+ * @cite Approach adapted from FORMIND model (www.formind.org).
+ */
 void SOIL::limitPlantGppAndSoilWaterUptakeByPotentialEvapotranspiration(UTILS utils, PARAMETER parameter, WEATHER weather, COMMUNITY &community)
 {
     double totalSoilWaterUptake = community.totalSoilWaterUptake;
     double limitationFactorGppPET = 0;
     double pet = weather.potEvapoTranspiration.at(parameter.day - 1);
 
-    // QQM what about evaporation from soil??
+    // TODO: use remainingPET here as evaporation from soil already happened
     /* calculate limitation factor */
     if ((totalSoilWaterUptake > 0))
     {
@@ -829,14 +1192,29 @@ void SOIL::limitPlantGppAndSoilWaterUptakeByPotentialEvapotranspiration(UTILS ut
     }
 }
 
+/**
+ * @brief Prevents soil water content from falling below permanent wilting point
+ *        by reducing plant uptake (and associated GPP) accordingly.
+ *
+ * For the internal/self-coupling path, calls `limitSoilWaterUptakeByPermanentWiltingPoint()`
+ * to compute per-layer reduction factors, then passes them to
+ * `reducePlantGppBasedOnLimitationByPermanentWiltingPoint()`. For BODIUM/get
+ * coupling, reads the reduction factors from the interface.
+ *
+ * @param utils     Utility object for error handling.
+ * @param parameter Provides module-mode flags and `numberOfSoilLayers`.
+ * @param community Plant community; uptake and GPP fields updated.
+ * @cite Approach adapted from FORMIND model (www.formind.org).
+ */
 void SOIL::limitPlantGppAndSoilWaterUptakeByPermanentWiltingPoint(UTILS utils, PARAMETER parameter, COMMUNITY &community)
 {
     std::vector<double> waterUptakeReductionByAvailableWaterPerLayer(parameter.numberOfSoilLayers, 0);
 
     if (parameter.useInternalSoilModule || parameter.useInternalSoilModule_selfCoupled_setVariables)
     {
-        // current PWP limitation works based on wateramount, in bodium coupling water limitation
-        // is based on water potential -> TODO: new PWP limitation criterion?
+        // current PWP limitation works based on water amount
+        // in BODIUM coupling water limitation is based on water potential
+        // TODO: new PWP limitation criterion?
         waterUptakeReductionByAvailableWaterPerLayer = limitSoilWaterUptakeByPermanentWiltingPoint(utils, parameter, community);
         if (parameter.useInternalSoilModule_selfCoupled_setVariables)
         {
@@ -862,6 +1240,21 @@ void SOIL::limitPlantGppAndSoilWaterUptakeByPermanentWiltingPoint(UTILS utils, P
     // together
 }
 
+/**
+ * @brief Computes per-layer maximum-allowed uptake to prevent soil water from
+ *        falling below PWP, and updates community-level uptake accordingly.
+ *
+ * For each layer where (`soilWater - totalUptake`) < PWP, clamps uptake to
+ * `max(0, soilWater - PWP)` and records a reduction factor
+ * (1 - allowedUptake/demandedUptake). Returns the vector of per-layer
+ * reduction factors for use by `reducePlantGppBasedOnLimitationByPermanentWiltingPoint()`.
+ *
+ * @param utils     Utility object (reserved).
+ * @param parameter Provides PWP, field capacity, and `numberOfSoilLayers`.
+ * @param community Plant community; community-level uptake totals updated.
+ * @return Vector of per-layer reduction factors (0 = no reduction, 1 = full reduction).
+ * @cite Approach adapted from FORMIND model (www.formind.org).
+ */
 std::vector<double> SOIL::limitSoilWaterUptakeByPermanentWiltingPoint(UTILS utils, PARAMETER parameter, COMMUNITY &community)
 {
     double limitedTotalSoilWaterUptake = 0;
@@ -898,6 +1291,19 @@ std::vector<double> SOIL::limitSoilWaterUptakeByPermanentWiltingPoint(UTILS util
     return limitationFactorOfSoilWaterUptakeByPwpPerSoilLayer;
 }
 
+/**
+ * @brief Reduces per-cohort GPP and water uptake based on PWP limitation
+ *        factors computed per soil layer.
+ *
+ * For each cohort with positive water uptake, computes a weighted-average
+ * reduction factor across rooting layers (weighted by per-layer uptake fraction)
+ * and applies it to `gpp` and `soilWaterUptake`. Also sets `limitingFactorGppTotal`.
+ *
+ * @param utils                                    Utility object (reserved).
+ * @param community                                Plant community; GPP and uptake updated.
+ * @param limitationFactorOfSoilWaterUptakeByPwpPerSoilLayer
+ *        Per-layer reduction factors from `limitSoilWaterUptakeByPermanentWiltingPoint()`.
+ */
 void SOIL::reducePlantGppBasedOnLimitationByPermanentWiltingPoint(UTILS utils, COMMUNITY &community, std::vector<double> limitationFactorOfSoilWaterUptakeByPwpPerSoilLayer)
 {
     for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
@@ -927,6 +1333,14 @@ void SOIL::reducePlantGppBasedOnLimitationByPermanentWiltingPoint(UTILS utils, C
     }
 }
 
+/**
+ * @brief Subtracts per-layer community water uptake from the soil water pool
+ *        (internal module) or exports it to the BODIUM coupling interface.
+ *
+ * @param utils     Utility object (reserved).
+ * @param community Provides `totalSoilWaterUptakePerSoilLayer`.
+ * @param parameter Provides module-mode flags and `numberOfSoilLayers`.
+ */
 void SOIL::subtractPlantWaterUptakeFromSoilWaterPool(UTILS utils, COMMUNITY &community, PARAMETER parameter)
 {
     if (parameter.useInternalSoilModule || parameter.useInternalSoilModule_selfCoupled_setVariables)
@@ -946,6 +1360,26 @@ void SOIL::subtractPlantWaterUptakeFromSoilWaterPool(UTILS utils, COMMUNITY &com
     }
 }
 
+/**
+ * @brief Orchestrates soil nitrogen demand, uptake, NPP limitation, and
+ *        nitrogen allocation for all plant cohorts.
+ *
+ * Steps in order:
+ * 1. calculateLimitingFactorOfSymbioticNitrogenFixationByRhizobiaPerPlant()
+ * 2. calculateSoilNitrogenDemandPerPlant()
+ * 3. summarizeTotalSoilNitrogenDemandFromAllPlants()
+ * 4. calculateBodiumSoilNitrogenUptake() (BODIUM) or
+ *    calculateSoilNitrogenUptakePerPlant() (internal/self-coupling)
+ * 5. calculateNitrogenLimitationFactorPerPlant()
+ * 6. allocateNitrogenUptakeToPlant()
+ * 7. summarizeTotalSoilNitrogenUptakeFromAllPlants() + deduction from pool
+ *    (internal module only).
+ *
+ * @param utils     Utility object for error handling.
+ * @param parameter Provides module flags, PFT parameters, layer count.
+ * @param community Plant community; all N demand/uptake and NPP limitation
+ *                  fields updated.
+ */
 void SOIL::doPlantSoilNitrogenUptakeAndNppLimitationBySoilNitrogenConditions(UTILS utils, PARAMETER parameter, COMMUNITY &community)
 {
     /* Limiting factor of symbiotic nitrogen fixation by rhizobia per plant */
@@ -989,6 +1423,15 @@ void SOIL::doPlantSoilNitrogenUptakeAndNppLimitationBySoilNitrogenConditions(UTI
     }
 }
 
+/**
+ * @brief Copies mineral nitrogen per layer to/from the self-coupling interface.
+ *
+ * In set mode: copies `nitrogenContent_soilMineralPoolPerSoilLayer` to
+ * `couplingInterface_nitrogenContentPerSoilLayer`. In get mode: does the reverse.
+ *
+ * @param utils     Utility object (reserved).
+ * @param parameter Provides module-mode flags.
+ */
 void SOIL::transferInterfaceVariablesForSelfCoupling_soilNitrogen(UTILS utils, PARAMETER parameter)
 {
     if (parameter.useInternalSoilModule_selfCoupled_setVariables)
@@ -1001,6 +1444,13 @@ void SOIL::transferInterfaceVariablesForSelfCoupling_soilNitrogen(UTILS utils, P
     }
 }
 
+/**
+ * @brief Resets the internal mineral nitrogen pool to NaN after it has been
+ *        consumed from the coupling interface (get mode).
+ *
+ * @param utils     Utility object (reserved).
+ * @param parameter Provides `numberOfSoilLayers` and module-mode flags.
+ */
 void SOIL::resetInterfaceVariablesForSelfCoupling_soilNitrogen(UTILS utils, PARAMETER parameter)
 {
     if (parameter.useExternalSoilModule_selfCoupled_getVariables)
@@ -1009,6 +1459,21 @@ void SOIL::resetInterfaceVariablesForSelfCoupling_soilNitrogen(UTILS utils, PARA
     }
 }
 
+/**
+ * @brief Calculates the limiting factor for symbiotic N fixation (rhizobia) per
+ *        cohort based on the C-cost of fixation.
+ *
+ * For PFTs with `symbioticNitrogenFixationFraction > 0`, computes the
+ * mean C/N ratio of growth biomass across allocation fractions and pools,
+ * then sets `limitingFactorSymbiosisRhizobia` using:
+ * @f[ f = \frac{C/N}{C/N + f_{\text{symb}} \cdot r_{\text{CN}}} @f]
+ * where `f_symb` is the fixation fraction and `r_CN` is the rhizobia C/N
+ * exchange rate. Otherwise `limitingFactorSymbiosisRhizobia` stays 1.0.
+ *
+ * @param utils     Utility object (reserved).
+ * @param community Plant community; `limitingFactorSymbiosisRhizobia` updated.
+ * @param parameter PFT-specific fixation fractions, exchange rate, C/N ratios.
+ */
 void SOIL::calculateLimitingFactorOfSymbioticNitrogenFixationByRhizobiaPerPlant(UTILS utils, COMMUNITY &community, PARAMETER parameter)
 {
     for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
@@ -1019,7 +1484,6 @@ void SOIL::calculateLimitingFactorOfSymbioticNitrogenFixationByRhizobiaPerPlant(
             int pft = community.allPlants.at(cohortindex)->pft;
             if (parameter.symbioticNitrogenFixationFraction[pft] > 0)
             {
-                // TODO: when allocations and cnRatios are revised, change also here
                 double cnRatioBiomassGrowth = 1 / (community.allPlants.at(cohortindex)->nppAllocationShoot / parameter.plantCNRatioGreenLeaves[pft] +
                                                    community.allPlants.at(cohortindex)->nppAllocationRoot / parameter.plantCNRatioRoots[pft] +
                                                    community.allPlants.at(cohortindex)->nppAllocationRecruitment / parameter.plantCNRatioSeeds[pft] +
@@ -1031,6 +1495,19 @@ void SOIL::calculateLimitingFactorOfSymbioticNitrogenFixationByRhizobiaPerPlant(
     }
 }
 
+/**
+ * @brief Calculates the nitrogen demand for each plant cohort and its
+ *        remaining demand to be met from the soil mineral pool.
+ *
+ * For each cohort: deducts the C cost of rhizobial fixation from potential
+ * NPP carbon, computes per-organ N demands and fraction vectors, checks that
+ * rhizobia uptake does not exceed total demand, then derives the remaining
+ * soil demand after accounting for rhizobia uptake and nitrogen surplus.
+ *
+ * @param utils     Utility object for error handling.
+ * @param community Plant community; demand fields updated per cohort.
+ * @param parameter PFT-specific C/N ratios, fixation parameters, allocation fractions.
+ */
 void SOIL::calculateSoilNitrogenDemandPerPlant(UTILS utils, COMMUNITY &community, PARAMETER parameter)
 {
     for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
@@ -1054,10 +1531,26 @@ void SOIL::calculateSoilNitrogenDemandPerPlant(UTILS utils, COMMUNITY &community
     }
 }
 
+/**
+ * @brief Computes rhizobial N uptake and deducts the equivalent C cost from
+ *        potential NPP carbon.
+ *
+ * Rhizobia N uptake = `carbonNPP * (1 - limitingFactorSymbiosisRhizobia)
+ *                      / rhizobiaExchangeRateCToN`.
+ * The carbon cost is deducted from `carbonContentOfPotentialNPP` and the
+ * adjusted value is returned.
+ *
+ * @param utils                    Utility object (reserved).
+ * @param parameter                Provides rhizobia exchange rate.
+ * @param community                Plant community; `rhizobiaNitrogenUptake` set.
+ * @param cohortindex              Index of the target cohort.
+ * @param carbonContentOfPotentialNPP Potential NPP carbon before rhizobia cost.
+ * @return Remaining NPP carbon after deducting rhizobia cost.
+ */
 double SOIL::calculateNitrogenUptakeByRhizobiaAndSubtractCostsFromPotentialNPP(UTILS utils, PARAMETER parameter, COMMUNITY &community, int cohortindex, double carbonContentOfPotentialNPP)
 {
     // if symbioticNitrogenFixationFraction > 0, i.e. if limitingFactorSymbiosisRhizobia < 1
-    // QQT: this rhizobia uptake does not take into account potential nitrogen coming from surplus
+    // TODO: this rhizobia uptake does not take into account potential nitrogen coming from surplus
     // (opposed to how it is done for nitrogen uptake from soil --> could be discussed)
     community.allPlants.at(cohortindex)->rhizobiaNitrogenUptake = carbonContentOfPotentialNPP * (1 - community.allPlants.at(cohortindex)->limitingFactorSymbiosisRhizobia) / parameter.rhizobiaExchangeRateCToN;
     carbonContentOfPotentialNPP *= community.allPlants.at(cohortindex)->limitingFactorSymbiosisRhizobia;
@@ -1065,6 +1558,21 @@ double SOIL::calculateNitrogenUptakeByRhizobiaAndSubtractCostsFromPotentialNPP(U
     return (carbonContentOfPotentialNPP);
 }
 
+/**
+ * @brief Derives per-organ N demands and their allocation fractions from
+ *        potential NPP carbon and PFT-specific C/N ratios.
+ *
+ * Computes `nitrogenDemandForGrowthOf{Shoot,Root,Reproduction,Exudation}`,
+ * `totalPlantNitrogenDemand`, and the corresponding fraction vectors
+ * `nitrogenDemandGrowthFraction*`. Fractions are set to zero if total demand
+ * is zero.
+ *
+ * @param utils                      Utility object (reserved).
+ * @param parameter                  Provides PFT-specific C/N ratios.
+ * @param community                  Plant community; demand and fraction fields updated.
+ * @param cohortindex                Index of the target cohort.
+ * @param carbonContentOfPotentialNPP NPP carbon after rhizobia cost deduction.
+ */
 void SOIL::calculateNitrogenDemandOfPlantFromPotentialNPP(UTILS utils, PARAMETER parameter, COMMUNITY &community, int cohortindex, double carbonContentOfPotentialNPP)
 {
     int pft = community.allPlants.at(cohortindex)->pft;
@@ -1094,6 +1602,14 @@ void SOIL::calculateNitrogenDemandOfPlantFromPotentialNPP(UTILS utils, PARAMETER
     }
 }
 
+/**
+ * @brief Raises an error if rhizobial N uptake exceeds total plant N demand.
+ *
+ * @param utils       Utility object for error handling.
+ * @param community   Plant community; reads `rhizobiaNitrogenUptake` and
+ *                    `totalPlantNitrogenDemand` from the target cohort.
+ * @param cohortindex Index of the target cohort.
+ */
 void SOIL::checkIfPlantNitrogenDemandIsNotExceededByRhizobiaUptake(UTILS utils, COMMUNITY &community, int cohortindex)
 {
     if (community.allPlants.at(cohortindex)->rhizobiaNitrogenUptake > community.allPlants.at(cohortindex)->totalPlantNitrogenDemand)
@@ -1102,6 +1618,18 @@ void SOIL::checkIfPlantNitrogenDemandIsNotExceededByRhizobiaUptake(UTILS utils, 
     }
 }
 
+/**
+ * @brief Derives the remaining N demand to be met from the soil mineral pool
+ *        after accounting for rhizobia uptake and internal nitrogen surplus.
+ *
+ * `totalSoilNitrogenDemand = max(0, totalDemand - rhizobiaN - surplus)`.
+ * Distributed uniformly over rooting layers.
+ *
+ * @param utils       Utility object (reserved).
+ * @param community   Plant community; `totalSoilNitrogenDemand` and per-layer
+ *                    demand updated for the target cohort.
+ * @param cohortindex Index of the target cohort.
+ */
 void SOIL::calculateRemainingPlantNitrogenDemandFromSoil(UTILS utils, COMMUNITY &community, int cohortindex)
 {
     double totalPlantNitrogenDemand = community.allPlants.at(cohortindex)->totalPlantNitrogenDemand;
@@ -1120,6 +1648,15 @@ void SOIL::calculateRemainingPlantNitrogenDemandFromSoil(UTILS utils, COMMUNITY 
     }
 }
 
+/**
+ * @brief Aggregates per-cohort soil N demand into community-level totals.
+ *
+ * Accumulates `totalSoilNitrogenDemand`, per-layer demand, and the count of
+ * competitors per layer (`numberOfPlantsCompetingForSoilNitrogenPerSoilLayer`).
+ *
+ * @param utils     Utility object (reserved).
+ * @param community Plant community; community-level N demand fields updated.
+ */
 void SOIL::summarizeTotalSoilNitrogenDemandFromAllPlants(UTILS utils, COMMUNITY &community)
 {
     for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
@@ -1144,6 +1681,19 @@ void SOIL::summarizeTotalSoilNitrogenDemandFromAllPlants(UTILS utils, COMMUNITY 
     }
 }
 
+/**
+ * @brief Calculates actual N uptake per cohort from available soil mineral N,
+ *        shared equally among competing plants per layer.
+ *
+ * For each layer, divides available mineral N by the number of competitors to
+ * obtain the maximum per-plant supply, then sets each cohort's uptake to
+ * `min(demand, supply)`. Finally sums per-layer uptake into `totalSoilNitrogenUptake`
+ * per cohort.
+ *
+ * @param utils     Utility object; raises an error for negative mineral N.
+ * @param parameter Provides `numberOfSoilLayers`.
+ * @param community Plant community; per-layer and total uptake updated per cohort.
+ */
 void SOIL::calculateSoilNitrogenUptakePerPlant(UTILS utils, PARAMETER parameter, COMMUNITY &community)
 {
     double maximumNitrogenSupplyPerPlant = 0.0;
@@ -1187,18 +1737,28 @@ void SOIL::calculateSoilNitrogenUptakePerPlant(UTILS utils, PARAMETER parameter,
     }
 }
 
+/**
+ * @brief Calculates N uptake via the BODIUM coupling model (convection +
+ *        diffusion) for each plant cohort.
+ *
+ * First computes convective N uptake from water flow and pore-water
+ * NH4/NO3 concentrations (capped at a minimum `n_lim`). If convection is
+ * insufficient to meet demand, adds diffusive uptake proportional to root
+ * surface area and concentration gradients. Exports per-layer NH4/NO3 uptake
+ * to the coupling interface.
+ *
+ * @param utils     Utility object (reserved).
+ * @param parameter Provides BODIUM coupling constants (h2L, h2H) and soil-layer
+ *                  widths for root-surface calculation.
+ * @param community Plant community; `soilNitrogenUptakePerSoilLayer` and
+ *                  `totalSoilNitrogenUptake` updated per cohort.
+ * @cite Approach adapted from BODIUM soil model.
+ */
 void SOIL::calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, COMMUNITY &community)
 {
-    /* !
-    \brief		Calculates actual nitrogen uptake of plant from water uptake and nitrogen demand
-    \input      plant.WaterUptakePerLayer, plant.soilNitrogenDemand,
-    patch.landtrans_nh4ConcentrationPerLayer, patch.landtrans_no3ConcentrationPerLayer
-    \output     plant.NitrogenUptakePerLayer, NH4uptake, NO3Uptake
-    */
-
     double meanRootDiameter = 7e-4; // m
     double meanSpecificRootLength =
-        120000 / 1000; // bodium config summeroats (m per kg), conversion to m per g
+        120000 / 1000; // BODIUM config summeroats (m per kg), conversion to m per g
 
     for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
     {
@@ -1209,7 +1769,7 @@ void SOIL::calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, C
                 community.allPlants.at(cohortindex)->totalSoilNitrogenDemand / 1000; // concversion from g to kg (per squaremeter and day)
             double total_n = 0, n_conv = 0, n_diff = 0;
             double water_up_n = 0;
-            double n_lim = 0.0004;                         // value from Bodium TODO: different values for different plants?
+            double n_lim = 0.0004;                         // value from BODIUM TODO: different values for different plants?
             n_lim = (n_lim > n_demand) ? n_demand : n_lim; // convective update should not be bigger than demand
             double surface;
 
@@ -1341,6 +1901,16 @@ void SOIL::calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, C
     }
 }
 
+/**
+ * @brief Computes the N limitation factor for NPP per cohort.
+ *
+ * `limitingFactorNppNitrogen = min(1, totalNSupply / totalNDemand)` where
+ * supply = soil uptake + rhizobia uptake + nitrogen surplus. Set to 1 when
+ * demand is zero.
+ *
+ * @param utils     Utility object (reserved).
+ * @param community Plant community; `limitingFactorNppNitrogen` updated per cohort.
+ */
 void SOIL::calculateNitrogenLimitationFactorPerPlant(UTILS utils, COMMUNITY &community)
 {
     for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
@@ -1364,6 +1934,18 @@ void SOIL::calculateNitrogenLimitationFactorPerPlant(UTILS utils, COMMUNITY &com
     }
 }
 
+/**
+ * @brief Distributes the allocable nitrogen to per-organ uptake fields and
+ *        updates the plant nitrogen surplus pool.
+ *
+ * `allocableNitrogen = limitingFactorNppNitrogen * totalNDemand`. Allocates
+ * to shoot, root, recruitment, and exudate uptake fields using the previously
+ * computed demand fractions. Calls `updateNitrogenSurplusPoolOfPlant()` to
+ * adjust the surplus.
+ *
+ * @param utils     Utility object for error checking.
+ * @param community Plant community; per-organ N uptake fields updated per cohort.
+ */
 void SOIL::allocateNitrogenUptakeToPlant(UTILS utils, COMMUNITY &community)
 {
     double allocableNitrogen = 0.0;
@@ -1398,6 +1980,18 @@ void SOIL::allocateNitrogenUptakeToPlant(UTILS utils, COMMUNITY &community)
     }
 }
 
+/**
+ * @brief Updates the plant nitrogen surplus pool after allocation.
+ *
+ * If the surplus was positive, recalculates it as:
+ * `surplus + soilUptake + rhizobiaUptake - allocatedN`.
+ * Calls `utils.checkForNegativeValue()` to guard against numerical issues.
+ *
+ * @param utils           Utility object for negative-value checking.
+ * @param community       Plant community; `nitrogenSurplus` updated for the cohort.
+ * @param cohortindex     Index of the target cohort.
+ * @param allocableNitrogen Total nitrogen allocated to growth this time step.
+ */
 void SOIL::updateNitrogenSurplusPoolOfPlant(UTILS utils, COMMUNITY &community, int cohortindex, double allocableNitrogen)
 {
     // update nitrogenSurplus if it existed
@@ -1414,6 +2008,15 @@ void SOIL::updateNitrogenSurplusPoolOfPlant(UTILS utils, COMMUNITY &community, i
     }
 }
 
+/**
+ * @brief Accumulates per-cohort soil N uptake into community-level per-layer
+ *        and total uptake accumulators.
+ *
+ * @param utils     Utility object (reserved).
+ * @param parameter Provides `numberOfSoilLayers`.
+ * @param community Plant community; `totalSoilNitrogenUptakePerSoilLayer` and
+ *                  `totalSoilNitrogenUptake` updated.
+ */
 void SOIL::summarizeTotalSoilNitrogenUptakeFromAllPlants(UTILS utils, PARAMETER parameter, COMMUNITY &community)
 {
     for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
@@ -1435,6 +2038,13 @@ void SOIL::summarizeTotalSoilNitrogenUptakeFromAllPlants(UTILS utils, PARAMETER 
     }
 }
 
+/**
+ * @brief Deducts community N uptake from the soil mineral N pool per layer.
+ *
+ * @param utils     Utility object; calls `checkForNegativeValue()` per layer.
+ * @param parameter Provides `numberOfSoilLayers`.
+ * @param community Provides `totalSoilNitrogenUptakePerSoilLayer`.
+ */
 void SOIL::subtractPlantNitrogenUptakeFromSoilMineralNitrogenPool(UTILS utils, PARAMETER parameter, COMMUNITY &community)
 {
     for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
@@ -1450,6 +2060,24 @@ void SOIL::subtractPlantNitrogenUptakeFromSoilMineralNitrogenPool(UTILS utils, P
 // ##################################################################################################
 // carbon-nitrogen dynamics
 // ##################################################################################################
+/**
+ * @brief Orchestrates all soil carbon and nitrogen decomposition dynamics.
+ *
+ * Steps in order:
+ * 1. splitLitterFluxesToStructuralAndMetabolicLitterPools()
+ * 2. calculateTemperatureAndWaterEffectsOnDecomposition() -> `decompositionFactor`
+ * 3. doDecompositionFluxesInLitterAndSoilPools()
+ * 4. updateSoilPoolsByRespirationAndFluxes()
+ * 5. calculateNonsymbioticNitrogenFixationAndAthmosphericDeposition()
+ * 6. calculateNitrogenLossByVolatilization()
+ *
+ * @param utils       Utility object for error handling.
+ * @param parameter   Provides soil-module flags and weather-day index.
+ * @param interaction Provides soil temperature for the decomposition factor.
+ * @param weather     Provides precipitation and temperature for litter splitting.
+ *
+ * @cite Adapted from the CENTURY 4.0 soil model.
+ */
 void SOIL::calculateSoilCarbonNitrogenDynamics(UTILS utils, PARAMETER parameter, INTERACTION interaction, WEATHER weather)
 {
     splitLitterFluxesToStructuralAndMetabolicLitterPools(utils, parameter, weather);
@@ -1467,12 +2095,39 @@ void SOIL::calculateSoilCarbonNitrogenDynamics(UTILS utils, PARAMETER parameter,
     calculateNitrogenLossByVolatilization(utils);
 }
 
+/**
+ * @brief Routes surface and soil litter fluxes to structural and metabolic pools.
+ *
+ * Calls `addCarbonNitrogenOfPlantLitterToStructuralAndMetabolicLitterPools()`
+ * for `"surface"` and `"soil"` pool types.
+ *
+ * @param utils     Utility object for error handling.
+ * @param parameter Provides simulation day for weather indexing.
+ * @param weather   Provides precipitation for lignin fraction calculation.
+ * @cite Function and code adapted from the CENTURY 4.0 soil model.
+ */
 void SOIL::splitLitterFluxesToStructuralAndMetabolicLitterPools(UTILS utils, PARAMETER parameter, WEATHER weather)
 {
     addCarbonNitrogenOfPlantLitterToStructuralAndMetabolicLitterPools(utils, parameter, weather, "surface");
     addCarbonNitrogenOfPlantLitterToStructuralAndMetabolicLitterPools(utils, parameter, weather, "soil");
 }
 
+/**
+ * @brief Splits a combined litter carbon/nitrogen flux into structural and
+ *        metabolic fractions and updates the corresponding pools.
+ *
+ * Uses lignin fraction, C/N ratio, and a DIRABS (direct absorption) factor
+ * to determine what fraction of C goes to the metabolic vs. structural pool.
+ * Updates lignin content of structural litter and calls `processLitterFluxes()`
+ * to transfer the C/N amounts to the appropriate pool variables.
+ *
+ * @param utils      Utility object for error handling.
+ * @param parameter  Provides simulation day for weather indexing.
+ * @param weather    Provides precipitation for lignin fraction calculation.
+ * @param typeOfPool `"surface"` or `"soil"`.
+ *
+ * @cite Adapted from the CENTURY 4.0 model.
+ */
 void SOIL::addCarbonNitrogenOfPlantLitterToStructuralAndMetabolicLitterPools(UTILS utils, PARAMETER parameter, WEATHER weather, std::string typeOfPool)
 {
     double dirabs = 0;
@@ -1528,6 +2183,19 @@ void SOIL::addCarbonNitrogenOfPlantLitterToStructuralAndMetabolicLitterPools(UTI
     }
 }
 
+/**
+ * @brief Calculates the DIRABS factor: direct mineral N absorption from
+ *        the soil pool to meet C/N requirements of structural litter.
+ *
+ * If the litter C/N ratio is below 15, mineral N is absorbed to raise the
+ * N content. DIRABS is capped at 2 % of mineral N per unit litter carbon.
+ *
+ * @param utils      Utility object (reserved).
+ * @param typeOfPool `"surface"` or `"soil"`; determines the damr coefficient.
+ * @return DIRABS amount (g N).
+ *
+ * @cite Adapted from the CENTURY 4.0 model.
+ */
 double SOIL::calculateDIRABS(UTILS utils, std::string typeOfPool)
 {
     double rcetot = 0.0;
@@ -1568,6 +2236,20 @@ double SOIL::calculateDIRABS(UTILS utils, std::string typeOfPool)
     return (dirabs);
 }
 
+/**
+ * @brief Computes the lignin fraction of incoming litter based on precipitation.
+ *
+ * Linearly scaled with daily precipitation; clamped to [0.02/365, 0.5/365].
+ * Surface and soil litter use different intercept/slope parameters.
+ *
+ * @param utils      Utility object (reserved).
+ * @param weather    Provides daily precipitation.
+ * @param parameter  Provides simulation day for weather indexing.
+ * @param typeOfPool `"surface"` or `"soil"`.
+ * @return Lignin fraction (dimensionless, per day).
+ *
+ * @cite Adapted from the CENTURY 4.0 model.
+ */
 double SOIL::calculateLigninFraction(UTILS utils, WEATHER weather, PARAMETER parameter, std::string typeOfPool)
 {
     double ligninFraction;
@@ -1594,6 +2276,15 @@ double SOIL::calculateLigninFraction(UTILS utils, WEATHER weather, PARAMETER par
     return (ligninFraction);
 }
 
+/**
+ * @brief Computes the nitrogen fraction of the combined litter flux including DIRABS.
+ *
+ * @param utils      Utility object (reserved).
+ * @param dirabs     Direct N absorption from soil computed by calculateDIRABS().
+ * @param typeOfPool `"surface"` or `"soil"`.
+ * @return Nitrogen fraction (g N / g C total litter).
+ * @cite Function and code adapted from the CENTURY 4.0 soil model.
+ */
 double SOIL::calculateNitrogenFraction(UTILS utils, double dirabs, std::string typeOfPool)
 {
 
@@ -1615,6 +2306,20 @@ double SOIL::calculateNitrogenFraction(UTILS utils, double dirabs, std::string t
     return (fractionOfNitrogen);
 }
 
+/**
+ * @brief Computes the metabolic litter fraction from lignin content and
+ *        lignin-to-nitrogen ratio.
+ *
+ * `metabolicFraction = 0.85 - 0.018 * ligninToNitrogenRatio`, clamped to [0, 1].
+ *
+ * @param utils                 Utility object (reserved).
+ * @param fractionOfLignin      Lignin fraction of litter.
+ * @param ligninToNitrogenRatio Lignin fraction / nitrogen fraction.
+ * @param type                  `"surface"` or `"soil"`.
+ * @return Metabolic litter fraction (0–1).
+ *
+ * @cite Adapted from the CENTURY 4.0 model.
+ */
 double SOIL::calculateFractionOfMetabolicLitter(UTILS utils, double fractionOfLignin, double ligninToNitrogenRatio, std::string type)
 {
     double fractionOfMetabolicLitter;
@@ -1640,6 +2345,21 @@ double SOIL::calculateFractionOfMetabolicLitter(UTILS utils, double fractionOfLi
     return (fractionOfMetabolicLitter);
 }
 
+/**
+ * @brief Adjusts the lignin content of the structural litter pool after
+ *        adding new litter.
+ *
+ * New structural lignin = added structural C x ligninFraction; added to the
+ * existing pool value.
+ *
+ * @param utils                        Utility object (reserved).
+ * @param fractionOfLignin             Lignin fraction of newly added litter.
+ * @param carbonAddedToStructuralLitter Carbon added to structural pool (g C).
+ * @param strlig                       Current lignin content of the pool (g).
+ * @param typeOfPool                   `"surface"` or `"soil"`.
+ * @return Updated lignin content (g).
+ * @cite Function and code adapted from the CENTURY 4.0 soil model.
+ */
 double SOIL::adjustLigninContentOfStructuralLitter(UTILS utils, double fractionOfLignin, double carbonAddedToStructuralLitter, double strlig, std::string typeOfPool)
 {
     double adjustedFractionOfLignin;
@@ -1670,6 +2390,22 @@ double SOIL::adjustLigninContentOfStructuralLitter(UTILS utils, double fractionO
     return (ligninContent);
 }
 
+/**
+ * @brief Applies the computed structural/metabolic C and N flux amounts to the
+ *        appropriate soil litter pool variables and resets the daily input pools.
+ *
+ * Increments structural and metabolic C and N pool contents and resets the
+ * surface or soil green/brown/root/seed input pools to zero.
+ *
+ * @param utils                          Utility object (reserved).
+ * @param dirabs                         Direct mineral N absorption (g N).
+ * @param carbonAddedToStructuralLitter  C added to structural pool (g C).
+ * @param carbonAddedToMetabolicLitter   C added to metabolic pool (g C).
+ * @param nitrogenAddedToStructuralLitter N added to structural pool (g N).
+ * @param nitrogenAddedToMetabolicLitter  N added to metabolic pool (g N).
+ * @param typeOfPool                     `"surface"` or `"soil"`.
+ * @cite Function and code adapted from the CENTURY 4.0 soil model.
+ */
 void SOIL::processLitterFluxes(UTILS utils, double dirabs, double carbonAddedToStructuralLitter, double carbonAddedToMetabolicLitter, double nitrogenAddedToStructuralLitter, double nitrogenAddedToMetabolicLitter, std::string typeOfPool)
 {
     if (typeOfPool == "surface")
@@ -1695,6 +2431,15 @@ void SOIL::processLitterFluxes(UTILS utils, double dirabs, double carbonAddedToS
     }
 }
 
+/**
+ * @brief Triggers decomposition for each active litter and soil C pool.
+ *
+ * Calls `startDecomposition()` for each pool if it is `decomposable()`,
+ * using pool-specific rate constants and lignin constraints.
+ *
+ * @param utils Utility object for error handling inside decomposition steps.
+ * @cite Function and code adapted from the CENTURY 4.0 soil model.
+ */
 void SOIL::doDecompositionFluxesInLitterAndSoilPools(UTILS utils)
 {
     startDecomposition(utils, carbonContent_surfaceStructuralLitterPool, 3.9 / 365.0, ligninContent_surfaceStructuralLitterPool, "surface_structural");
@@ -1707,6 +2452,22 @@ void SOIL::doDecompositionFluxesInLitterAndSoilPools(UTILS utils)
     startDecomposition(utils, carbonContent_soilPassivePool, 0.0045 / 365.0, 1, "passive");
 }
 
+/**
+ * @brief Initiates the decomposition flux from one pool, routing C and N to
+ *        the destination pool(s) according to the pool-specific transfer scheme.
+ *
+ * Calls `decomposable()` to check preconditions, then `decompose()` to compute
+ * the flux. The actual C/N transfer, respiratory losses, and N mineralisation/
+ * immobilisation are handled inside `decompose()`.
+ *
+ * @param utils            Utility object for error handling.
+ * @param carbonContentOfPool C content of the source pool (g C).
+ * @param constFactor      Pool-specific rate constant (d\u207b\u00b9 at reference conditions).
+ * @param lignin           Lignin content of the pool (affects decomposition rate).
+ * @param transferFromPool Source pool identifier string (e.g. `"surface_structural"`).
+ *
+ * @cite Adapted from the CENTURY 4.0 model.
+ */
 void SOIL::startDecomposition(UTILS utils, double carbonContentOfPool, double constFactor, double lignin, std::string transferFromPool)
 {
     const double maximumCarbonFlux = 5000.0; // in [g/m²/day]
@@ -1740,6 +2501,19 @@ void SOIL::startDecomposition(UTILS utils, double carbonContentOfPool, double co
     }
 }
 
+/**
+ * @brief Precomputes the decisive C/N ratios used to decide between
+ *        mineralisation and immobilisation for a given pool-to-pool transfer.
+ *
+ * The decisive C/N ratio determines the N demand of the receiving microbial
+ * biomass. If the supply pool's C/N is above this ratio, N must be immobilised
+ * from the mineral pool; if below, net N is mineralised.
+ *
+ * @param utils           Utility object for error handling.
+ * @param transferFromPool Source pool identifier string.
+ *
+ * @cite Adapted from the CENTURY 4.0 model.
+ */
 void SOIL::calculateDecisiveCarbonNitrogenRatiosForDecomposition(UTILS utils, std::string transferFromPool)
 {
     // decisive CN ratios depend on daily dynamically changing state variables (e.g. mineral soil nitrogen content or carbon content of pool)
@@ -1887,7 +2661,20 @@ void SOIL::calculateDecisiveCarbonNitrogenRatiosForDecomposition(UTILS utils, st
 }
 
 /**
- * @cite Function and code has been reused from the CENTURY4.0 soil model
+ * @brief Computes the temperature and water effects on decomposition rates
+ *        and returns a combined scalar factor.
+ *
+ * Temperature effect: exponential Q10 function based on soil temperature.
+ * Water effect: linear scaling from a lower threshold to field capacity.
+ * The two effects are multiplied.
+ *
+ * @param utils       Utility object (reserved).
+ * @param interaction Provides `soilTemperature`.
+ * @param parameter   Provides `numberOfSoilLayers` and soil-module flags.
+ * @return Combined decomposition factor (dimensionless, stored in
+ *         `decompositionFactor`).
+ *
+ * @cite Adapted from the CENTURY 4.0 model.
  */
 double SOIL::calculateTemperatureAndWaterEffectsOnDecomposition(UTILS utils, INTERACTION interaction, PARAMETER parameter)
 {
@@ -1910,6 +2697,17 @@ double SOIL::calculateTemperatureAndWaterEffectsOnDecomposition(UTILS utils, INT
     return (factor);
 }
 
+/**
+ * @brief Checks whether a pool is eligible for decomposition this time step.
+ *
+ * Returns `true` if the pool's C content is above a minimum threshold and
+ * other preconditions (e.g. positive decomposition factor) are met.
+ *
+ * @param utils      Utility object (reserved).
+ * @param typeOfPool Pool identifier string.
+ * @return `true` if decomposition should proceed.
+ * @cite Function and code adapted from the CENTURY 4.0 soil model.
+ */
 bool SOIL::decomposable(UTILS utils, std::string typeOfPool)
 {
     bool doDecomposition = true;
@@ -1983,7 +2781,21 @@ bool SOIL::decomposable(UTILS utils, std::string typeOfPool)
 }
 
 /**
- * @cite Function and code has been reused from the CENTURY4.0 soil model
+ * @brief Computes the decomposition flux from one pool, calculates C and N
+ *        respiratory losses, determines N flow direction, and updates flux
+ *        tracking variables.
+ *
+ * Uses the decomposition factor, rate constant, and lignin content to compute
+ * how much C decomposes. Delegates to `calculateCarbonRespirationOfDecomposition()`,
+ * `calculateNitrogenRespirationOfDecomposition()`, and `determineNitrogenFlux()`.
+ *
+ * @param utils           Utility object for error handling.
+ * @param carbonFlux      C available for decomposition (g C).
+ * @param ligninContent   Lignin content of the decomposing material.
+ * @param transferFromPool Source pool identifier string.
+ * @return `true` if decomposition occurred; `false` otherwise.
+ *
+ * @cite Adapted from the CENTURY 4.0 model.
  */
 bool SOIL::decompose(UTILS utils, double carbonFlux, double ligninContent, std::string transferFromPool)
 {
@@ -2216,7 +3028,13 @@ bool SOIL::decompose(UTILS utils, double carbonFlux, double ligninContent, std::
 }
 
 /**
- * @cite Function and code has been reused from the CENTURY4.0 soil model
+ * @brief Computes the carbon respiratory loss from a pool-to-pool transfer
+ *        and stores it in the corresponding tracking variable.
+ *
+ * @param utils           Utility object (reserved).
+ * @param transferFromPool Source pool identifier string.
+ * @param transferToPool   Destination pool identifier string.
+ * @cite Function and code adapted from the CENTURY 4.0 soil model.
  */
 void SOIL::calculateCarbonRespirationOfDecomposition(UTILS utils, std::string transferFromPool, std::string transferToPool)
 {
@@ -2297,7 +3115,13 @@ void SOIL::calculateCarbonRespirationOfDecomposition(UTILS utils, std::string tr
 }
 
 /**
- * @cite Function and code has been reused from the CENTURY4.0 soil model
+ * @brief Computes the nitrogen respiratory loss associated with a C-pool
+ *        decomposition transfer and updates the corresponding N respiration variable.
+ *
+ * @param utils            Utility object (reserved).
+ * @param transferPoolFrom Source pool identifier string.
+ * @param transferPoolTo   Destination pool identifier string.
+ * @cite Function and code adapted from the CENTURY 4.0 soil model.
  */
 void SOIL::calculateNitrogenRespirationOfDecomposition(UTILS utils, std::string transferPoolFrom, std::string transferPoolTo)
 {
@@ -2491,7 +3315,15 @@ void SOIL::calculateNitrogenRespirationOfDecomposition(UTILS utils, std::string 
 }
 
 /**
- * @cite Function and code has been reused from the CENTURY4.0 soil model
+ * @brief Determines the direction and amount of net nitrogen flow associated
+ *        with a decomposition transfer and routes to
+ *        `immobilizeOrMineralizeNitrogen()`.
+ *
+ * @param utils           Utility object for error handling.
+ * @param transferFromPool Source pool identifier string.
+ * @param transferToPool   Destination pool identifier string.
+ *
+ * @cite Adapted from the CENTURY 4.0 model.
  */
 void SOIL::determineNitrogenFlux(UTILS utils, std::string transferFromPool, std::string transferToPool)
 {
@@ -2653,6 +3485,18 @@ void SOIL::determineNitrogenFlux(UTILS utils, std::string transferFromPool, std:
     }
 }
 
+/**
+ * @brief Dispatches to `immobilizeNitrogen()` or `mineralizeNitrogen()` based
+ *        on the decisive C/N ratio of the transfer.
+ *
+ * @param utils           Utility object for error handling.
+ * @param carbonFlux      C flux of the decomposition step (g C).
+ * @param nitrogenFlow    N flow estimate before immobilisation/mineralisation.
+ * @param decisiveCNratio Decisive C/N ratio for this pool-to-pool transfer.
+ * @param transferFromPool Source pool identifier string.
+ * @param transferToPool   Destination pool identifier string.
+ * @cite Function and code adapted from the CENTURY 4.0 soil model.
+ */
 void SOIL::immobilizeOrMineralizeNitrogen(UTILS utils, double carbonFlux, double nitrogenFlow, double decisiveCNratio, std::string transferFromPool, std::string transferToPool)
 {
     double mineralize_fromPool_toPool, immobilize_fromPool_toPool;
@@ -2677,7 +3521,15 @@ void SOIL::immobilizeOrMineralizeNitrogen(UTILS utils, double carbonFlux, double
 }
 
 /**
- * @cite Function and code has been reused from the CENTURY4.0 soil model
+ * @brief Calculates the amount of mineral N that must be immobilised from the
+ *        soil mineral pool to support decomposition of N-poor material.
+ *
+ * @param utils           Utility object for error handling.
+ * @param transferFromPool Source pool identifier string.
+ * @param transferToPool   Destination pool identifier string.
+ * @param decisiveCNratio Decisive C/N ratio for this transfer.
+ *
+ * @cite Adapted from the CENTURY 4.0 model.
  */
 void SOIL::immobilizeNitrogen(UTILS utils, std::string transferFromPool, std::string transferToPool, double decisiveCNratio)
 {
@@ -2772,7 +3624,16 @@ void SOIL::immobilizeNitrogen(UTILS utils, std::string transferFromPool, std::st
 }
 
 /**
- * @cite Function and code has been reused from the CENTURY4.0 soil model
+ * @brief Calculates net nitrogen mineralisation from N-rich decomposing material
+ *        and adds it to the soil mineral N pool.
+ *
+ * @param utils              Utility object for error handling.
+ * @param transferFromPool   Source pool identifier string.
+ * @param transferToPool     Destination pool identifier string.
+ * @param decisiveCNratio    Decisive C/N ratio for this transfer.
+ * @param previousNitrogenFlow N flow before this step.
+ *
+ * @cite Adapted from the CENTURY 4.0 model.
  */
 void SOIL::mineralizeNitrogen(UTILS utils, std::string transferFromPool, std::string transferToPool, double decisiveCNratio, double previousNitrogenFlow)
 {
@@ -2892,6 +3753,18 @@ void SOIL::mineralizeNitrogen(UTILS utils, std::string transferFromPool, std::st
     }
 }
 
+/**
+ * @brief Applies all computed C/N fluxes and respiratory losses to update
+ *        the soil pool contents at the end of each decomposition time step.
+ *
+ * Iterates over all transfer routes and adds/subtracts the accumulated
+ * carbon and nitrogen flow and respiration values to the respective pool
+ * content variables.
+ *
+ * @param utils Utility object for error handling.
+ *
+ * @cite Adapted from the CENTURY 4.0 model.
+ */
 void SOIL::updateSoilPoolsByRespirationAndFluxes(UTILS utils)
 {
 
@@ -3020,6 +3893,19 @@ void SOIL::updateSoilPoolsByRespirationAndFluxes(UTILS utils)
          mineralize_soilSlowPool_to_soilActivePool + mineralize_soilPassivePool_to_soilActivePool);
 }
 
+/**
+ * @brief Computes non-symbiotic N fixation and atmospheric N deposition and
+ *        adds the combined amount to the topsoil mineral N pool.
+ *
+ * Non-symbiotic fixation scales linearly with annual precipitation
+ * (converted to cm). Atmospheric deposition is a fixed value per unit time.
+ *
+ * @param utils     Utility object (reserved).
+ * @param parameter Provides simulation day for weather indexing.
+ * @param weather   Provides annual precipitation for the fixation estimate.
+ *
+ * @cite Adapted from the CENTURY 4.0 model.
+ */
 void SOIL::calculateNonsymbioticNitrogenFixationAndAthmosphericDeposition(UTILS utils, PARAMETER parameter, WEATHER weather)
 {
     double nonsymbioticNitrogenFixation;
@@ -3039,6 +3925,18 @@ void SOIL::calculateNonsymbioticNitrogenFixationAndAthmosphericDeposition(UTILS 
     }
 }
 
+/**
+ * @brief Calculates daily nitrogen loss by volatilization from the topsoil
+ *        mineral N pool.
+ *
+ * Volatilization is proportional to gross N mineralisation; the lost N is
+ * deducted from `nitrogenContent_soilMineralPoolPerSoilLayer[0]` and added
+ * to `nitrogenVolatilization`.
+ *
+ * @param utils Utility object (reserved).
+ *
+ * @cite Adapted from the CENTURY 4.0 model.
+ */
 void SOIL::calculateNitrogenLossByVolatilization(UTILS utils)
 {
     double nitrogenLossByVolatilization = 0.0;
@@ -3055,6 +3953,13 @@ void SOIL::calculateNitrogenLossByVolatilization(UTILS utils)
     }
 }
 
+/**
+ * @brief Deducts carbon leached from the active soil pool and accumulates
+ *        the cumulative leached carbon.
+ *
+ * @param utils Utility object (reserved).
+ * @cite Function and code adapted from the CENTURY 4.0 soil model.
+ */
 void SOIL::doLeaching(UTILS utils)
 {
     // leaching of organics

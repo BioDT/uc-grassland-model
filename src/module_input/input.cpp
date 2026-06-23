@@ -8,7 +8,25 @@ std::map<std::string, float> INPUT::configParFloat;
 std::map<std::string, bool> INPUT::configParBool;
 std::map<std::string, std::string> INPUT::configParString;
 
-/* stream all relevant input data */
+/**
+ * @brief Reads and parses all input data required to run the simulation.
+ *
+ * Opens and processes the following input files in order:
+ * 1. Configuration file — general simulation settings.
+ * 2. Plant traits file — species/PFT-specific physiological parameters.
+ * 3. Weather file — daily meteorological time series.
+ * 4. Soil file — texture and hydraulic properties per soil layer.
+ * 5. Management file — mowing, fertilisation, irrigation, and sowing events.
+ * 6. Process setup file — flags controlling which sub-models are active.
+ *
+ * @param path       Absolute path to the main configuration file; used to derive
+ *                   the directory structure for all other input files.
+ * @param utils      Utility object for string splitting and error handling.
+ * @param parameter  Model parameter struct; filled with values read from all files.
+ * @param weather    Weather struct; filled with the daily meteorological time series.
+ * @param soil       Soil struct; filled with texture and per-layer hydraulic properties.
+ * @param management Management struct; filled with all scheduled management events.
+ */
 void INPUT::getInputData(std::string path, UTILS utils, PARAMETER &parameter, WEATHER &weather, SOIL &soil, MANAGEMENT &management)
 {
     openAndReadConfigurationFile(path, utils, parameter);
@@ -24,7 +42,18 @@ void INPUT::getInputData(std::string path, UTILS utils, PARAMETER &parameter, WE
     openAndReadProcessSetupFile(path, utils, parameter);
 }
 
-/* open and read configuration file */
+/**
+ * @brief Opens and parses the main configuration file, populating the PARAMETER struct.
+ *
+ * Iterates over all expected configuration parameter names (defined in PARAMETER),
+ * searches for each in the file via searchParameterInInputFile(), validates its
+ * presence and format, determines its data type, converts the raw string value to
+ * the correct type, and finally transfers all mapped values to the PARAMETER struct.
+ *
+ * @param config    Absolute path to the configuration file.
+ * @param utils     Utility object for string splitting and error handling.
+ * @param parameter Model parameter struct; configuration values are written here.
+ */
 void INPUT::openAndReadConfigurationFile(std::string config, UTILS utils, PARAMETER &parameter)
 {
     const char *filename = config.c_str();
@@ -47,7 +76,23 @@ void INPUT::openAndReadConfigurationFile(std::string config, UTILS utils, PARAME
     transferConfigParameterValueToModelParameter(parameter, utils);
 }
 
-/* open file and search for name (keyword) in all lines */
+/**
+ * @brief Searches a parameter file for all lines containing a given keyword.
+ *
+ * Opens the file line-by-line and records every line (and its number) that
+ * contains `keyword`. The line immediately following each match is stored as
+ * the candidate data-type descriptor. Windows-style carriage-return artifacts
+ * are stripped before matching.
+ *
+ * Results are stored in the member variables `lineValues`, `lineNumbers`, and
+ * `lineTypeValues` for use by subsequent parsing steps.
+ *
+ * @param keyword  The parameter name to search for.
+ * @param filename Null-terminated path to the input file.
+ * @param utils    Utility object for error handling.
+ * @return `true` if the file was opened successfully, `false` otherwise
+ *         (after calling `utils.handleError()`).
+ */
 bool INPUT::searchParameterInInputFile(std::string keyword, const char *filename, UTILS utils)
 {
     std::string line;   // current line text in parser
@@ -95,7 +140,20 @@ bool INPUT::searchParameterInInputFile(std::string keyword, const char *filename
     }
 }
 
-/* check if the parameter name (keyowrd) was found at least once */
+/**
+ * @brief Verifies that a keyword was found in the input file and extracts its value lines.
+ *
+ * Raises an error if the keyword was not found at all. If it was found one or more
+ * times, delegates to extractLinesOfCorrectFormat() to keep only lines that match
+ * the expected `keyword <value>` tab-separated format.
+ *
+ * @param utils          Utility object for error handling.
+ * @param keyword        The parameter name that was searched for.
+ * @param lineValues     Text of all lines in which `keyword` appeared.
+ * @param lineNumbers    Line numbers corresponding to `lineValues`.
+ * @param lineTypeValues Lines immediately following each matched line
+ *                       (expected to contain the `\datatype` descriptor).
+ */
 void INPUT::checkIfParameterExistsAndExtractValues(UTILS utils, std::string keyword, std::vector<std::string> lineValues, std::vector<int> lineNumbers, std::vector<std::string> lineTypeValues)
 {
     /* if parameter name (keyword) was not found in the input file */
@@ -111,7 +169,24 @@ void INPUT::checkIfParameterExistsAndExtractValues(UTILS utils, std::string keyw
     }
 }
 
-/* read in each line, split string and save correct formatted parameter values in variables */
+/**
+ * @brief Filters candidate lines to those with the correct `keyword <value>` format
+ *        and extracts the associated value token(s).
+ *
+ * For each candidate line, splits first by tab and then by spaces to produce a
+ * clean token list. A line is considered correctly formatted if its first token
+ * matches `keyword`. The extracted value token(s) are appended to
+ * `keywordLineValues` and the corresponding index to `keywordLineNumbers`.
+ *
+ * Raises an error if:
+ * - No correctly formatted occurrence of the keyword is found,
+ * - A matched line contains no value token,
+ * - The keyword occurs in a correct format more than once.
+ *
+ * @param utils      Utility object for string splitting, warning, and error handling.
+ * @param keyword    The parameter name expected as the first token of a valid line.
+ * @param lineValues Candidate lines returned by searchParameterInInputFile().
+ */
 void INPUT::extractLinesOfCorrectFormat(UTILS utils, std::string keyword, std::vector<std::string> lineValues)
 {
     int index = 0;                          /* index used to track which of the found lines show the correct format of the found parameter (e.g. if found more than once) */
@@ -188,7 +263,17 @@ void INPUT::extractLinesOfCorrectFormat(UTILS utils, std::string keyword, std::v
     }
 }
 
-/* get the corresponding datatype for the extracted parameter value */
+/**
+ * @brief Reads the data-type descriptor from the line following the keyword match.
+ *
+ * Expects a line of the form `\datatype:<type>` immediately after the parameter
+ * value line. Splits on `:` and stores the type string in `parameterType`.
+ * Raises an error if the descriptor line is absent, malformed, or the type token
+ * is missing.
+ *
+ * @param utils   Utility object for string splitting and error handling.
+ * @param keyword Parameter name; used only for informative error messages.
+ */
 void INPUT::extractDataTypeForExtractedValue(UTILS utils, std::string keyword)
 {
     if (keywordLineNumbers.size() > 0)
@@ -221,7 +306,28 @@ void INPUT::extractDataTypeForExtractedValue(UTILS utils, std::string keyword)
     }
 }
 
-/* convert the extracted value to its datatype, check for inconsistencies and map the value to the parameter name */
+/**
+ * @brief Converts a raw string value to its declared data type and stores it
+ *        in the appropriate static map.
+ *
+ * Supported types and their target maps:
+ * - `integer`, `integer-array`  → `configParInt`
+ * - `float`, `float-array`      → `configParFloat`
+ * - `boolean`, `boolean-array`  → `configParBool`
+ * - `string`, `string-array`    → `configParString`
+ * - `date`, `date-array`        → `configParInt` (stored as day-count offset
+ *                                 from `parameter.referenceJulianDayStart`)
+ *
+ * For scalar types, non-negative range checks are applied (with named exceptions
+ * such as `randomNumberGeneratorSeed`, `h2H`, `h2L`). For string parameters,
+ * a `.txt` extension is appended if missing (except for IDs and coordinate strings).
+ * Errors are reported via `utils.handleError()` for out-of-range or missing values.
+ *
+ * @param utils         Utility object for parsing helpers and error handling.
+ * @param keyword       Parameter name; used as the map key and in error messages.
+ * @param parameterType Data-type string (e.g. `"float"`, `"integer-array"`).
+ * @param parameter     Read-only; provides `referenceJulianDayStart` for date conversion.
+ */
 void INPUT::convertAndCheckAndSetParameterValue(UTILS utils, std::string keyword, std::string parameterType, PARAMETER parameter)
 {
     if (parameterType == "integer")
@@ -504,7 +610,18 @@ void INPUT::convertAndCheckAndSetParameterValue(UTILS utils, std::string keyword
     }
 }
 
-/* transfer the mapped values of all config parameter names to their variables in class PARAMETER */
+/**
+ * @brief Copies all parsed configuration values from the static maps into the
+ *        PARAMETER struct.
+ *
+ * Transfers file names, output flags, simulation period (first/last year),
+ * clipping height, and the RNG seed. Also computes the Julian-day reference
+ * boundaries (`referenceJulianDayStart`, `referenceJulianDayEnd`) and the
+ * total simulation length in days.
+ *
+ * @param parameter Model parameter struct; all configuration fields are written here.
+ * @param utils     Utility object used for Julian-day calculations.
+ */
 void INPUT::transferConfigParameterValueToModelParameter(PARAMETER &parameter, UTILS utils)
 {
     parameter.deimsID = configParString["deimsID"];
@@ -524,6 +641,7 @@ void INPUT::transferConfigParameterValueToModelParameter(PARAMETER &parameter, U
     parameter.soilNitrogenOutputFile = configParBool["soilNitrogenOutputFile"];
     parameter.soilWaterOutputFile = configParBool["soilWaterOutputFile"];
     parameter.soilResourcesPerSoilLayerOutputFile = configParBool["soilResourcesPerSoilLayerOutputFile"];
+    parameter.soilFluxesDetailsOutputFile = configParBool["soilFluxesDetailsOutputFile"];
 
     parameter.outputWritingDatesFile = configParString["outputWritingDatesFile"];
     parameter.clippingHeightOfBiomassMeasurement = configParFloat["clippingHeightOfBiomassMeasurement"];
@@ -536,7 +654,17 @@ void INPUT::transferConfigParameterValueToModelParameter(PARAMETER &parameter, U
     parameter.simulationTimeInDays = parameter.referenceJulianDayEnd - parameter.referenceJulianDayStart + 1;
 }
 
-/* transfer the mapped values of all plant trait parameter names to their variables in class PARAMETER */
+/**
+ * @brief Copies all parsed plant-trait values from the static maps into the
+ *        PARAMETER struct.
+ *
+ * Transfers PFT count, global flags (crowding mortality, seed influx, allocation
+ * mode, etc.), community-level physiological constants, and all per-PFT vectors
+ * (allometric parameters, photosynthesis parameters, allocation fractions, C:N
+ * ratios, water use, etc.).
+ *
+ * @param parameter Model parameter struct; all plant-trait fields are written here.
+ */
 void INPUT::transferPlantTraitsParameterValueToModelParameter(PARAMETER &parameter)
 {
     parameter.pftCount = configParInt["pftCount"];
@@ -605,7 +733,20 @@ void INPUT::transferPlantTraitsParameterValueToModelParameter(PARAMETER &paramet
     }
 }
 
-/* open and read plant traits parameter file */
+/**
+ * @brief Opens and parses the plant-traits parameter file, populating
+ *        PFT-specific fields in the PARAMETER struct.
+ *
+ * Derives the file path from `path` (up three directory levels, then into
+ * `parameters/`). Iterates over all expected plant-trait parameter names,
+ * searches for each, validates format, extracts the data type, converts the
+ * value, and finally calls transferPlantTraitsParameterValueToModelParameter().
+ *
+ * @param path      Path to the main configuration file; used to derive the
+ *                  `parameters/` directory location.
+ * @param utils     Utility object for path splitting and error handling.
+ * @param parameter Model parameter struct; plant-trait fields are written here.
+ */
 void INPUT::openAndReadPlantTraitsFile(std::string path, UTILS utils, PARAMETER &parameter)
 {
     char pathSeparator = utils.getPathSeparator();
@@ -638,7 +779,20 @@ void INPUT::openAndReadPlantTraitsFile(std::string path, UTILS utils, PARAMETER 
     transferPlantTraitsParameterValueToModelParameter(parameter);
 }
 
-/* open and read process setup parameter file */
+/**
+ * @brief Opens and parses the process-setup parameter file, then validates
+ *        the resulting configuration for consistency.
+ *
+ * Derives the file path analogously to openAndReadPlantTraitsFile(). After
+ * transferring values via transferProcessSetupParameterValueToModelParameter(),
+ * calls checkIfProcessSetupParameterValuesAreConsistent() to detect mutually
+ * exclusive module flag combinations.
+ *
+ * @param path      Path to the main configuration file; used to derive the
+ *                  `parameters/` directory location.
+ * @param utils     Utility object for path splitting and error handling.
+ * @param parameter Model parameter struct; process-setup flags are written here.
+ */
 void INPUT::openAndReadProcessSetupFile(std::string path, UTILS utils, PARAMETER &parameter)
 {
     char pathSeparator = utils.getPathSeparator();
@@ -674,6 +828,21 @@ void INPUT::openAndReadProcessSetupFile(std::string path, UTILS utils, PARAMETER
     checkIfProcessSetupParameterValuesAreConsistent(utils, parameter);
 }
 
+/**
+ * @brief Validates that process-setup flags are not set in mutually exclusive
+ *        combinations.
+ *
+ * Checks for incompatible pairs such as:
+ * - Both internal and external (BODIUM) soil modules active simultaneously.
+ * - Both self-coupling get and set interfaces active simultaneously.
+ * - Internal soil module combined with a coupling-interface flag.
+ * - External BODIUM module combined with a coupling-interface flag.
+ *
+ * Calls `utils.handleError()` for each detected inconsistency.
+ *
+ * @param utils     Utility object for error reporting.
+ * @param parameter Read-only; provides the boolean module activation flags.
+ */
 void INPUT::checkIfProcessSetupParameterValuesAreConsistent(UTILS utils, PARAMETER parameter)
 {
 
@@ -708,7 +877,15 @@ void INPUT::checkIfProcessSetupParameterValuesAreConsistent(UTILS utils, PARAMET
     }
 }
 
-/* transfer the mapped values of all process setup parameter names to their variables in class PARAMETER */
+/**
+ * @brief Copies all parsed process-setup values from the static maps into the
+ *        PARAMETER struct.
+ *
+ * Transfers soil-module activation flags (internal, external BODIUM,
+ * self-coupled get/set) and the stochastic simulation flag.
+ *
+ * @param parameter Model parameter struct; process-setup fields are written here.
+ */
 void INPUT::transferProcessSetupParameterValueToModelParameter(PARAMETER &parameter)
 {
     parameter.useInternalSoilModule = configParBool["useInternalSoilModule"];
@@ -719,7 +896,25 @@ void INPUT::transferProcessSetupParameterValueToModelParameter(PARAMETER &parame
     parameter.stochasticSimulation = configParBool["stochasticSimulation"];
 }
 
-/* read-in weather variables from input file */
+/**
+ * @brief Opens and parses the weather file, populating the WEATHER struct with
+ *        the daily meteorological time series for the simulation period.
+ *
+ * Derives the file path from `path` by navigating to
+ * `scenarios/<location>/weather/`. Reads tab-separated rows (one per day)
+ * with seven columns: date, precipitation, full-day temperature, daytime
+ * temperature, PPFD, day length, and potential evapotranspiration. Only rows
+ * within the simulation period (`firstYear`–`lastYear`) are stored.
+ *
+ * Raises an error if the file cannot be opened, if any row has fewer than seven
+ * columns, or if the required start or end date is not present in the file.
+ *
+ * @param path      Path to the main configuration file; used to derive the
+ *                  `scenarios/<location>/weather/` directory.
+ * @param utils     Utility object for string splitting and error handling.
+ * @param parameter Read-only; provides `firstYear`, `lastYear`, and file name.
+ * @param weather   Weather struct; all daily time-series vectors are filled here.
+ */
 void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &parameter, WEATHER &weather)
 {
     char pathSeparator = utils.getPathSeparator();
@@ -827,7 +1022,28 @@ void INPUT::openAndReadWeatherFile(std::string path, UTILS utils, PARAMETER &par
     }
 }
 
-/* read-in management information from input file */
+/**
+ * @brief Opens and parses the management file, populating the MANAGEMENT struct
+ *        with all scheduled land-management events.
+ *
+ * Derives the file path from `path` by navigating to
+ * `scenarios/<location>/management/`. Each data row contains a date followed
+ * by columns for mowing height, fertiliser amount, irrigation amount, per-PFT
+ * sowing amounts, and an information string. NaN values indicate that a
+ * management action does not occur on that day.
+ *
+ * Events falling outside the simulation period are skipped with a warning.
+ * Raises an error if the file cannot be opened, if any row has an unexpected
+ * number of columns, or if a date string cannot be parsed.
+ *
+ * @param path       Path to the main configuration file; used to derive the
+ *                   `scenarios/<location>/management/` directory.
+ * @param utils      Utility object for string splitting and error handling.
+ * @param parameter  Read-only; provides `pftCount`, simulation period bounds,
+ *                   and `referenceJulianDayStart`.
+ * @param management Management struct; mowing, fertilisation, irrigation, and
+ *                   sowing event vectors are filled here.
+ */
 void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &parameter, MANAGEMENT &management)
 {
     char pathSeparator = utils.getPathSeparator();
@@ -1073,7 +1289,30 @@ void INPUT::openAndReadManagementFile(std::string path, UTILS utils, PARAMETER &
     }
 }
 
-/* Reads-in soil parameters from input file */
+/**
+ * @brief Opens and parses the soil parameter file, populating texture and
+ *        per-layer hydraulic properties in the SOIL and PARAMETER structs.
+ *
+ * Derives the file path from `path` by navigating to
+ * `scenarios/<location>/soil/`. The file format is:
+ * - Row 2: silt, clay, and sand content fractions (must sum to 1).
+ * - Rows 5+: per-layer data with columns: layer index, layer width (cm),
+ *   field capacity, permanent wilting point, porosity, and saturated
+ *   hydraulic conductivity.
+ *
+ * Validates that texture fractions sum to 1 within TOLERANCE, that all
+ * values are non-negative and in range, that pwp < fc < porosity holds for
+ * every layer, and that the number of data rows matches the declared layer
+ * count. Raises an error for any violation or if the file cannot be opened.
+ *
+ * @param path      Path to the main configuration file; used to derive the
+ *                  `scenarios/<location>/soil/` directory.
+ * @param utils     Utility object for string splitting and error handling.
+ * @param parameter Model parameter struct; `numberOfSoilLayers`, `soilLayerWidth`,
+ *                  and `soilDepth` are written here.
+ * @param soil      Soil struct; texture fractions and per-layer hydraulic
+ *                  property vectors are filled here.
+ */
 void INPUT::openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parameter, SOIL &soil)
 {
     char pathSeparator = utils.getPathSeparator();

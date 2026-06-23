@@ -3,8 +3,28 @@
 INIT::INIT() {};
 INIT::~INIT() {};
 
-/* main function to initialize state variables of the simulation start */
-/* is done only once at the beginning of a simulation */
+/**
+ * @brief Initialises all model state variables at the start of a simulation.
+ *
+ * This is the single entry point for model initialisation and is called exactly
+ * once before the main time-step loop begins. It delegates to specialised
+ * sub-functions in the following order:
+ * 1. initTimeVariables() — set the start day counter.
+ * 2. initRandomNumberGeneratorSeed() — seed the RNG (from parameter or system).
+ * 3. initVegetationStateVariables() — clear plant cohort lists, recruitment pools,
+ *    and mortality litter pools.
+ * 4. resetVegetationProcessVariables() — zero all per-step process/flux accumulators.
+ * 5. initSoilResourceStateVariables() — initialise soil C/N pools and water content.
+ * 6. resetSoilResourceProcessAndFluxVariables() — zero all soil flux variables.
+ *
+ * @param utils       Utility object for error handling.
+ * @param parameter   Model parameter struct; `day` and RNG seed are written here.
+ * @param community   Plant community object; fully cleared and reset.
+ * @param recruitment Recruitment state; seed pools and germination counters cleared.
+ * @param soil        Soil state object; C/N pools, water content, and all flux variables initialised.
+ * @param interaction Interaction state; LAI arrays reset to zero.
+ * @param weather     Weather data used to compute initial soil pool sizes.
+ */
 void INIT::initModelSimulation(UTILS utils, PARAMETER &parameter, COMMUNITY &community, RECRUITMENT &recruitment, SOIL &soil, INTERACTION &interaction, WEATHER weather)
 {
     /* init time variables */
@@ -23,16 +43,33 @@ void INIT::initModelSimulation(UTILS utils, PARAMETER &parameter, COMMUNITY &com
     initSoilResourceStateVariables(utils, soil, weather, parameter);
 
     /* init process- and flux-specific state variables that will be reset at each time step again */
-    resetSoilResourceProcessAndFluxVariables(parameter, soil);
+    resetSoilResourceProcessAndFluxVariables(utils, parameter, soil);
 }
 
-/* initialization of state variables of time */
+/**
+ * @brief Initialises the simulation time counter.
+ *
+ * Sets `parameter.day` to 1, representing the first day of the simulation.
+ *
+ * @param parameter Model parameter struct; `day` is set to 1.
+ */
 void INIT::initTimeVariables(PARAMETER &parameter)
 {
     parameter.day = 1; // start with the first day
 }
 
-/* initialization of random number generator seed */
+/**
+ * @brief Initialises the random number generator seed.
+ *
+ * If `parameter.randomNumberGeneratorSeed` is set to `std::numeric_limits<int>::min()`
+ * (the sentinel value indicating no user-specified seed), a non-deterministic seed is
+ * drawn from `std::random_device` and stored back in `parameter.randomNumberGeneratorSeed`.
+ * The seed is then assigned to `community.randomNumberIndex` so that all stochastic
+ * processes in the simulation share the same reproducible sequence.
+ *
+ * @param parameter Model parameter struct; `randomNumberGeneratorSeed` may be updated.
+ * @param community Plant community object; `randomNumberIndex` is set to the chosen seed.
+ */
 void INIT::initRandomNumberGeneratorSeed(PARAMETER &parameter, COMMUNITY &community)
 {
     if (parameter.randomNumberGeneratorSeed == std::numeric_limits<int>::min())
@@ -43,7 +80,19 @@ void INIT::initRandomNumberGeneratorSeed(PARAMETER &parameter, COMMUNITY &commun
     community.randomNumberIndex = parameter.randomNumberGeneratorSeed;
 }
 
-/* initialization of the community vector and grassland state variables */
+/**
+ * @brief Initialises vegetation and recruitment state variables to their start-of-simulation values.
+ *
+ * Clears the plant cohort list, resets the cohort count, and sets up empty per-PFT
+ * seed pools and germination time counters in the RECRUITMENT object. Also zeros
+ * all litter pool carbon and nitrogen quantities in the SOIL object that are populated
+ * by the mortality module (surface green/brown litter, soil root litter, soil seed litter).
+ *
+ * @param community   Plant community; cohort list cleared, `totalNumberOfCohortsInCommunity` set to 0.
+ * @param parameter   Read-only; provides `pftCount` for sizing per-PFT containers.
+ * @param recruitment Recruitment state; `seedPool` and `seedGerminationTimeCounter` reset.
+ * @param soil        Soil state; mortality-related litter C/N pools set to zero.
+ */
 void INIT::initVegetationStateVariables(COMMUNITY &community, PARAMETER parameter, RECRUITMENT &recruitment, SOIL &soil)
 {
     // simulation-related variables
@@ -61,7 +110,7 @@ void INIT::initVegetationStateVariables(COMMUNITY &community, PARAMETER paramete
         recruitment.seedGerminationTimeCounter[pft].clear();
     }
 
-    /* Mortality variables */
+    /* Mortality-related litter variables */
     soil.carbonContent_surfaceGreenLitterPool = 0;
     soil.carbonContent_surfaceBrownLitterPool = 0;
     soil.carbonContent_soilRootLitterPool = 0;
@@ -72,6 +121,29 @@ void INIT::initVegetationStateVariables(COMMUNITY &community, PARAMETER paramete
     soil.nitrogenContent_soilSeedLitterPool = 0;
 }
 
+/**
+ * @brief Resets all per-time-step vegetation process and output accumulator variables.
+ *
+ * Called during model initialisation (and at the start of each time step) to clear
+ * variables that accumulate fluxes or summarise community state over a single day.
+ * The following groups are reset:
+ * - **Recruitment**: incoming/outgoing/germinated seed counts per PFT.
+ * - **Interaction / light**: LAI and light-extinction arrays, community height, leaf area
+ *   index accumulators, covered area, above-ground biomass, and litter biomass.
+ * - **Carbon and nitrogen balances**: community-level respiration, NPP, seedling ingrowth,
+ *   and ecosystem C/N balance accumulators.
+ * - **Soil water demand/uptake**: total and per-layer demand and uptake.
+ * - **Soil nitrogen demand/uptake**: total and per-layer demand, uptake, and competitor counts.
+ * - **Output aggregates**: plant counts, yield variables, per-PFT biomass fractions,
+ *   GPP/NPP/respiration summaries, and yield-per-PFT arrays.
+ *
+ * @param parameter   Read-only; provides `pftCount` and `numberOfSoilLayers` for sizing.
+ * @param recruitment Recruitment state; per-PFT seed-flux counters zeroed.
+ * @param community   Plant community; all accumulator and output fields reset.
+ * @param interaction Interaction state; LAI and extinction arrays reset to zero.
+ * @param soil        Soil state (passed by value; not modified — soil fluxes are reset
+ *                    separately by resetSoilResourceProcessAndFluxVariables()).
+ */
 void INIT::resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &recruitment, COMMUNITY &community, INTERACTION &interaction, SOIL soil)
 {
     /// Process-related variables
@@ -82,7 +154,7 @@ void INIT::resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &rec
 
     // 2. Light availability, crowding (interaction)
     interaction.LAI.assign(MAXIMUM_HEIGHT_LAYER + 1, 0.0);
-    interaction.LAIwithLightExtinction.assign(MAXIMUM_HEIGHT_LAYER + 1, 0.0); 
+    interaction.LAIwithLightExtinction.assign(MAXIMUM_HEIGHT_LAYER + 1, 0.0);
     community.maximumHeightOfAllPlants = 0;
     community.totalLeafAreaIndexOfPlantsInCommunity = 0;
     community.greenleafAreaIndexOfPlantsInCommunity = 0;
@@ -141,7 +213,24 @@ void INIT::resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &rec
 }
 
 /**
- * @cite: function adapted from Century 4.0 model
+ * @brief Initialises all soil resource state variables to their start-of-simulation values.
+ *
+ * Sets structural, metabolic, and microbial litter pools to zero; assigns a fixed
+ * initial value to the soil microbial pool; and computes the initial sizes of the
+ * soil active, slow, and passive C/N pools from mean annual weather conditions using
+ * `calculateInitialCarbonContentOfAllSoilPools()`. Mineral nitrogen is set uniformly
+ * across all soil layers, and water content is initialised at field capacity (internal
+ * soil module) or NaN (external soil module). Snow stores and fertilisation/irrigation
+ * inputs are zeroed. Finally, decisive C/N ratios for decomposition are computed for
+ * all pool types.
+ *
+ * @param utils     Utility object for error handling.
+ * @param soil      Soil state object; all pool sizes and auxiliary variables are set.
+ * @param weather   Weather data used to derive mean annual precipitation and temperature
+ *                  for the initial soil pool calculation.
+ * @param parameter Read-only; provides soil module flags, layer count, and field capacity.
+ *
+ * @cite Soil dynamics have been adapted from the Century 4.0 soil organic matter model (https://www.soilcarbonsolutionscenter.com/century-agreement and https://www2.nrel.colostate.edu/projects/irc/#)
  */
 void INIT::initSoilResourceStateVariables(UTILS utils, SOIL &soil, WEATHER weather, PARAMETER parameter)
 {
@@ -205,11 +294,40 @@ void INIT::initSoilResourceStateVariables(UTILS utils, SOIL &soil, WEATHER weath
 
     soil.addedMineralNitrogenToSoilByFertilization = 0;
     soil.addedWaterToSoilByIrrigation = 0;
+
+    /* decisive CN ratios */
+    soil.calculateDecisiveCarbonNitrogenRatiosForDecomposition(utils, "surface_structural");
+    soil.calculateDecisiveCarbonNitrogenRatiosForDecomposition(utils, "soil_structural");
+    soil.calculateDecisiveCarbonNitrogenRatiosForDecomposition(utils, "surface_metabolic");
+    soil.calculateDecisiveCarbonNitrogenRatiosForDecomposition(utils, "soil_metabolic");
+    soil.calculateDecisiveCarbonNitrogenRatiosForDecomposition(utils, "microbes");
+    soil.calculateDecisiveCarbonNitrogenRatiosForDecomposition(utils, "active");
+    soil.calculateDecisiveCarbonNitrogenRatiosForDecomposition(utils, "slow");
+    soil.calculateDecisiveCarbonNitrogenRatiosForDecomposition(utils, "passive");
 }
 
 /**
- * @cite: Century4.0
- * soil pools are initialized based on average weather data
+ * @brief Estimates the initial total carbon content of all soil pools from
+ *        mean annual weather and soil texture.
+ *
+ * Uses an empirical regression equation derived from the Century 4.0 model to
+ * compute a single aggregate carbon content value (g m⁻²) that is subsequently
+ * split between the active (2 %), slow (64 %), and passive (34 %) soil pools.
+ *
+ * Input values are clamped to the valid regression range:
+ * - Mean annual temperature capped at 23 °C.
+ * - Annual precipitation capped at 120 cm.
+ *
+ * @param utils     Utility object for error handling.
+ * @param weather   Weather data; annual precipitation and mean temperature are
+ *                  derived for `parameter.firstYear`.
+ * @param parameter Read-only; provides `firstYear` and the soil `siltContent`
+ *                  and `clayContent` fractions (accessed via `soil`).
+ * @param soil      Read-only; provides `siltContent` and `clayContent` fractions
+ *                  used in the regression.
+ * @return Estimated total initial soil carbon content (g C m⁻²).
+ *
+ * @cite Adapted from the Century 4.0 soil organic matter model (https://www.soilcarbonsolutionscenter.com/century-agreement and https://www2.nrel.colostate.edu/projects/irc/#)
  */
 double INIT::calculateInitialCarbonContentOfAllSoilPools(UTILS utils, WEATHER weather, PARAMETER parameter, SOIL soil)
 {
@@ -228,12 +346,26 @@ double INIT::calculateInitialCarbonContentOfAllSoilPools(UTILS utils, WEATHER we
 
     double initCarbonContentOfSoilPools = ((-8.27E-01 * averageAirTemperature) + (2.24E-02 * averageAirTemperature * averageAirTemperature) + (annualPrecipitation * 1.27E-01) - (9.38E-04 * annualPrecipitation * annualPrecipitation) +
                                            (annualPrecipitation * soil.siltContent * 8.99E-02) + (annualPrecipitation * soil.clayContent * 6.00E-02) + 4.09) *
-                                          1000.0; // g/m²
+                                          1000.0; // g per m²
 
     return (initCarbonContentOfSoilPools);
 }
 
-void INIT::resetSoilResourceProcessAndFluxVariables(PARAMETER parameter, SOIL &soil)
+/**
+ * @brief Resets all soil process and flux variables to zero at the start of each time step.
+ *
+ * Zeroes hydrological fluxes (interception, evaporation, run-off, per-layer downward
+ * water fluxes), all inter-pool carbon and nitrogen transfer fluxes, carbon/nitrogen
+ * respiratory losses from decomposition, gross and net nitrogen mineralisation,
+ * volatilisation, nitrogen fixation, and the decomposition factor. Called once during
+ * model initialisation and then again at the beginning of every daily time step.
+ *
+ * @param utils     Utility object (reserved for future error handling).
+ * @param parameter Read-only; provides `numberOfSoilLayers` for vector sizing.
+ * @param soil      Soil state object; all flux and process variables are set to zero
+ *                  (or 1.0 for `decompositionFactor`).
+ */
+void INIT::resetSoilResourceProcessAndFluxVariables(UTILS utils, PARAMETER parameter, SOIL &soil)
 {
     /* soil water fluxes */
     soil.interception = 0.0;  // interception [mm/day]
@@ -321,6 +453,41 @@ void INIT::resetSoilResourceProcessAndFluxVariables(PARAMETER parameter, SOIL &s
 
     soil.nitrogenFlow_soilPassivePool_to_soilActivePool = 0;
 
+    soil.nitrogenFlux_surfaceStructuralLitterPool_to_soilSlowPool = 0;
+    soil.nitrogenFlux_surfaceStructuralLitterPool_to_soilMicrobesPool = 0;
+    soil.nitrogenFlux_surfaceMetabolicLitterPool_to_soilMicrobesPool = 0;
+
+    soil.nitrogenFlux_soilStructuralLitterPool_to_soilSlowPool = 0;
+    soil.nitrogenFlux_soilStructuralLitterPool_to_soilActivePool = 0;
+    soil.nitrogenFlux_soilMetabolicLitterPool_to_soilActivePool = 0;
+
+    soil.nitrogenFlux_soilMicrobesPool_to_soilSlowPool = 0;
+
+    soil.nitrogenFlux_soilActivePool_to_soilSlowPool = 0;
+    soil.nitrogenFlux_soilActivePool_to_soilPassivePool = 0;
+
+    soil.nitrogenFlux_soilSlowPool_to_soilActivePool = 0;
+    soil.nitrogenFlux_soilSlowPool_to_soilPassivePool = 0;
+
+    soil.nitrogenFlux_soilPassivePool_to_soilActivePool = 0;
+
+    soil.nitrogenFlux_surfaceStructuralLitterPool_to_soilSlowPool = 0;
+    soil.nitrogenFlux_surfaceStructuralLitterPool_to_soilMicrobesPool = 0;
+    soil.nitrogenFlux_soilStructuralLitterPool_to_soilSlowPool = 0;
+    soil.nitrogenFlux_soilStructuralLitterPool_to_soilActivePool = 0;
+    soil.nitrogenFlux_surfaceMetabolicLitterPool_to_soilMicrobesPool = 0;
+    soil.nitrogenFlux_soilMetabolicLitterPool_to_soilActivePool = 0;
+
+    soil.nitrogenFlux_soilMicrobesPool_to_soilSlowPool = 0;
+
+    soil.nitrogenFlux_soilActivePool_to_soilPassivePool = 0;
+    soil.nitrogenFlux_soilActivePool_to_soilSlowPool = 0;
+
+    soil.nitrogenFlux_soilSlowPool_to_soilPassivePool = 0;
+    soil.nitrogenFlux_soilSlowPool_to_soilActivePool = 0;
+
+    soil.nitrogenFlux_soilPassivePool_to_soilActivePool = 0;
+
     soil.nitrogenContent_leachedFromSoil = 0; // overall amount of nitrogen leached from active soil pool during simulation
     soil.leachingNitrogen = 0;                // daily amount of nitrogen leached from active soil pool
 
@@ -342,6 +509,7 @@ void INIT::resetSoilResourceProcessAndFluxVariables(PARAMETER parameter, SOIL &s
     soil.nitrogenGrossMineralization = 0;
     soil.nitrogenNetMineralization = 0;
     soil.nitrogenVolatilization = 0;
+    soil.nitrogenFixationToSoil = 0;
 
     soil.mineralize_surfaceStructuralLitterPool_to_soilSlowPool = 0;
     soil.mineralize_surfaceStructuralLitterPool_to_soilMicrobesPool = 0;

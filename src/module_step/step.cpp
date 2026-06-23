@@ -4,27 +4,25 @@ STEP::STEP() {};
 STEP::~STEP() {};
 
 /**
- * @brief Simulates the entire simulation period.
+ * @brief Runs the full simulation period by iterating over all simulation days.
  *
- * This function runs the model simulation for a specified number of days as defined
- * by the `parameter.simulationTimeInDays`. For each day in the simulation, it calls `runModelSimulationStep` which resets specific state variables,
- * performs daily plant processes, updates the community's dynamic state variables, and saves the simulation results.
+ * Increments `parameter.day` each iteration and delegates to
+ * runModelSimulationStep() for the per-day logic. The total number of days is
+ * given by `parameter.simulationTimeInDays`.
  *
- * @param utils Utility functions for string manipulation and error handling.
- * @param parameter Reference to a `PARAMETER` object containing simulation parameters,
- *                  including the current day of the simulation.
- * @param init An `INIT` object used for initializing and resetting process variables.
- * @param allometry An `ALLOMETRY` object that contains functions related to allometric
- *                  calculations for plant growth and structure.
- * @param community Reference to a `COMMUNITY` object representing the plant community
- *                  being simulated.
- * @param recruitment Reference to a `RECRUITMENT` object handling the plant recruitment processes
- *                    within the community.
- * @param mortality A `MORTALITY` object that handles plant mortality processes in the community.
- * @param growth A `GROWTH` object that calculates plant growth processes of the community.
- * @param management A `MANAGEMENT` object that performs predefined management regimes.
- * @param soil Reference to a `SOIL` object representing soil characteristics and processes.
- * @param output Reference to an `OUTPUT` object for saving simulation results.
+ * @param utils       Utility object for error handling.
+ * @param parameter   Model parameters; `day` is incremented each iteration.
+ * @param init        Provides per-step reset functions.
+ * @param allometry   Allometric helper passed through to daily sub-steps.
+ * @param community   Plant community; updated in place each day.
+ * @param recruitment Recruitment state; updated each day.
+ * @param mortality   Mortality module; applied each day.
+ * @param growth      Growth module; applied each day.
+ * @param management  Management module; applied each day.
+ * @param soil        Soil state; updated each day.
+ * @param weather     Daily weather time-series (read-only inside each step).
+ * @param interaction Interaction state (shading, temperature); updated each day.
+ * @param output      Output buffers and file streams; filled and flushed each day.
  */
 void STEP::runModelSimulation(UTILS utils, PARAMETER &parameter, INIT init, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT &recruitment, MORTALITY mortality, GROWTH growth, MANAGEMENT management, SOIL &soil, WEATHER weather, INTERACTION &interaction, OUTPUT &output)
 {
@@ -38,32 +36,35 @@ void STEP::runModelSimulation(UTILS utils, PARAMETER &parameter, INIT init, ALLO
 }
 
 /**
- * @brief Simulates one simulation step.
+ * @brief Executes all sub-processes for a single simulation day.
  *
- * This function runs one step of the model simulation. It resets specific state variables,
- * performs daily plant processes, updates the community's dynamic state variables, and saves the simulation results.
+ * Performs the following steps in order:
+ * 1. resetVegetationProcessVariables() + resetSoilResourceProcessAndFluxVariables()
+ *    — zero all per-step accumulators.
+ * 2. getEnvironmentalConditionsOfDay() — read weather and compute soil temperature.
+ * 3. doDayStepOfModelSimulation() — run all ecological processes.
+ * 4. updateVegetationStateVariablesForOutput() — aggregate community/PFT output fields.
+ * 5. saveSimulationResultsToBuffer() — append today's results to output buffers.
  *
- * @param utils Utility functions for string manipulation and error handling.
- * @param parameter Reference to a `PARAMETER` object containing simulation parameters,
- *                  including the current day of the simulation.
- * @param init An `INIT` object used for initializing and resetting process variables.
- * @param allometry An `ALLOMETRY` object that contains functions related to allometric
- *                  calculations for plant growth and structure.
- * @param community Reference to a `COMMUNITY` object representing the plant community
- *                  being simulated.
- * @param recruitment Reference to a `RECRUITMENT` object handling the plant recruitment processes
- *                    within the community.
- * @param mortality A `MORTALITY` object that handles plant mortality processes in the community.
- * @param growth A `GROWTH` object that calculates plant growth processes of the community.
- * @param management A `MANAGEMENT` object that performs predefined management regimes.
- * @param soil Reference to a `SOIL` object representing soil characteristics and processes.
- * @param output Reference to an `OUTPUT` object for saving simulation results.
+ * @param utils       Utility object for error handling.
+ * @param parameter   Model parameters; `day` must already be set to the current day.
+ * @param init        Provides per-step reset functions.
+ * @param allometry   Allometric helper passed through to ecological sub-steps.
+ * @param community   Plant community; updated in place.
+ * @param recruitment Recruitment state; updated in place.
+ * @param mortality   Mortality module.
+ * @param growth      Growth module.
+ * @param management  Management module.
+ * @param soil        Soil state; updated in place.
+ * @param weather     Daily weather time-series.
+ * @param interaction Interaction state; updated in place.
+ * @param output      Output buffers; filled by saveSimulationResultsToBuffer().
  */
 void STEP::runModelSimulationStep(UTILS utils, PARAMETER &parameter, INIT init, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT &recruitment, MORTALITY mortality, GROWTH growth, MANAGEMENT management, SOIL &soil, WEATHER weather, INTERACTION &interaction, OUTPUT &output)
 {
     /* Resetting of process- and flux-specific state variables of the vegetation community and soil resources */
     init.resetVegetationProcessVariables(parameter, recruitment, community, interaction, soil);
-    init.resetSoilResourceProcessAndFluxVariables(parameter, soil);
+    init.resetSoilResourceProcessAndFluxVariables(utils, parameter, soil);
 
     /* Environmental conditions of the day */
     double abovegroundLitterBiomass = (soil.carbonContent_surfaceStructuralLitterPool + soil.carbonContent_surfaceMetabolicLitterPool) * (1.0 / CARBON_CONTENT_ODM);
@@ -78,27 +79,27 @@ void STEP::runModelSimulationStep(UTILS utils, PARAMETER &parameter, INIT init, 
 }
 
 /**
- * @brief Performs one day step of all plant processes.
+ * @brief Runs all ecological process modules for a single simulation day.
  *
- * This function executes the daily processes for plant dynamics, including recruitment,
- * mortality, and growth.
+ * Executes, in order:
+ * 1. doPlantRecruitment() — seed influx, germination, new cohort creation.
+ * 2. doPlantMortality() — senescence, litter fall, crowding and basic mortality.
+ * 3. calculateLightAttenuationAndAvailabilityForPlants() — canopy shading pipeline.
+ * 4. doPlantGrowth() — photosynthesis, respiration, NPP, allocation, geometry update.
+ * 5. applyManagementRegime() — mowing, fertilisation, irrigation.
+ * 6. calculateSoilResourceDynamics() — soil water and C/N dynamics.
  *
- * @param utils Utility functions for various operations including error handling.
- * @param parameter Reference to a `PARAMETER` object containing simulation parameters.
- * @param allometry An `ALLOMETRY` object that handles allometric calculations related
- *                  to plant growth and structure.
- * @param community Reference to a `COMMUNITY` object representing the current state
- *                  of the plant community.
- * @param recruitment Reference to a `RECRUITMENT` object that manages the recruitment
- *                    of new plants into the community.
- * @param mortality A `MORTALITY` object that processes and calculates plant mortality and leaf senescence
- *                  within the community.
- * @param growth A `GROWTH` object responsible for calculating the growth of plants
- *               in the community.
- * @param management A `MANAGEMENT` object that applies predefined management regimes
- *                   to the community.
- * @param soil Reference to a `SOIL` object that represents the soil characteristics
- *              affecting plant processes.
+ * @param utils       Utility object for error handling.
+ * @param parameter   Model parameters; `day` used throughout.
+ * @param allometry   Allometric helper for cohort geometry.
+ * @param community   Plant community; cohort state updated by all modules.
+ * @param recruitment Recruitment state; updated by doPlantRecruitment().
+ * @param mortality   Mortality module.
+ * @param growth      Growth module.
+ * @param interaction Interaction state; LAI and radiation updated.
+ * @param management  Management module.
+ * @param soil        Soil state; litter and resource pools updated.
+ * @param weather     Daily weather data.
  */
 void STEP::doDayStepOfModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMETRY allometry, COMMUNITY &community, RECRUITMENT &recruitment, MORTALITY mortality, GROWTH growth, INTERACTION &interaction, MANAGEMENT management, SOIL &soil, WEATHER weather)
 {
@@ -121,16 +122,47 @@ void STEP::doDayStepOfModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMET
     soil.calculateSoilResourceDynamics(utils, parameter, weather, community, interaction);
 }
 
+/**
+ * @brief Appends one row of community-level output variables to
+ *        `output.bufferCommunity`.
+ *
+ * Written columns (tab-separated): Date, DayCount, NumberPlants,
+ * NumberCohorts, LeafAreaIndex, VegetationHeight, VegetationCover,
+ * CBalance, NBalance.
+ * Only executed when `parameter.communityOutputFile` is `true`.
+ *
+ * @param utils     Utility object (reserved for future error handling).
+ * @param parameter Provides `day`, `communityOutputFile` flag.
+ * @param community Read-only; provides community-level aggregates.
+ * @param output    `bufferCommunity` is appended.
+ * @param date      ISO-formatted date string (`"YYYY-MM-DD"`).
+ */
 void STEP::fillCommunityBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, OUTPUT &output, std::string date)
 {
     if (parameter.communityOutputFile)
     {
         output.bufferCommunity << date << "\t" << parameter.day << "\t";
         output.bufferCommunity << community.totalNumberOfPlantsInCommunity << "\t" << community.totalNumberOfCohortsInCommunity << "\t" << community.totalLeafAreaIndexOfPlantsInCommunity << "\t";
-        output.bufferCommunity << community.maximumHeightOfAllPlants << "\t" << community.coveredAreaOfAllPlants << "\t" << community.ecosystemCarbonBalance << "\t" << community.ecosystemNitrogenBalance << std::endl;
+        output.bufferCommunity << community.maximumHeightOfAllPlants << "\t" << (100 * (community.coveredAreaOfAllPlants / SIMULATION_AREA)) << "\t" << community.ecosystemCarbonBalance << "\t" << community.ecosystemNitrogenBalance << std::endl;
     }
 }
 
+/**
+ * @brief Appends one row per PFT of population-level output variables to
+ *        `output.bufferPFTPopulation`.
+ *
+ * Written columns (tab-separated): Date, DayCount, PFT, Fraction,
+ * NumberPlants, CoveredArea, ShootBiomass, GreenShootBiomass,
+ * BrownShootBiomass, ClippedShootBiomass, RootBiomass, RecruitmentBiomass,
+ * ExudationBiomass, GPP, NPP, Respiration.
+ * Only executed when `parameter.pftOutputFile` is `true`.
+ *
+ * @param utils     Utility object (reserved).
+ * @param parameter Provides `day`, `pftCount`, `pftOutputFile` flag.
+ * @param community Read-only; provides per-PFT accumulator vectors.
+ * @param output    `bufferPFTPopulation` is appended.
+ * @param date      ISO-formatted date string.
+ */
 void STEP::fillPFTBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, OUTPUT &output, std::string date)
 {
     if (parameter.pftOutputFile)
@@ -149,6 +181,24 @@ void STEP::fillPFTBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, 
     }
 }
 
+/**
+ * @brief Appends one row per plant cohort of individual-level output variables
+ *        to `output.bufferPlant`.
+ *
+ * Written columns (tab-separated): Date, DayCount, PFT, Age, NumberPlants,
+ * Height, Width, LAI, CoveredArea, RootDepth, NumberSoilLayers,
+ * ShootBiomass, GreenShootBiomass, BrownShootBiomass, ClippedShootBiomass,
+ * RootBiomass, RecruitmentBiomass, ExudationBiomass, GPP, NPP, Respiration,
+ * Radiation, ShadingIndicator, LimitingFactorWater, LimitingFactorNitrogen,
+ * AllocationShoot, AllocationRoot, AllocationRecruitment, AllocationExudation.
+ * Only executed when `parameter.plantCohortOutputFile` is `true`.
+ *
+ * @param utils     Utility object (reserved).
+ * @param parameter Provides `day` and `plantCohortOutputFile` flag.
+ * @param community Read-only; iterates over `allPlants`.
+ * @param output    `bufferPlant` is appended.
+ * @param date      ISO-formatted date string.
+ */
 void STEP::fillPlantCohortBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, OUTPUT &output, std::string date)
 {
     if (parameter.plantCohortOutputFile)
@@ -174,6 +224,20 @@ void STEP::fillPlantCohortBuffer(UTILS utils, PARAMETER parameter, COMMUNITY com
     }
 }
 
+/**
+ * @brief Appends one row of soil carbon pool contents and inter-pool fluxes
+ *        to `output.bufferSoilCarbon`.
+ *
+ * Columns follow the header defined in
+ * OUTPUT::writeHeaderInOutputFiles() for the soil carbon file.
+ * Only executed when `parameter.soilCarbonOutputFile` is `true`.
+ *
+ * @param utils     Utility object (reserved).
+ * @param parameter Provides `day` and `soilCarbonOutputFile` flag.
+ * @param soil      Read-only; provides all C pool contents and fluxes.
+ * @param output    `bufferSoilCarbon` is appended.
+ * @param date      ISO-formatted date string.
+ */
 void STEP::fillSoilCarbonBuffer(UTILS utils, PARAMETER parameter, SOIL soil, OUTPUT &output, std::string date)
 {
     if (parameter.soilCarbonOutputFile)
@@ -211,6 +275,21 @@ void STEP::fillSoilCarbonBuffer(UTILS utils, PARAMETER parameter, SOIL soil, OUT
     }
 }
 
+/**
+ * @brief Appends one row of soil nitrogen pool contents, inter-pool fluxes,
+ *        and mineralisation variables to `output.bufferSoilNitrogen`.
+ *
+ * Columns follow the header defined in
+ * OUTPUT::writeHeaderInOutputFiles() for the soil nitrogen file.
+ * Only executed when `parameter.soilNitrogenOutputFile` is `true`.
+ *
+ * @param utils     Utility object (reserved).
+ * @param parameter Provides `day` and `soilNitrogenOutputFile` flag.
+ * @param soil      Read-only; provides all N pool contents, fluxes, and
+ *                  mineralisation/volatilisation variables.
+ * @param output    `bufferSoilNitrogen` is appended.
+ * @param date      ISO-formatted date string.
+ */
 void STEP::fillSoilNitrogenBuffer(UTILS utils, PARAMETER parameter, SOIL soil, OUTPUT &output, std::string date)
 {
     if (parameter.soilNitrogenOutputFile)
@@ -268,6 +347,22 @@ void STEP::fillSoilNitrogenBuffer(UTILS utils, PARAMETER parameter, SOIL soil, O
     }
 }
 
+/**
+ * @brief Appends one row of soil water flux and snow variables to
+ *        `output.bufferSoilWater`.
+ *
+ * Written columns (tab-separated): Date, DayCount,
+ * addedWaterToSoilByIrrigation, interception, surfaceRunOff, soilRunOff,
+ * solidSnowContent, liquidSnowContent, evaporation, soilTemperature.
+ * Only executed when `parameter.soilWaterOutputFile` is `true`.
+ *
+ * @param utils       Utility object (reserved).
+ * @param parameter   Provides `day` and `soilWaterOutputFile` flag.
+ * @param soil        Read-only; provides hydrological flux variables.
+ * @param interaction Read-only; provides `soilTemperature`.
+ * @param output      `bufferSoilWater` is appended.
+ * @param date        ISO-formatted date string.
+ */
 void STEP::fillSoilWaterBuffer(UTILS utils, PARAMETER parameter, SOIL soil, INTERACTION interaction, OUTPUT &output, std::string date)
 {
     if (parameter.soilWaterOutputFile)
@@ -286,6 +381,23 @@ void STEP::fillSoilWaterBuffer(UTILS utils, PARAMETER parameter, SOIL soil, INTE
     }
 }
 
+/**
+ * @brief Appends one row per soil layer of per-layer water and nitrogen
+ *        resources to `output.bufferSoilResourcesPerSoilLayer`.
+ *
+ * Written columns (tab-separated): Date, DayCount, SoilLayerNumber,
+ * SoilLayerWidth, soilWaterFluxDownwardsOutOfSoilLayer,
+ * waterContent_soilWaterPoolPerSoilLayer,
+ * nitrogenContent_soilMineralPoolPerSoilLayer.
+ * Only executed when `parameter.soilResourcesPerSoilLayerOutputFile` is `true`.
+ *
+ * @param utils     Utility object (reserved).
+ * @param parameter Provides `day`, `numberOfSoilLayers`, `soilLayerWidth`,
+ *                  and `soilResourcesPerSoilLayerOutputFile` flag.
+ * @param soil      Read-only; provides per-layer water and N content vectors.
+ * @param output    `bufferSoilResourcesPerSoilLayer` is appended.
+ * @param date      ISO-formatted date string.
+ */
 void STEP::fillSoilResourcePerSoilLayerBuffer(UTILS utils, PARAMETER parameter, SOIL soil, OUTPUT &output, std::string date)
 {
     if (parameter.soilResourcesPerSoilLayerOutputFile)
@@ -303,6 +415,119 @@ void STEP::fillSoilResourcePerSoilLayerBuffer(UTILS utils, PARAMETER parameter, 
     }
 }
 
+/**
+ * @brief Appends one row of detailed soil decomposition diagnostics to
+ *        `output.bufferSoilFluxesDetails`.
+ *
+ * Columns follow the header defined in
+ * OUTPUT::writeHeaderInOutputFiles() for the soil fluxes details file.
+ * Includes decisive C/N ratios, lignin contents, per-transfer C and N
+ * respiratory losses, immobilisation and mineralisation fluxes, and the
+ * decomposition factor.
+ * Only executed when `parameter.soilFluxesDetailsOutputFile` is `true`.
+ *
+ * @param utils     Utility object (reserved).
+ * @param parameter Provides `day` and `soilFluxesDetailsOutputFile` flag.
+ * @param soil      Read-only; provides all decomposition diagnostic variables.
+ * @param output    `bufferSoilFluxesDetails` is appended.
+ * @param date      ISO-formatted date string.
+ */
+void STEP::fillSoilFluxesDetailsBuffer(UTILS utils, PARAMETER parameter, SOIL soil, OUTPUT &output, std::string date)
+{
+    if (parameter.soilFluxesDetailsOutputFile)
+    {
+        output.bufferSoilFluxesDetails << date << "\t" << parameter.day << "\t";
+        output.bufferSoilFluxesDetails << soil.decisiveCNRatio_soilMicrobesPool_soilSlowPool << "\t";
+        output.bufferSoilFluxesDetails << soil.decisiveCNRatio_soilPassivePool_soilActivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.decisiveCNRatio_soilSlowPool_soilActivePool << "\t"
+                                       << soil.decisiveCNRatio_soilSlowPool_soilPassivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.decisiveCNRatio_soilActivePool_soilSlowPool << "\t"
+                                       << soil.decisiveCNRatio_soilActivePool_soilPassivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.decisiveCNRatio_soilMetabolicLitterPool_soilActivePool << "\t"
+                                       << soil.decisiveCNRatio_surfaceMetabolicLitterPool_soilMicrobesPool << "\t";
+        output.bufferSoilFluxesDetails << soil.decisiveCNRatio_surfaceStructuralLitterPool_soilMicrobesPool << "\t";
+        output.bufferSoilFluxesDetails << soil.decisiveCNRatio_surfaceStructuralLitterPool_soilSlowPool << "\t";
+        output.bufferSoilFluxesDetails << soil.decisiveCNRatio_soilStructuralLitterPool_soilActivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.decisiveCNRatio_soilStructuralLitterPool_soilSlowPool << "\t";
+
+        output.bufferSoilFluxesDetails << soil.ligninContent_surfaceStructuralLitterPool << "\t";
+        output.bufferSoilFluxesDetails << soil.ligninContent_soilStructuralLitterPool << "\t";
+
+        output.bufferSoilFluxesDetails << soil.respiration_decompositionCarbon_surfaceStructuralLitterPool_soilSlowPool << "\t";
+        output.bufferSoilFluxesDetails << soil.respiration_decompositionCarbon_surfaceStructuralLitterPool_soilMicrobesPool << "\t";
+        output.bufferSoilFluxesDetails << soil.respiration_decompositionCarbon_soilStructuralLitterPool_soilSlowPool << "\t";
+        output.bufferSoilFluxesDetails << soil.respiration_decompositionCarbon_soilStructuralLitterPool_soilActivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.respiration_decompositionCarbon_surfaceMetabolicLitterPool_soilMicrobesPool << "\t";
+        output.bufferSoilFluxesDetails << soil.respiration_decompositionCarbon_soilMetabolicLitterPool_soilActivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.respiration_decompositionCarbon_soilMicrobesPool_soilSlowPool << "\t";
+        output.bufferSoilFluxesDetails << soil.respiration_decompositionCarbon_soilActivePool_soilPassiveAndSlowPool << "\t";
+        output.bufferSoilFluxesDetails << soil.respiration_decompositionCarbon_soilSlowPool_soilPassiveAndActivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.respiration_decompositionCarbon_soilPassivePool_soilActivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.respirationCarbon_surface_litter << "\t";
+        output.bufferSoilFluxesDetails << soil.respirationCarbon_soil_litter << "\t";
+        output.bufferSoilFluxesDetails << soil.respirationCarbon_litter << "\t";
+        output.bufferSoilFluxesDetails << soil.respirationCarbon_soilpools << "\t";
+
+        output.bufferSoilFluxesDetails << soil.respiration_decompositionNitrogen_surfaceStructuralLitterPool_soilSlowPool << "\t";
+        output.bufferSoilFluxesDetails << soil.respiration_decompositionNitrogen_surfaceStructuralLitterPool_soilMicrobesPool << "\t";
+        output.bufferSoilFluxesDetails << soil.respiration_decompositionNitrogen_soilStructuralLitterPool_soilSlowPool << "\t";
+        output.bufferSoilFluxesDetails << soil.respiration_decompositionNitrogen_soilStructuralLitterPool_soilActivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.respiration_decompositionNitrogen_surfaceMetabolicLitterPool_soilMicrobesPool << "\t";
+        output.bufferSoilFluxesDetails << soil.respiration_decompositionNitrogen_soilMetabolicLitterPool_soilActivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.respiration_decompositionNitrogen_soilMicrobesPool_soilSlowPool << "\t";
+        output.bufferSoilFluxesDetails << soil.respiration_decompositionNitrogen_soilActivePool_soilPassiveAndSlowPool << "\t";
+        output.bufferSoilFluxesDetails << soil.respiration_decompositionNitrogen_soilSlowPool_soilPassiveAndActivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.respiration_decompositionNitrogen_soilPassivePool_soilActivePool << "\t";
+
+        output.bufferSoilFluxesDetails << soil.immobilize_surfaceStructuralLitterPool_to_soilSlowPool << "\t";
+        output.bufferSoilFluxesDetails << soil.immobilize_surfaceStructuralLitterPool_to_soilMicrobesPool << "\t";
+        output.bufferSoilFluxesDetails << soil.immobilize_soilStructuralLitterPool_to_soilSlowPool << "\t";
+        output.bufferSoilFluxesDetails << soil.immobilize_soilStructuralLitterPool_to_soilActivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.immobilize_surfaceMetabolicLitterPool_to_soilMicrobesPool << "\t";
+        output.bufferSoilFluxesDetails << soil.immobilize_soilMetabolicLitterPool_to_soilActivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.immobilize_soilMicrobesPool_to_soilSlowPool << "\t";
+        output.bufferSoilFluxesDetails << soil.immobilize_soilActivePool_to_soilPassivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.immobilize_soilActivePool_to_soilSlowPool << "\t";
+        output.bufferSoilFluxesDetails << soil.immobilize_soilSlowPool_to_soilPassivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.immobilize_soilSlowPool_to_soilActivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.immobilize_soilPassivePool_to_soilActivePool << "\t";
+
+        output.bufferSoilFluxesDetails << soil.mineralize_surfaceStructuralLitterPool_to_soilSlowPool << "\t";
+        output.bufferSoilFluxesDetails << soil.mineralize_surfaceStructuralLitterPool_to_soilMicrobesPool << "\t";
+
+        output.bufferSoilFluxesDetails << soil.mineralize_soilStructuralLitterPool_to_soilSlowPool << "\t";
+        output.bufferSoilFluxesDetails << soil.mineralize_soilStructuralLitterPool_to_soilActivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.mineralize_surfaceMetabolicLitterPool_to_soilMicrobesPool << "\t";
+        output.bufferSoilFluxesDetails << soil.mineralize_soilMetabolicLitterPool_to_soilActivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.mineralize_soilMicrobesPool_to_soilSlowPool << "\t";
+        output.bufferSoilFluxesDetails << soil.mineralize_soilActivePool_to_soilPassivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.mineralize_soilActivePool_to_soilSlowPool << "\t";
+        output.bufferSoilFluxesDetails << soil.mineralize_soilSlowPool_to_soilPassivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.mineralize_soilSlowPool_to_soilActivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.mineralize_soilPassivePool_to_soilActivePool << "\t";
+        output.bufferSoilFluxesDetails << soil.decompositionFactor;
+
+        output.bufferSoilFluxesDetails << std::endl;
+    }
+}
+
+/**
+ * @brief Computes the ISO date string for today and delegates to all eight
+ *        `fill*Buffer()` helpers.
+ *
+ * Calls, in order: fillCommunityBuffer(), fillPFTBuffer(),
+ * fillPlantCohortBuffer(), fillSoilCarbonBuffer(), fillSoilNitrogenBuffer(),
+ * fillSoilWaterBuffer(), fillSoilResourcePerSoilLayerBuffer(), and
+ * fillSoilFluxesDetailsBuffer().
+ *
+ * @param utils       Utility object for date calculations.
+ * @param parameter   Provides `day` and `referenceJulianDayStart`.
+ * @param community   Read-only; passed to community/PFT/cohort buffer functions.
+ * @param interaction Read-only; provides `soilTemperature` for water buffer.
+ * @param output      All `buffer*` streams are appended.
+ * @param soil        Read-only; passed to all soil buffer functions.
+ * @param date        ISO-formatted date string (`"YYYY-MM-DD"`).
+ */
 void STEP::fillSimulationResultsToBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, INTERACTION interaction, OUTPUT &output, SOIL soil, std::string date)
 {
     fillCommunityBuffer(utils, parameter, community, output, date);
@@ -312,29 +537,29 @@ void STEP::fillSimulationResultsToBuffer(UTILS utils, PARAMETER parameter, COMMU
     fillSoilNitrogenBuffer(utils, parameter, soil, output, date);
     fillSoilWaterBuffer(utils, parameter, soil, interaction, output, date);
     fillSoilResourcePerSoilLayerBuffer(utils, parameter, soil, output, date);
+    fillSoilFluxesDetailsBuffer(utils, parameter, soil, output, date);
 }
 
 /**
- * @brief Saves the simulation results to a buffer for output.
+ * @brief Converts the current simulation day to an ISO date string, then
+ *        conditionally fills all output buffers and flushes them to disk.
  *
- * This function stores the simulation results of the current day into a buffer,
- * which can later be written to an output file. The results include information
- * about the plant functional types (PFTs) present in the community, including
- * their composition and the number of individual plants. The data is saved
- * conditionally based on whether specific output writing dates are configured.
+ * Two operating modes:
+ * - **Date-list mode** (`output.outputWritingDatesFileOpened == true`):
+ *   results are only buffered and flushed on days that appear in
+ *   `output.outputWritingDates`.
+ * - **Daily mode**: results are buffered and flushed every simulation day.
  *
- * @param parameter A `PARAMETER` object containing simulation parameters such as
- *                  the current day and the number of plant functional types (PFTs).
- * @param community A `COMMUNITY` object that holds the current state of the plant
- *                  community, including its composition and number of plants per PFT.
- * @param output Reference to an `OUTPUT` object that manages the output buffer
- *               and handles writing the results to files.
+ * In both cases, after filling the buffers,
+ * OUTPUT::writeSimulationResultsToOutputFiles() is called to flush the
+ * buffers to the open file streams.
  *
- * The function distinguishes between two cases:
- * - If the `outputWritingDatesFileOpened` is true, results are only saved for
- *   the days specified in `output.outputWritingDates`.
- * - Otherwise, results for every day of the simulation are stored directly in the
- *   buffer.
+ * @param utils       Utility object; used for date conversion.
+ * @param parameter   Provides `day`, `referenceJulianDayStart`, and output flags.
+ * @param community   Read-only; community state variables for output.
+ * @param interaction Read-only; provides `soilTemperature`.
+ * @param output      Output object; `buffer*` streams and file streams updated.
+ * @param soil        Read-only; soil state variables for output.
  */
 void STEP::saveSimulationResultsToBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, INTERACTION interaction, OUTPUT &output, SOIL soil)
 {

@@ -1,3 +1,28 @@
+/**
+ * @file plant.h
+ * @brief Declares the PLANT class, which represents a single plant cohort in
+ *        the grassland simulation.
+ *
+ * A cohort groups a number of identical plants (`amount`) that share the same
+ * state variables. All quantities stored here refer to **one representative
+ * individual**; community-level totals are computed by multiplying by `amount`
+ * in the respective modules.
+ *
+ * PLANT objects are heap-allocated and managed via `std::shared_ptr<PLANT>` in
+ * `COMMUNITY::allPlants`. New cohorts are created by the recruitment module;
+ * dead cohorts are removed by MORTALITY after all death processes.
+ *
+ * Consistent units:
+ * - Length / height / depth / width: **cm**
+ * - Area: **cm²**
+ * - Biomass: **g ODM** (organic dry matter)
+ * - Carbon: **g C**
+ * - Nitrogen: **g N**
+ * - Fluxes (GPP, NPP, respiration, demands/uptakes): **g ODM d⁻¹** or **g C/N d⁻¹**
+ * - LAI: **m² m⁻²** (dimensionless)
+ * - Radiation: **µmol photons m⁻² s⁻¹**
+ * - Allocation fractions, limiting factors: **dimensionless (0–1)**
+ */
 #pragma once
 #include "allometry.h"
 #include "../module_parameter/parameter.h"
@@ -6,30 +31,42 @@
 #include <iostream>
 
 /**
- * @brief Represents a plant in the simulation.
+ * @class PLANT
+ * @brief Represents one plant cohort — a group of identical individual plants
+ *        described by a single set of state variables.
  *
- * The `PLANT` class encapsulates the attributes and behaviors of a plant,
- * including its biological and ecological properties. This class is used
- * to manage individual plant instances in the community.
+ * State variables cover geometry, biomass pools (C and N), light climate,
+ * carbon-balance fluxes, NPP allocation fractions, and water/nitrogen
+ * demand/uptake fields. All values refer to a single representative plant;
+ * multiply by `amount` for cohort-level or community-level totals.
  */
 class PLANT
 {
 public:
+    /** @brief Default constructor. All members are value-initialised. */
     PLANT();
 
     /**
-     * @brief Constructor for the PLANT class.
+     * @brief Constructs and fully initialises a new plant cohort at seedling stage.
      *
-     * Initializes a new instance of the PLANT class. This constructor sets
-     * up the plant's initial state and attributes based on the provided
-     * parameters.
+     * Sets all geometry, biomass, carbon, nitrogen, allocation, light, and
+     * demand/uptake fields from the seed mass and PFT-specific parameters.
+     * Initial biomass equals `parameter.seedMasses[pft]`; height, width,
+     * covered area, and LAI are computed via the provided allometry object.
+     * NPP allocation fractions are initialised from the shoot-root ratio and
+     * exudation fraction; recruitment allocation is set to zero (seedlings do
+     * not produce seeds). All per-layer water and nitrogen vectors are sized to
+     * `parameter.numberOfSoilLayers` and filled with zero.
      *
-     * @param parameter The simulation parameters that define plant properties.
-     * @param allometry The allometry object that provides methods for calculating
-     *              plant dimensions and biomass based on allometric relationships.
-     * @param pft The plant functional type identifier.
-     * @param plantBiomass The initial biomass of the plant in g(ODM).
-     * @param amount The number of plants in the cohort.
+     * Raises an error if:
+     * - `plantLifeSpan == "annual"` but `maturityAges[pft] > 365`.
+     * - The shoot-root ratio would cause division by zero in NPP allocation.
+     *
+     * @param utils     Utility object for error handling.
+     * @param parameter PFT-specific and global model parameters.
+     * @param allometry Allometric helper for geometry and biomass conversions.
+     * @param pft       Plant functional type index (0-based).
+     * @param amount    Number of individual plants represented by this cohort.
      */
     PLANT(UTILS utils, PARAMETER parameter, ALLOMETRY allometry, int pft, double amount) : pft(pft), amount(amount)
     {
@@ -92,7 +129,6 @@ public:
         lai = laiGreen + laiBrown;
 
         /* mortality */
-        annualMortality = 0.0;
         if (parameter.plantLifeSpan[pft] == "annual" && parameter.maturityAges[pft] > 365)
         {
             utils.handleError("Plant species is defined as annual, but their maturity age is set to an age larger than one year. Please adjust maturityAges in the plant traits file!");
@@ -169,98 +205,330 @@ public:
         exudationNitrogenUptake = 0.0;
         limitingFactorNppNitrogen = 1.0;
     }
+
+    /** @brief Destructor. No dynamic resources are owned; all members destroyed automatically. */
     ~PLANT();
 
-    double amount; /// Number of plants in cohort with equal properties listed below (representative for ONE plant)
-    short pft;     /// Number of plant functional types (PFT)
-    double age;    /// Plant age (in days)
+    // =========================================================================
+    // Identity and cohort size
+    // =========================================================================
 
-    double coveredArea;            /// Ground area covered by plant (in square cm)
-    double width;                  /// Plant width (in cm)
-    double height;                 /// Plant height (in cm)
-    double laiGreen;               /// Green leaf area index of a plant (in square cm per square cm)
-    double laiBrown;               /// Senescent leaf area index of a plant (in square cm per square cm)
-    double lai;                    /// Leaf area index of plant (in square cm per square cm)
-    double rootingDepth;           /// Rooting depth (in cm)
-    int numberOfSoilLayersRooting; /// Number of soil layer a plant is rooting down to
+    /** @brief Number of identical individual plants represented by this cohort. */
+    double amount;
 
-    double shootBiomass;                    /// Aboveground shoot biomass (in gODM)
-    double shootBiomassGreenLeaves;         /// Green photosynthetic active biomass of plant shoot (in gODM)
-    double shootBiomassBrownLeaves;         /// Senescent photosynthetic inactive brown biomass of plant shoot (in gODM)
-    double shootBiomassAboveClippingHeight; /// Shoot biomass above the clipping height of field measurements (in gODM)
-    double rootBiomass;                     /// Belowground root biomass (in gODM)
-    double recruitmentBiomass;              /// Recruitment biomass (in gODM)
-    double exudationBiomass;                /// Exudation biomass (in gODM)
-    double plantBiomass;                    /// Total plant biomass of shoot and root (in gODM)
+    /** @brief Plant functional type index (0-based); indexes into all PFT parameter vectors. */
+    short pft;
 
-    double shootCarbonGreenLeaves; /// Carbon content in biomass of green plant shoot (in gC)
-    double shootCarbonBrownLeaves; /// Carbon content in biomass of senescent brown plant shoot (in gC)
-    double shootCarbon;            /// Carbon content in biomass of plant shoot (in gC)
-    double rootCarbon;             /// Carbon content in belowground root biomass (in gC)
-    double recruitmentCarbon;      /// Carbon content in recruitment biomass per plant (in gC)
-    double exudationCarbon;        /// Carbon content in exudation biomass per plant (in gC)
-    double plantCarbon;            /// Carbon content in biomass per plant of root and shoot (in gC)
+    /** @brief Plant age (days since germination; incremented each time step). */
+    double age;
 
-    double shootNitrogenGreenLeaves; /// Nitrogen content in biomass of green plant shoot (in gN)
-    double shootNitrogenBrownLeaves; /// Nitrogen content in biomass of senescent brown plant shoot (in gN)
-    double shootNitrogen;            /// Nitrogen content in biomass of plant shoot (in gN)
-    double rootNitrogen;             /// Nitrogen content in belowground root biomass (in gN)
-    double recruitmentNitrogen;      /// Nitrogen content in recruitment biomass per plant (in gN)
-    double exudationNitrogen;        /// Nitrogen content in exudation biomass per plant (in gN)
-    double plantNitrogen;            /// Nitrogen content in biomass per plant of root and shoot (in gN)
+    // =========================================================================
+    // Geometry
+    // =========================================================================
 
-    double annualMortality;                   /// Annual probability for a plant to die
-    double cumulativeOvertoppingCommunityLAI; /// Cumulative leaf area index above a plant accounting for light extinction (in square cm per square cm)
-    double availableRadiation;                /// Incoming radiation [micromol(photon) per square m per second]
-    double shadingIndicator;                  /// Fraction of sunlight reaching the plant in relation to full sun light (-)
+    /** @brief Ground area covered by the plant canopy (cm²). */
+    double coveredArea;
 
-    double gpp;                               /// Gross primary productivity GPP (in gODM per day)
-    double npp;                               /// Net primary productivity NPP (in gODM per day)
-    double nppBuffer;                         /// Buffer of GPP (in gODM per d) if NPP < 0
-    double totalRespiration;                  /// Total respiration (in gODM per day)
-    double growthRespiration;                 /// Growth respiration (in gODM per day)
-    double maintenanceRespiration;            /// Maintanance respiration (in gODM per day)
-    double airTemperatureEffectOnRespiration; /// Effect of full-day air tempature on maintenance respiration
-    double airTemperatureEffectOnGpp;         /// Effect of daytime air temperature on GPP
+    /** @brief Canopy diameter / width (cm). */
+    double width;
 
-    double nppAllocationShoot;       /// Allocation rate of NPP to shoot growth
-    double nppAllocationRoot;        /// Allocation rate of NPP to root growth
-    double nppAllocationRecruitment; /// Allocation rate of NPP to seed production (recruitment biomass)
-    double nppAllocationExudation;   /// Allocation rate of NPP to exudates
+    /** @brief Plant height (cm). */
+    double height;
 
-    double limitingFactorGppWater; /// Limitation factor addressing the impact of soil water deficit and surplus on GPP
+    /** @brief Green (photosynthetically active) leaf area index (m² m⁻²). */
+    double laiGreen;
+
+    /** @brief Brown (senescent) leaf area index (m² m⁻²). */
+    double laiBrown;
+
+    /** @brief Total leaf area index = laiGreen + laiBrown (m² m⁻²). */
+    double lai;
+
+    /** @brief Root-zone depth (cm); computed from root biomass via the allometric power-law equation. */
+    double rootingDepth;
+
+    /** @brief Number of soil layers reached by plant roots (integer ≥ 1). */
+    int numberOfSoilLayersRooting;
+
+    // =========================================================================
+    // Biomass pools (g ODM per plant)
+    // =========================================================================
+
+    /** @brief Total aboveground shoot biomass = green + brown leaves (g ODM). */
+    double shootBiomass;
+
+    /** @brief Photosynthetically active green shoot biomass (g ODM). */
+    double shootBiomassGreenLeaves;
+
+    /** @brief Senescent brown shoot biomass (g ODM). */
+    double shootBiomassBrownLeaves;
+
+    /**
+     * @brief Shoot biomass above the biomass-measurement clipping height (g ODM).
+     * Represents the harvestable fraction for comparison with field clip data.
+     */
+    double shootBiomassAboveClippingHeight;
+
+    /** @brief Total belowground root biomass (g ODM). */
+    double rootBiomass;
+
+    /**
+     * @brief Accumulated biomass in the seed/recruitment pool (g ODM).
+     * Grows via NPP allocation; seeds are drawn from this pool by the
+     * recruitment module.
+     */
+    double recruitmentBiomass;
+
+    /**
+     * @brief Daily root exudate biomass produced (g ODM d⁻¹).
+     */
+    double exudationBiomass;
+
+    /** @brief Total plant biomass = shoot + root (g ODM). */
+    double plantBiomass;
+
+    // =========================================================================
+    // Carbon pools (g C per plant)
+    // =========================================================================
+
+    /** @brief Carbon in green shoot biomass (g C). */
+    double shootCarbonGreenLeaves;
+
+    /** @brief Carbon in brown shoot biomass (g C). */
+    double shootCarbonBrownLeaves;
+
+    /** @brief Total carbon in shoot biomass (g C). */
+    double shootCarbon;
+
+    /** @brief Carbon in root biomass (g C). */
+    double rootCarbon;
+
+    /** @brief Carbon in recruitment (seed) biomass (g C). */
+    double recruitmentCarbon;
+
+    /** @brief Carbon in exudate biomass (g C). */
+    double exudationCarbon;
+
+    /** @brief Total carbon in shoot + root biomass (g C). */
+    double plantCarbon;
+
+    // =========================================================================
+    // Nitrogen pools (g N per plant)
+    // =========================================================================
+
+    /** @brief Nitrogen in green shoot biomass (g N). */
+    double shootNitrogenGreenLeaves;
+
+    /** @brief Nitrogen in brown shoot biomass (g N). */
+    double shootNitrogenBrownLeaves;
+
+    /** @brief Total nitrogen in shoot biomass (g N). */
+    double shootNitrogen;
+
+    /** @brief Nitrogen in root biomass (g N). */
+    double rootNitrogen;
+
+    /** @brief Nitrogen in recruitment (seed) biomass (g N). */
+    double recruitmentNitrogen;
+
+    /** @brief Nitrogen in exudate biomass (g N). */
+    double exudationNitrogen;
+
+    /** @brief Total nitrogen in shoot + root biomass (g N). */
+    double plantNitrogen;
+
+    // =========================================================================
+    // Mortality
+    // =========================================================================
+
+    // =========================================================================
+    // Light climate
+    // =========================================================================
+
+    /**
+     * @brief Extinction-weighted cumulative community LAI above the plant's top
+     *        layer (dimensionless).
+     */
+    double cumulativeOvertoppingCommunityLAI;
+
+    /**
+     * @brief Photosynthetically active radiation available to this plant after
+     *        canopy attenuation (µmol photons m⁻² s⁻¹).
+     */
+    double availableRadiation;
+
+    /**
+     * @brief Dimensionless shading indicator (0–1): ratio of available to
+     *        full-sun radiation.
+     */
+    double shadingIndicator;
+
+    // =========================================================================
+    // Carbon-balance fluxes (g ODM d⁻¹ per plant unless noted)
+    // =========================================================================
+
+    /** @brief Gross primary productivity (g ODM d⁻¹). */
+    double gpp;
+
+    /** @brief Net primary productivity (g ODM d⁻¹). */
+    double npp;
+
+    /**
+     * @brief Carry-over buffer for negative NPP (g ODM).
+     * When GPP < maintenance respiration, the deficit is stored here and
+     * deducted from NPP in the next time step.
+     */
+    double nppBuffer;
+
+    /** @brief Total respiration = maintenance + growth respiration (g ODM d⁻¹). */
+    double totalRespiration;
+
+    /** @brief Growth respiration (g ODM d⁻¹). */
+    double growthRespiration;
+
+    /** @brief Maintenance respiration (g ODM d⁻¹). */
+    double maintenanceRespiration;
+
+    /**
+     * @brief Temperature-based scaling factor for maintenance respiration (0–1).
+     */
+    double airTemperatureEffectOnRespiration;
+
+    /**
+     * @brief Temperature-based reduction factor for GPP (0–1).
+     */
+    double airTemperatureEffectOnGpp;
+
+    // =========================================================================
+    // NPP allocation fractions (dimensionless, sum to 1)
+    // =========================================================================
+
+    /** @brief Fraction of NPP allocated to shoot growth (0–1). */
+    double nppAllocationShoot;
+
+    /** @brief Fraction of NPP allocated to root growth (0–1). */
+    double nppAllocationRoot;
+
+    /** @brief Fraction of NPP allocated to seed production (0–1; 0 for immature plants). */
+    double nppAllocationRecruitment;
+
+    /** @brief Fraction of NPP allocated to root exudates (0–1). */
+    double nppAllocationExudation;
+
+    // =========================================================================
+    // Soil water demand and uptake
+    // =========================================================================
+
+    /**
+     * @brief GPP reduction factor due to soil water stress (0–1).
+     * 1 = no limitation; < 1 = water-limited.
+     */
+    double limitingFactorGppWater;
+
+    /** @brief Intermediate water-limitation factor based on potential evapotranspiration (reserved). */
     double limitingFactorGppPET;
+
+    /** @brief Intermediate water-limitation factor based on permanent wilting point (reserved). */
     double limitingFactorGppPWP;
+
+    /** @brief Combined total water-limitation factor on GPP (reserved). */
     double limitingFactorGppTotal;
 
+    /** @brief Total daily soil water demand of this plant (mm d⁻¹). */
     double soilWaterDemand;
+
+    /** @brief Total daily soil water uptake of this plant (mm d⁻¹). */
     double soilWaterUptake;
+
+    /**
+     * @brief Per-layer soil water demand (mm d⁻¹ per layer).
+     */
     std::vector<double> soilWaterDemandPerSoilLayer;
+
+    /**
+     * @brief Per-layer soil water uptake (mm d⁻¹ per layer).
+     */
     std::vector<double> soilWaterUptakePerSoilLayer;
 
-    double rhizobiaNitrogenUptake;          /// Uptake of nitrogen through rhizobia symbiosis (in gN per day)
-    double limitingFactorSymbiosisRhizobia; /// Limitation factor addressing the impact of rhizobia symbiosis efficiency on nitrogen fixation
-    double nitrogenSurplus;                 /// Nitrogen surplus provided by leaf senescence and nitrogen retranslocation to green leaves (in gN)
+    // =========================================================================
+    // Soil nitrogen demand and uptake
+    // =========================================================================
 
-    double nitrogenDemandForGrowthOfShoot; /// Nitrogen demand for shoot growth (in gN)
-    double nitrogenDemandForGrowthOfRoot;  /// Nitrogen demand for root growth (in gN)
-    double nitrogenDemandForReproduction;  /// Nitrogen demand for recruitment growth (in gN)
-    double nitrogenDemandForExudation;     /// Nitrogen demand for exudation (in gN)
-    double totalPlantNitrogenDemand;       /// Total nitrogen demand of plant (in gN)
+    /**
+     * @brief Daily nitrogen taken up via rhizobial symbiosis (g N d⁻¹).
+     */
+    double rhizobiaNitrogenUptake;
 
-    double nitrogenDemandGrowthFractionShoot;        /// Fraction of nitrogen demand for growth allocated to shoot growth
-    double nitrogenDemandGrowthFractionRoot;         /// Fraction of nitrogen demand for growth allocated to root growth
-    double nitrogenDemandGrowthFractionReproduction; /// Fraction of nitrogen demand for growth allocated to recruitment growth
-    double nitrogenDemandGrowthFractionExudation;    /// Fraction of nitrogen demand for growth allocated to exudation
+    /**
+     * @brief Scaling factor for rhizobial nitrogen fixation efficiency (0–1).
+     * Modulates how much of the theoretical fixation capacity is realised.
+     */
+    double limitingFactorSymbiosisRhizobia;
 
-    double totalSoilNitrogenDemand;                     /// Total nitrogen demand of plant from soil (in gN)
-    std::vector<double> soilNitrogenDemandPerSoilLayer; /// Nitrogen demand of plant from soil per soil layer (in gN)
-    double totalSoilNitrogenUptake;                     /// Total nitrogen uptake of plant from soil (in gN)
-    std::vector<double> soilNitrogenUptakePerSoilLayer; /// Uptake of soil nitrogen per soil layer (in gN per day)
+    /**
+     * @brief Internal nitrogen surplus accumulated from leaf-senescence
+     *        retranslocation (g N).
+     */
+    double nitrogenSurplus;
 
-    double shootNitrogenUptakeForGreenLeaves; /// Uptake of soil nitrogen at plant shoot (in gN per day)
-    double rootNitrogenUptake;                /// Uptake of soil nitrogen at plant root (in gN per day)
-    double recruitmentNitrogenUptake;         /// Uptake of soil nitrogen for seed production (recruitment) (in gN per day)
-    double exudationNitrogenUptake;           /// Uptake of soil nitrogen for exudation (in gN per day)
-    double limitingFactorNppNitrogen;         /// Limitation factor addressing the impact of soil nitrogen deficits on NPP
+    /** @brief Daily nitrogen demand for shoot growth (g N d⁻¹). */
+    double nitrogenDemandForGrowthOfShoot;
+
+    /** @brief Daily nitrogen demand for root growth (g N d⁻¹). */
+    double nitrogenDemandForGrowthOfRoot;
+
+    /** @brief Daily nitrogen demand for seed production (g N d⁻¹). */
+    double nitrogenDemandForReproduction;
+
+    /** @brief Daily nitrogen demand for exudate production (g N d⁻¹). */
+    double nitrogenDemandForExudation;
+
+    /** @brief Total daily nitrogen demand of this plant across all pools (g N d⁻¹). */
+    double totalPlantNitrogenDemand;
+
+    /** @brief Fraction of total growth N demand attributed to shoot growth (0–1). */
+    double nitrogenDemandGrowthFractionShoot;
+
+    /** @brief Fraction of total growth N demand attributed to root growth (0–1). */
+    double nitrogenDemandGrowthFractionRoot;
+
+    /** @brief Fraction of total growth N demand attributed to seed production (0–1). */
+    double nitrogenDemandGrowthFractionReproduction;
+
+    /** @brief Fraction of total growth N demand attributed to exudation (0–1). */
+    double nitrogenDemandGrowthFractionExudation;
+
+    /** @brief Total daily nitrogen demand met from soil mineral pools (g N d⁻¹). */
+    double totalSoilNitrogenDemand;
+
+    /**
+     * @brief Per-layer soil nitrogen demand (g N d⁻¹ per layer).
+     */
+    std::vector<double> soilNitrogenDemandPerSoilLayer;
+
+    /** @brief Total daily nitrogen uptake from soil mineral pools (g N d⁻¹). */
+    double totalSoilNitrogenUptake;
+
+    /**
+     * @brief Per-layer soil nitrogen uptake (g N d⁻¹ per layer).
+     */
+    std::vector<double> soilNitrogenUptakePerSoilLayer;
+
+    /** @brief Nitrogen uptake allocated to green shoot growth (g N d⁻¹). */
+    double shootNitrogenUptakeForGreenLeaves;
+
+    /** @brief Nitrogen uptake allocated to root growth (g N d⁻¹). */
+    double rootNitrogenUptake;
+
+    /** @brief Nitrogen uptake allocated to seed production (g N d⁻¹). */
+    double recruitmentNitrogenUptake;
+
+    /** @brief Nitrogen uptake allocated to exudate production (g N d⁻¹). */
+    double exudationNitrogenUptake;
+
+    /**
+     * @brief NPP reduction factor due to soil nitrogen limitation (0–1).
+     * 1 = no limitation; < 1 = N-limited.
+     */
+    double limitingFactorNppNitrogen;
 };
