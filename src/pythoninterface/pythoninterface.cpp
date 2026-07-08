@@ -238,6 +238,38 @@ double PYTHONINTERFACE::getMeanNitrogenLimitationFactor()
     return summedNitrogenLimitationFactor/numberOfPlants;
 }
 
+double PYTHONINTERFACE::getNumberOfPlants()
+{
+    return community.totalNumberOfPlantsInCommunity;
+}
+
+double PYTHONINTERFACE::getNumberOfPlantsAboveClippingHeight()
+{
+    double numberOfPlants = 0;
+
+    for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
+    {
+        if (community.allPlants.at(cohortindex)->height > parameter.clippingHeightOfBiomassMeasurement)
+        {
+            numberOfPlants += community.allPlants.at(cohortindex)->amount;
+        }
+    }
+    return numberOfPlants;
+}
+
+double PYTHONINTERFACE::getNumberOfPlantsAbove10cm()
+{
+    double numberOfPlants = 0;
+
+    for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
+    {
+        if (community.allPlants.at(cohortindex)->height > 10.0) // 10cm is the mowing height
+        {
+            numberOfPlants += community.allPlants.at(cohortindex)->amount;
+        }
+    }
+    return numberOfPlants;}
+
 std::vector<double> PYTHONINTERFACE::getNumberOfPlantsPerHeight()
 {
     // return number of plants per height in cm up to 1m and number of plants above 1m

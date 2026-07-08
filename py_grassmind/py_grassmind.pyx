@@ -73,25 +73,40 @@ cdef class GrassmindModel():
         cdef vector[double] v = self.py_grassmind.getNumberOfPlantsPerHeight()
         return np.asarray(v, dtype=np.double)
 
+    def get_number_of_plants(self):
+        return self.py_grassmind.getNumberOfPlants()
+
+    def get_number_of_plants_above_clipping_height(self):
+        return self.py_grassmind.getNumberOfPlantsAboveClippingHeight()
+
+    def get_number_of_plants_above_10cm(self):
+        return self.py_grassmind.getNumberOfPlantsAbove10cm()
+
     ## get selfcoupling variables
 
     def get_permanent_wilting_point_at_plant_soil_water_uptake(self):
-        return self.py_grassmind.getPermanentWiltingPoint_plantSoilWaterUptake()
+        cdef vector[double] v = self.py_grassmind.getPermanentWiltingPoint_plantSoilWaterUptake()
+        return np.asarray(v, dtype=np.double)
 
     def get_field_capacity_at_plant_soil_water_uptake(self):
-        return self.py_grassmind.getFieldCapacity_plantSoilWaterUptake()
+        cdef vector[double] v = self.py_grassmind.getFieldCapacity_plantSoilWaterUptake()
+        return np.asarray(v, dtype=np.double)
 
     def get_porosity_at_plant_soil_water_uptake(self):
-        return self.py_grassmind.getPorosity_plantSoilWaterUptake()
+        cdef vector[double] v = self.py_grassmind.getPorosity_plantSoilWaterUptake()
+        return np.asarray(v, dtype=np.double)
 
     def get_water_content_at_plant_soil_water_uptake(self):
-        return self.py_grassmind.getWaterContent_plantSoilWaterUptake()
+        cdef vector[double] v = self.py_grassmind.getWaterContent_plantSoilWaterUptake()
+        return np.asarray(v, dtype=np.double)
 
     def get_water_uptake_reduction_by_available_water_at_plant_soil_water_uptake(self):
-        return self.py_grassmind.getWaterUptakeReductionByAvailableWater_plantSoilWaterUptake()
+        cdef vector[double] v = self.py_grassmind.getWaterUptakeReductionByAvailableWater_plantSoilWaterUptake()
+        return np.asarray(v, dtype=np.double)
 
     def get_nitrogen_content_at_plant_soil_nitrogen_uptake(self):
-        return self.py_grassmind.getNitrogenContent_plantSoilNitrogenUptake()
+        cdef vector[double] v = self.py_grassmind.getNitrogenContent_plantSoilNitrogenUptake()
+        return np.asarray(v, dtype=np.double)
 
     ## set selfcoupling variables
 

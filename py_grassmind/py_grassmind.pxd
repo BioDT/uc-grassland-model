@@ -24,6 +24,9 @@ cdef extern from "../src/pythoninterface/pythoninterface.h":
         double getLai() except + nogil
         double getMeanWaterLimitationFactor() except + nogil
         double getMeanNitrogenLimitationFactor() except + nogil
+        double getNumberOfPlants() except + nogil
+        double getNumberOfPlantsAboveClippingHeight() except + nogil
+        double getNumberOfPlantsAbove10cm() except + nogil
         vector[double] getSoilWaterPerLayer() except + nogil
         vector[double] getNumberOfPlantsPerHeight() except + nogil
 

@@ -88,6 +88,9 @@ public:
     double getLai();
     double getMeanWaterLimitationFactor();
     double getMeanNitrogenLimitationFactor();
+    double getNumberOfPlants();
+    double getNumberOfPlantsAboveClippingHeight();
+    double getNumberOfPlantsAbove10cm();
     std::vector<double> getSoilWaterPerLayer();
     std::vector<double> getNumberOfPlantsPerHeight();
 
