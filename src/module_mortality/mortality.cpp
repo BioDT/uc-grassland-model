@@ -133,6 +133,8 @@ double MORTALITY::doLeafSenescence(COMMUNITY &community, PARAMETER parameter, GR
     double effectOfDayTimeTemperature = growth.calculateEffectOfAirTemperatureOnGPP(interaction.dayTimeAirTemperature);
     double effectOfWaterLimitation = 1 - community.allPlants.at(cohortIndex)->limitingFactorGppWater;
     double browningLeafBiomass = effectOfDayTimeTemperature * effectOfWaterLimitation * (community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves / parameter.leafLifeSpan[pft]);
+    // as in old grassmind:
+    //double browningLeafBiomass = effectOfWaterLimitation * (community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves / parameter.leafLifeSpan[pft]);
 
     community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves += browningLeafBiomass;
     community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves -= browningLeafBiomass;
