@@ -452,10 +452,9 @@ std::vector<double> PYTHONINTERFACE::calculateRootBiomassPerLayer()
 
     for (int cohortindex = 0; cohortindex < community.allPlants.size(); cohortindex++)
     {
-
-        for (int lay = 0; lay < community.allPlants.at(cohortindex)->numberOfSoilLayersRooting; lay++)
+        double depth = 0.0;
+        for (int lay = 0; lay < community.allPlants.at(cohortindex)->numberOfSoilLayersRooting && lay < parameter.numberOfSoilLayers; lay++)
         {
-            double depth = 0.0;
             if (lay < (community.allPlants.at(cohortindex)->numberOfSoilLayersRooting - 1))
             {
                 rootMassPerLayer[lay] +=
