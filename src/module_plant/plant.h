@@ -124,8 +124,9 @@ public:
         numberOfSoilLayersRooting = allometry.calculateNumberOfRootingSoillayer(parameter.soilLayerWidth, rootingDepth);
         if (numberOfSoilLayersRooting > parameter.numberOfSoilLayers)
         {
-            utils.handleWarning("numberOfSoilLayersRooting (" + std::to_string(numberOfSoilLayersRooting) + ") exceeds parameter.numberOfSoilLayers (" + std::to_string(parameter.numberOfSoilLayers) + "). Capping to maximum.");
-            numberOfSoilLayersRooting = parameter.numberOfSoilLayers;
+            utils.handleError("numberOfSoilLayersRooting (" + std::to_string(numberOfSoilLayersRooting) + ") exceeds parameter.numberOfSoilLayers (" + std::to_string(parameter.numberOfSoilLayers) + ").");
+            // utils.handleWarning("numberOfSoilLayersRooting (" + std::to_string(numberOfSoilLayersRooting) + ") exceeds parameter.numberOfSoilLayers (" + std::to_string(parameter.numberOfSoilLayers) + "). Capping to maximum.");
+            // numberOfSoilLayersRooting = parameter.numberOfSoilLayers;
         }
 
         /* leaf area and structure */

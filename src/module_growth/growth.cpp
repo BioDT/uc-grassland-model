@@ -585,8 +585,9 @@ void GROWTH::doPlantGrowthInSizeAndAging(UTILS utils, PARAMETER parameter, COMMU
 
         if (community.allPlants.at(cohortindex)->numberOfSoilLayersRooting > parameter.numberOfSoilLayers)
         {
-            utils.handleWarning("Plant cohort " + std::to_string(cohortindex) + " (pft " + std::to_string(pft) + "): numberOfSoilLayersRooting (" + std::to_string(community.allPlants.at(cohortindex)->numberOfSoilLayersRooting) + ") exceeds parameter.numberOfSoilLayers (" + std::to_string(parameter.numberOfSoilLayers) + "). Capping to maximum.");
-            community.allPlants.at(cohortindex)->numberOfSoilLayersRooting = parameter.numberOfSoilLayers;
+            utils.handleError("Plant cohort " + std::to_string(cohortindex) + " (pft " + std::to_string(pft) + "): numberOfSoilLayersRooting (" + std::to_string(community.allPlants.at(cohortindex)->numberOfSoilLayersRooting) + ") exceeds parameter.numberOfSoilLayers (" + std::to_string(parameter.numberOfSoilLayers) + ").");
+            // utils.handleWarning("Plant cohort " + std::to_string(cohortindex) + " (pft " + std::to_string(pft) + "): numberOfSoilLayersRooting (" + std::to_string(community.allPlants.at(cohortindex)->numberOfSoilLayersRooting) + ") exceeds parameter.numberOfSoilLayers (" + std::to_string(parameter.numberOfSoilLayers) + "). Capping to maximum.");
+            // community.allPlants.at(cohortindex)->numberOfSoilLayersRooting = parameter.numberOfSoilLayers;
         }
 
         community.allPlants.at(cohortindex)->laiGreen =
