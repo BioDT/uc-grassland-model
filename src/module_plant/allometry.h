@@ -98,7 +98,7 @@ public:
      * @brief Calculates root-zone depth from root biomass using an allometric
      *        power-law equation.
      */
-    double rootDepthFromRootBiomassParametersRatioAndShootCorrection(UTILS utils, double rootBiomass, double parameterIntercept, double parameterExponent, double shootRootRatio, double shootCorrectionFactor);
+    double rootDepthFromRootBiomassParametersRatioAndShootCorrection(UTILS utils, double rootBiomass, double parameterIntercept, double parameterExponent, double shootRootRatio, double shootCorrectionFactor, double soilDepth);
 
     /**
      * @brief Determines the number of soil layers reached by plant roots.

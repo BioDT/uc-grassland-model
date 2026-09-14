@@ -580,15 +580,8 @@ void GROWTH::doPlantGrowthInSizeAndAging(UTILS utils, PARAMETER parameter, COMMU
         }
 
         /// update all other geometric size variables of the plants
-        community.allPlants.at(cohortindex)->rootingDepth = allometry.rootDepthFromRootBiomassParametersRatioAndShootCorrection(utils, community.allPlants.at(cohortindex)->rootBiomass, parameter.plantRootDepthParamIntercept[pft], parameter.plantRootDepthParamExponent[pft], parameter.plantShootRootRatio[pft], parameter.plantShootCorrectionFactor[pft]);
+        community.allPlants.at(cohortindex)->rootingDepth = allometry.rootDepthFromRootBiomassParametersRatioAndShootCorrection(utils, community.allPlants.at(cohortindex)->rootBiomass, parameter.plantRootDepthParamIntercept[pft], parameter.plantRootDepthParamExponent[pft], parameter.plantShootRootRatio[pft], parameter.plantShootCorrectionFactor[pft], parameter.soilDepth);
         community.allPlants.at(cohortindex)->numberOfSoilLayersRooting = allometry.calculateNumberOfRootingSoillayer(parameter.soilLayerWidth, community.allPlants.at(cohortindex)->rootingDepth);
-
-        if (community.allPlants.at(cohortindex)->numberOfSoilLayersRooting > parameter.numberOfSoilLayers)
-        {
-            throw std::runtime_error("Plant cohort " + std::to_string(cohortindex) + " (pft " + std::to_string(pft) + "): numberOfSoilLayersRooting (" + std::to_string(community.allPlants.at(cohortindex)->numberOfSoilLayersRooting) + ") exceeds parameter.numberOfSoilLayers (" + std::to_string(parameter.numberOfSoilLayers) + ").");
-            // utils.handleWarning("Plant cohort " + std::to_string(cohortindex) + " (pft " + std::to_string(pft) + "): numberOfSoilLayersRooting (" + std::to_string(community.allPlants.at(cohortindex)->numberOfSoilLayersRooting) + ") exceeds parameter.numberOfSoilLayers (" + std::to_string(parameter.numberOfSoilLayers) + "). Capping to maximum.");
-            // community.allPlants.at(cohortindex)->numberOfSoilLayersRooting = parameter.numberOfSoilLayers;
-        }
 
         community.allPlants.at(cohortindex)->laiGreen =
             allometry.laiFromShootBiomassAreaSla(utils, community.allPlants.at(cohortindex)->shootBiomassGreenLeaves, community.allPlants.at(cohortindex)->coveredArea, parameter.plantSpecificLeafArea[pft]);
