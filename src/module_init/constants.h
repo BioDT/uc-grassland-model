@@ -48,7 +48,7 @@ const int HEIGHT_LAYER_WIDTH = 1;
  * With HEIGHT_LAYER_WIDTH = 1 cm, this corresponds to a maximum
  * vegetation height of 300 cm (3 m).
  */
-const int MAXIMUM_HEIGHT_LAYER = 300;
+const int MAXIMUM_HEIGHT_LAYER = 500; // just for sensitivity analysis, change back to 300 afterwards
 
 /**
  * @brief Number of seconds in one day (s d⁻¹).
