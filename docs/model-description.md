@@ -1,0 +1,18 @@
+---
+layout: default
+title: Model description
+---
+
+# Model description
+
+## Aim
+
+Describe the scientific questions and intended applications of GRASSMIND here.
+
+## Model overview
+
+Explain the model entities, processes, spatial and temporal resolution, inputs, outputs, and assumptions here.
+
+## Citation
+
+Add the recommended citation and links to related publications here.
