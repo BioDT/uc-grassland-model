@@ -1,0 +1,9 @@
+remote_theme: pages-themes/minimal@v0.2.0
+
+plugins:
+  - jekyll-remote-theme
+
+title: GRASSMIND
+description: Documentation and tutorials for the grassland model.
+logo: /uc-grassland-model/assets/images/255571_logo_grassmind-200.jpg
+show_downloads: false
