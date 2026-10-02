@@ -15,9 +15,9 @@
   <body>
     <div class="wrapper">
       <header>
-       <h1 class="site-name">
-  <a href="{{ '/' | relative_url }}">{{ site.title }}</a>
-</h1>
+        <h1 class="site-name">
+           <a href="{{ '/' | relative_url }}">{{ site.title }}</a>
+        </h1>
 
         {% if site.logo %}
           <img src="{{site.logo | relative_url}}" alt="Logo" />
@@ -42,14 +42,16 @@
         {% endif %}
 
       </header>
+      
       <section>
-
       {{ content }}
-        <aside class="right-navigation" aria-label="Documentation navigation">
-  {% include navigation.html %}
-</aside>
-
       </section>
+      
+      <aside class="right-navigation" aria-label="Documentation navigation">
+           {% include navigation.html %}
+        </aside>
+
+      
       <footer>
         <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
       </footer>
