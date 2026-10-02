@@ -5,7 +5,12 @@ plugins:
 
 title: GRASSMIND
 description: Documentation and tutorials for the grassland model.
-show_downloads: false
+logo: assets/images/255605_logo_grassmind_long.jpg
+show_downloads: true
+
+github:
+  zip_url: https://github.com/BioDT/uc-grassland-model/archive/refs/heads/main.zip
+  tar_url: https://github.com/BioDT/uc-grassland-model/archive/refs/heads/main.tar.gz
 
 baseurl: /uc-grassland-model
 url: https://biodt.github.io
