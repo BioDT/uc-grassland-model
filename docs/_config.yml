@@ -3,7 +3,7 @@ remote_theme: pages-themes/minimal@v0.2.0
 plugins:
   - jekyll-remote-theme
 
-title: GRASSMIND
+title: 
 description: Documentation and tutorials for the grassland model.
 logo: assets/images/255605_logo_grassmind_long.jpg
 show_downloads: true
