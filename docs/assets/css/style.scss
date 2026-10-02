@@ -93,3 +93,29 @@ section {
   }
 }
 
+
+@media print, screen and (min-width: 961px) {
+  .wrapper {
+    width: 1380px;
+    margin: 0 auto;
+  }
+
+  header {
+    width: 240px;
+  }
+
+  section {
+    width: 760px;
+    float: left;
+    padding-right: 0;
+  }
+
+  .right-navigation {
+    position: fixed;
+    top: 200px;
+    right: max(42px, calc((100vw - 1380px) / 2));
+    width: 210px;
+    padding-left: 20px;
+    border-left: 1px solid #d8dfd7;
+  }
+}
