@@ -131,3 +131,21 @@ section {
     border-left: 1px solid #d8dfd7;
   }
 }
+
+
+@media print, screen and (min-width: 961px) {
+  header {
+    position: relative;
+    min-height: 100vh;
+    margin-left: -55px;
+    padding: 0 30px 40px 55px;
+
+    background: linear-gradient(
+      90deg,
+      rgba(10, 83, 52, 0.80) 0%,
+      rgba(79, 143, 82, 0.48) 48%,
+      rgba(222, 210, 167, 0.28) 78%,
+      rgba(255, 255, 255, 0) 100%
+    );
+  }
+}
