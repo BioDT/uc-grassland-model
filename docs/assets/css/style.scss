@@ -137,14 +137,14 @@ section {
   header {
     position: relative;
     min-height: 100vh;
-    margin-left: -55px;
-    padding: 0 30px 40px 55px;
+    margin-left: -50px;
+    padding: 0 30px 40px 50px;
 
     background: linear-gradient(
       90deg,
-      rgba(222, 210, 167, 0.45) 0%,
-      rgba(222, 210, 167, 0.45) 48%,
-      rgba(222, 210, 167, 0.45) 78%,
+      rgba(255, 255, 255, 0.45) 0%,
+      rgba(255, 255, 255, 0.45) 48%,
+      rgba(255, 255, 255, 0.45) 78%,
       rgba(255, 255, 255, 0) 100%
     );
   }
