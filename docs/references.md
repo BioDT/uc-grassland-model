@@ -1,16 +1,8 @@
-\---
-
+---
 layout: default
-
 title: References
+---
 
-\---
-
-
-
-\# References
-
-
-
+# References
 Add publications, documentation, datasets, and software references here.
 
