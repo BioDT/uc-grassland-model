@@ -4,7 +4,7 @@ plugins:
   - jekyll-remote-theme
 
 title:         
-description: Documentation and tutorials for the grassland model.
+description: An individual-based and process-oriented grassland model combining biodiversity and biogeochemical cycles
 logo: assets/images/255605_logo_grassmind_long.jpg
 show_downloads: true
 
