@@ -197,6 +197,11 @@ double PYTHONINTERFACE::getShootBiomassAboveClippingHeightPerSquaremeter()
     return std::accumulate(community.clippedShootBiomassOfPlantsPerPFT.begin(), community.clippedShootBiomassOfPlantsPerPFT.end(), 0.0);
 }
 
+double PYTHONINTERFACE::getShootBiomassPerSquaremeter()
+{
+    return std::accumulate(community.shootBiomassOfPlantsPerPFT.begin(), community.shootBiomassOfPlantsPerPFT.end(), 0.0);
+}
+
 double PYTHONINTERFACE::getYieldPerSquaremeter()
 {
     return community.biomassYield;

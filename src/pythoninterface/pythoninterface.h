@@ -84,6 +84,7 @@ public:
 
     // get output variables
     double getShootBiomassAboveClippingHeightPerSquaremeter();
+    double getShootBiomassPerSquaremeter();
     double getYieldPerSquaremeter();
     double getLai();
     double getMeanWaterLimitationFactor();
