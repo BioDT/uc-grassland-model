@@ -116,7 +116,7 @@ void STEP::doDayStepOfModelSimulation(UTILS utils, PARAMETER &parameter, ALLOMET
     growth.doPlantGrowth(utils, parameter, weather, community, interaction, allometry, soil);
 
     /* Management activities */
-    management.applyManagementRegime(utils, community, allometry, parameter, soil);
+    management.applyManagementRegime(utils, community, allometry, parameter, soil, recruitment);
 
     /* Soil resource dynamics */
     soil.calculateSoilResourceDynamics(utils, parameter, weather, community, interaction);

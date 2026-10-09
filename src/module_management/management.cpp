@@ -1,4 +1,5 @@
 #include "management.h"
+#include "../module_recruitment/recruitment.h"
 
 MANAGEMENT::MANAGEMENT() {};
 MANAGEMENT::~MANAGEMENT() {};
@@ -24,12 +25,14 @@ MANAGEMENT::~MANAGEMENT() {};
  * @param parameter Read-only; provides `day`, PFT count, and C:N ratios.
  * @param soil      Soil state; mineral nitrogen and water pools updated by
  *                  fertilisation and irrigation events.
+ * @param recruitment Seed pool and germination counters cleared by plowing.
  */
-void MANAGEMENT::applyManagementRegime(UTILS utils, COMMUNITY &community, ALLOMETRY allometry, PARAMETER parameter, SOIL &soil)
+void MANAGEMENT::applyManagementRegime(UTILS utils, COMMUNITY &community, ALLOMETRY allometry, PARAMETER parameter, SOIL &soil, RECRUITMENT &recruitment)
 {
     /* mowing events */
     initializeYieldVariables(community, parameter);
     checkIfTodayAndDoMowing(utils, community, allometry, parameter);
+    checkIfTodayAndDoPlowing(utils, community, parameter, soil, recruitment);
 
     /* fertilization events */
     checkIfTodayAndDoFertilization(utils, parameter, soil);
@@ -90,7 +93,7 @@ void MANAGEMENT::checkIfTodayAndDoMowing(UTILS utils, COMMUNITY &community, ALLO
     int index = 0;
     for (auto day : mowingDate)
     {
-        if (parameter.day == day)
+        if (parameter.day == day && mowingHeight.at(index) > 0)
         {
             double heightToCutPlantsDownTo = 100.0 * mowingHeight.at(index); // convert m in cm
             for (int cohortIndex = 0; cohortIndex < community.totalNumberOfCohortsInCommunity; cohortIndex++)
@@ -110,6 +113,56 @@ void MANAGEMENT::checkIfTodayAndDoMowing(UTILS utils, COMMUNITY &community, ALLO
         }
         index++;
     }
+}
+
+/**
+ * @brief Checks whether today is a scheduled plowing date and, if so, kills all
+ *        plant cohorts and empties the seed pool.
+ *
+ * Plowing is indicated by a negative mowing height on the current day.
+ * Transfers dying plant biomass to litter pools and clears each PFT's seed
+ * batches and matching germination counters, preserving the per-PFT vectors.
+ *
+ * @param utils       Utility object for error handling.
+ * @param community   Plant community; all plant cohorts are killed.
+ * @param parameter   Read-only; provides `day` and PFT count.
+ * @param soil        Soil state; litter pools are updated in place.
+ * @param recruitment Seed pool and germination counters cleared in place.
+ */
+void MANAGEMENT::checkIfTodayAndDoPlowing(UTILS utils, COMMUNITY &community, PARAMETER parameter, SOIL &soil, RECRUITMENT &recruitment)
+{
+    // scan through all mowing dates from the management file to check if today is a plowing event (indicated as mowing event with height -1)
+    int index = 0;
+    for (auto day : mowingDate)
+    {
+        if (parameter.day == day && mowingHeight.at(index) < 0.0)
+        {
+            for (int pft = 0; pft < parameter.pftCount; pft++)
+            {
+                recruitment.seedPool[pft].clear();
+                recruitment.seedGerminationTimeCounter[pft].clear();
+            }
+
+            for (int cohortIndex = 0; cohortIndex < community.totalNumberOfCohortsInCommunity; cohortIndex++)
+            {
+                int pft = community.allPlants[cohortIndex]->pft;
+
+                double amountOfPlantsToDie = community.allPlants[cohortIndex]->amount;
+        
+                soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfPlantsToDie, community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves, "surface_green", pft);
+                soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfPlantsToDie, community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves, "surface_brown", pft);
+                soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfPlantsToDie, community.allPlants.at(cohortIndex)->rootBiomass, "soil_root", pft, community.allPlants.at(cohortIndex)->numberOfSoilLayersRooting);
+                soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfPlantsToDie, community.allPlants.at(cohortIndex)->recruitmentBiomass, "soil_seed", pft);
+                community.allPlants[cohortIndex]->amount -= amountOfPlantsToDie;
+            }
+        }
+        index++;
+    }
+    // Delete cohorts if no more plants are alive
+    community.checkPlantsAreAliveInCommunity(utils);
+
+    // Update number of cohorts in allPlants-vector
+    community.totalNumberOfCohortsInCommunity = community.allPlants.size();
 }
 
 /**

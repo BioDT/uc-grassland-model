@@ -21,6 +21,8 @@
 #include <vector>
 #include <iostream>
 
+class RECRUITMENT;
+
 /**
  * @class MANAGEMENT
  * @brief Stores scheduled management event data and applies management actions
@@ -80,7 +82,7 @@ public:
     /**
      * @brief Applies all scheduled management actions for the current simulation day.
      */
-    void applyManagementRegime(UTILS utils, COMMUNITY &community, ALLOMETRY allometry, PARAMETER parameter, SOIL &soil);
+    void applyManagementRegime(UTILS utils, COMMUNITY &community, ALLOMETRY allometry, PARAMETER parameter, SOIL &soil, RECRUITMENT &recruitment);
 
     /**
      * @brief Resets per-PFT and community yield accumulators to zero.
@@ -92,6 +94,12 @@ public:
      *        cuts all plant cohorts to the specified height.
      */
     void checkIfTodayAndDoMowing(UTILS utils, COMMUNITY &community, ALLOMETRY allometry, PARAMETER parameter);
+
+    /**
+     * @brief Checks whether today matches a scheduled plowing date (indicated as mowing date with depth -1) and, if so,
+     *        kills all plant cohorts and empties the seed pool and germination counters.
+     */
+    void checkIfTodayAndDoPlowing(UTILS utils, COMMUNITY &community, PARAMETER parameter, SOIL &soil, RECRUITMENT &recruitment);
 
     /**
      * @brief Cuts a single cohort to the target height, tracks harvested biomass
