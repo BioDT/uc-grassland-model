@@ -170,14 +170,53 @@ void STEP::fillPFTBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, 
         for (int pft = 0; pft < parameter.pftCount; pft++)
         {
             output.bufferPFTPopulation << date << "\t" << parameter.day << "\t" << pft << "\t";
-            output.bufferPFTPopulation << community.pftComposition[pft] << "\t" << community.numberOfPlantsPerPFT[pft] << "\t";
-            output.bufferPFTPopulation << community.coveredAreaOfPlantsPerPFT[pft] << "\t" << community.shootBiomassOfPlantsPerPFT[pft] << "\t";
+            output.bufferPFTPopulation << community.pftCompositionPlantNumber[pft] << "\t" << community.numberOfPlantsPerPFT[pft] << "\t";
+			output.bufferPFTPopulation << community.coveredAreaOfPlantsPerPFT[pft] << "\t" << community.shootBiomassOfPlantsPerPFT[pft] << "\t";
             output.bufferPFTPopulation << community.greenShootBiomassOfPlantsPerPFT[pft] << "\t" << community.brownShootBiomassOfPlantsPerPFT[pft] << "\t";
             output.bufferPFTPopulation << community.clippedShootBiomassOfPlantsPerPFT[pft] << "\t" << community.rootBiomassOfPlantsPerPFT[pft] << "\t";
             output.bufferPFTPopulation << community.recruitmentBiomassOfPlantsPerPFT[pft] << "\t" << community.exudationBiomassOfPlantsPerPFT[pft] << "\t";
             output.bufferPFTPopulation << community.gppOfPlantsPerPFT[pft] << "\t" << community.nppOfPlantsPerPFT[pft] << "\t" << community.carbonRespirationOfPlantsPerPFT[pft];
             output.bufferPFTPopulation << std::endl;
         }
+    }
+}
+
+/**
+ * @brief Appends one row per PFT of diversity-level output variables to
+ *        `output.bufferDiversityPopulation`.
+ *
+ * Written columns (tab-separated): Date, DayCount, PFT, Fraction,
+ * NumberPlants, CoveredArea, ShootBiomass, GreenShootBiomass,
+ * BrownShootBiomass, ClippedShootBiomass, RootBiomass, RecruitmentBiomass,
+ * ExudationBiomass, GPP, NPP, Respiration.
+ * Only executed when `parameter.pftOutputFile` is `true`.
+ *
+ * @param utils     Utility object (reserved).
+ * @param parameter Provides `day`, `pftCount`, `pftOutputFile` flag.
+ * @param community Read-only; provides per-PFT accumulator vectors.
+ * @param output    `bufferDiversityPopulation` is appended.
+ * @param date      ISO-formatted date string.
+ */
+void STEP::fillDiversityBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, OUTPUT &output, std::string date)
+{
+    if (parameter.diversityOutputFile)
+    {
+        for (int pft = 0; pft < parameter.pftCount; pft++)
+        {
+            output.bufferDiversity << date << "\t" << parameter.day << "\t" << pft << "\t";
+            output.bufferDiversity << community.pftCompositionPlantNumber[pft] << "\t";
+            output.bufferDiversity << community.pftCompositionShootBiomass[pft] << "\t";
+            output.bufferDiversity << community.pftCompositionPlantBiomass[pft] << "\t";
+            output.bufferDiversity << community.pftCompositionCoveredArea[pft];
+            output.bufferDiversity << std::endl;
+        }
+
+        output.bufferDiversity << date << "\t" << parameter.day << "\t" << "ShannonIndex" << "\t";
+        output.bufferDiversity << community.shannonWienerIndexPlantNumber << "\t";
+        output.bufferDiversity << community.shannonWienerIndexShootBiomass << "\t";
+        output.bufferDiversity << community.shannonWienerIndexPlantBiomass << "\t";
+        output.bufferDiversity << community.shannonWienerIndexCoveredArea;
+        output.bufferDiversity << std::endl;
     }
 }
 
@@ -532,7 +571,8 @@ void STEP::fillSimulationResultsToBuffer(UTILS utils, PARAMETER parameter, COMMU
 {
     fillCommunityBuffer(utils, parameter, community, output, date);
     fillPFTBuffer(utils, parameter, community, output, date);
-    fillPlantCohortBuffer(utils, parameter, community, output, date);
+    fillDiversityBuffer(utils, parameter, community, output, date);
+	fillPlantCohortBuffer(utils, parameter, community, output, date);
     fillSoilCarbonBuffer(utils, parameter, soil, output, date);
     fillSoilNitrogenBuffer(utils, parameter, soil, output, date);
     fillSoilWaterBuffer(utils, parameter, soil, interaction, output, date);

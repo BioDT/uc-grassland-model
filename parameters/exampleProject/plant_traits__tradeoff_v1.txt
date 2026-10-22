@@ -1,0 +1,352 @@
+# =============================================================================
+#
+#  GRASSMIND exemplary trait-based parametrization
+#  Groups of plants (PFT): 1-grasses, 2-forbs, 3-legumes
+#
+#  Intended use: stylised temperate, perennial grassland PFTs.
+#  These are internally contrasted starting values, NOT species-specific
+#  calibrations. Validate units, biomass geometry, and emergent monoculture
+#  behaviour against the implementation and target site before inference.
+#
+#  Strategy contrasts represented here:
+#  1. Grasses: dense, relatively shallow fine-root foraging; conservative,
+#     long-lived tissues; efficient use of N and water; strong occupancy.
+#  2. Forbs: lower-density but taller/broader shoots; relatively deep roots;
+#     acquisitive leaves and rapid growth when resources are available, with
+#     higher turnover and poorer drought tolerance.
+#  3. Legumes: N2 fixation coupled to a carbon cost; high leaf N and potential
+#     photosynthesis; intermediate-to-deep roots; relatively high water demand.
+#
+# =============================================================================
+#  Species/PFT number
+# =============================================================================
+
+pftCount	3
+\datatype:integer
+\description:number of plant species or plant functional types
+
+# =============================================================================
+#  Seed influx from surrounding area
+# =============================================================================
+
+externalSeedInfluxActivated	true
+\datatype:boolean
+\description:de-/activation of global seed influx from outside the area
+
+dayOfExternalSeedInfluxStart	2013-05-01
+\datatype:date
+\description:date (month-day) when external seed influx starts
+
+# Moderate, equal immigration isolates trait-mediated performance from
+# propagule-pressure differences. Alter this in colonisation experiments.
+externalSeedInfluxNumber	10	10	10
+\datatype:integer-array
+\unit:cm-2 d-1
+\description:number of seeds reaching the area from its outside
+
+# =============================================================================
+#  Seed influx from plants at the area
+# =============================================================================
+
+seedsFromMaturePlantsActivated	true
+\datatype:boolean
+\description:de-/activation of seed production by mature plants at the area
+
+maturityHeights	20	35	30
+\datatype:float-array
+\unit:cm
+\description:minimum height of plants to be mature (for starting to produce seeds)
+
+# =============================================================================
+#  Establishment of seedlings
+# =============================================================================
+
+# Grasses: numerous small propagules / relatively rapid establishment.
+# Forbs: fewer, larger seeds / slower establishment but greater reserves.
+# Legumes: intermediate strategy.
+seedGerminationRates	0.45	0.30	0.35
+\datatype:float-array
+\unit:d-1
+\description:germination rate of seeds
+
+seedGerminationTimes	10	16	12
+\datatype:integer-array
+\unit:d
+\description:days to emergence of seeds since influx, production or sowing
+
+seedMasses	0.0007	0.0025	0.0015
+\datatype:float-array
+\unit:g(odm)
+\description:seed biomass (organic dry matter)
+
+# =============================================================================
+#  Plant mortality
+# =============================================================================
+
+plantMortalityProbability	0.004	0.006	0.005
+\datatype:float-array
+\unit:d-1
+\description:mortality probability of mature plants
+
+seedlingMortalityProbability	0.030	0.040	0.035
+\datatype:float-array
+\unit:d-1
+\description:mortality probability of seedlings
+
+maturityAges	90	140	120
+\datatype:float-array
+\unit:d
+\description:minimum age of plants to be mature (for a changed mortality probability)
+
+plantLifeSpan	perennial	perennial	perennial
+\datatype:string-array
+\description:life span of plants (select: annual, perennial)
+
+# Conservative grass tissues persist longest; acquisitive forb leaves/roots
+# turn over fastest; legumes are intermediate.
+leafLifeSpan	150	75	105
+\datatype:integer-array
+\unit:d
+\description:leaf life span
+
+rootLifeSpan	600	300	420
+\datatype:integer-array
+\unit:d
+\description:root life span
+
+brownBiomassFractionFalling	0.01
+\datatype:float
+\unit:d-1
+\description:fraction of brown biomass that falls to litter surface pool (full N and C)
+
+crowdingMortalityActivated	true
+\datatype:boolean
+\description:de-/activation self-thinning in crowded stand
+
+tresholdCohortDeathDeterministic	0.2
+\datatype:float
+\description:amount of plants in a cohort under which a cohort dies out in simulations with stochasticSimulation = false
+
+# =============================================================================
+#  Plant geometry (single plant)
+# =============================================================================
+
+# Forbs are the strongest potential vertical/light competitors; grasses are
+# shorter, narrow-leaved and dense; legumes are intermediate.
+maximumPlantHeight	90	125	100
+\datatype:integer-array
+\unit:cm
+\description:maximum height of a plant
+
+plantHeightToWidthRatio	1.8	0.55	0.90
+\datatype:float-array
+\unit:cm cm-1
+\description:height to width ratio of a plant's growth form (cylindric)
+
+# Values follow the file's stated unit (cm2 g(odm)-1). High SLA is assigned to
+# acquisitive forbs and legumes; grasses have tougher, lower-SLA foliage.
+plantSpecificLeafArea	140	230	200
+\datatype:float-array
+\unit:cm2 g(odm)-1
+\description:specific leaf area
+
+plantShootCorrectionFactor	0.0011	0.00085	0.0010
+\datatype:float-array
+\unit:g(odm) cm-3
+\description:shoot correction factor
+
+# Grasses retain greater proportional belowground investment; forbs favour
+# shoots/height; legumes are intermediate because N2 fixation and nodules
+# require a substantial root carbon supply.
+plantShootRootRatio	1.6	3.2	2.2
+\datatype:float-array
+\unit:g(odm) g(odm)-1
+\description:shoot to root ratio (organic dry matter of biomass)
+
+# Rooting-depth power law: grasses forage intensively in upper layers,
+# whereas forbs and legumes access deeper layers as plants grow.
+plantRootDepthParamIntercept	3.0	5.5	4.8
+\datatype:float-array
+\description:intercept of power-law relationship of shoot biomass with rooting depth
+
+plantRootDepthParamExponent	0.26	0.38	0.34
+\datatype:float-array
+\description:exponent of power-law relationship of shoot biomass with rooting depth
+
+plantShootOverlapFactors	1.0	1.0	1.0
+\datatype:float-array
+\description:fraction of possible overlapping of a plant's shoot with other plants
+
+# =============================================================================
+#  Plant GPP, respiration and NPP allocation
+# =============================================================================
+
+# Enable this if aboveground light competition is intended to be represented.
+# Keep false only for sensitivity tests or models in which light competition is
+# represented elsewhere.
+communityShadingInGppCalculation	true
+\datatype:boolean
+\description:de-/activation of community shading in the calculation of GPP
+
+# Grasses: lower Amax but strong light capture at low-to-intermediate light.
+# Forbs: high Amax but a steeper resource demand and fast turnover.
+# Legumes: high photosynthetic capacity associated with high foliar N, offset by
+# carbon expenditure on symbiotic N fixation.
+maximumGrossLeafPhotosynthesisRate	16	23	25
+\datatype:float-array
+\unit:mikromol(CO2) m-2 s-1
+\description:maximum gross leaf photosynthesis rate
+
+initialSlopeOfLightResponseCurve	0.34	0.25	0.30
+\datatype:float-array
+\unit:mikromol(CO2) mikromol(photons)-1
+\description:initial slope of light response curve
+
+lightExtinctionCoefficients	0.35	0.65	0.50
+\datatype:float-array
+\description:light extinction coefficient of leaves
+
+growthRespirationFraction	0.20
+\datatype:float
+\description:fraction of GPP attributed to growth respiration
+
+maintenanceRespirationRate	0.02
+\datatype:float
+\unit:d-1
+\description:maintenance respiration rate (proportional to plant biomass)
+
+# Remaining NPP after exudation is partitioned using shoot:root ratios when
+# useStaticShootRootAllocationRates is true.
+plantNppAllocationGrowth	0.83	0.78	0.76
+\datatype:float-array
+\description:NPP allocation of a plant to shoot and root growth
+
+# Highest exudation for legumes represents rhizosphere/nodule-associated C
+# costs; grass exudation is lowest in this stylised comparison.
+plantNppAllocationExudation	0.07	0.10	0.16
+\datatype:float-array
+\description:NPP allocation of a plant to exudates
+
+useStaticShootRootAllocationRates	true
+\datatype:boolean
+\description:calculation of allocation rates to shoot, root and reproduction based on only shoot-root ratio (value 1) or shoot-root ratio and daily GPP (value 0)
+
+# =============================================================================
+#  Temperature responses for plant growth
+# =============================================================================
+
+plantResponseToTemperatureQ10Base	2.0
+\datatype:float
+\description:base of Q10-function as effect on maintenance respiration
+
+plantResponseToTemperatureQ10Reference	25.0
+\datatype:float
+\unit:°C
+\description:reference temperature of Q10-function as effect on maintenance respiration
+
+# =============================================================================
+#  Nitrogen demand and fixation
+# =============================================================================
+
+# Higher C:N represents lower tissue N demand / more conservative tissues.
+# Legumes have low C:N (high N concentration), making their high Amax dependent
+# on symbiotic fixation and imposing a carbon cost through exudation.
+plantCNRatioGreenLeaves	35	24	20
+\datatype:float-array
+\unit:g(C) g(N)-1
+\description:ratio of carbon (C) and nitrogen (N) in green leaves
+
+plantCNRatioBrownLeaves	55	40	35
+\datatype:float-array
+\unit:g(C) g(N)-1
+\description:ratio of carbon (C) and nitrogen (N) in brown leaves and roots
+
+plantCNRatioRoots	45	32	28
+\datatype:float-array
+\unit:g(C) g(N)-1
+\description:ratio of carbon (C) and nitrogen (N) in root branches
+
+plantCNRatioSeeds	45	35	30
+\datatype:float-array
+\unit:g(C) g(N)-1
+\description:ratio of carbon (C) and nitrogen (N) in seeds
+
+plantCNRatioExudates	18	15	14
+\datatype:float-array
+\unit:g(C) g(N)-1
+\description:ratio of carbon (C) and nitrogen (N) in exudates
+
+symbioticNitrogenFixationFraction	0	0	0.75
+\datatype:float-array
+\description:nitrogen fixation ability
+
+# Lower C:N exchange ratio than in the generic file means a deliberately more
+# conservative C return per unit N fixed; test this jointly with legume
+# exudation and fixation fraction.
+rhizobiaExchangeRateCToN	12.0
+\datatype:float
+\description:Exchange rate of plant carbon (from NPP) to Nitrogen supply by rhizobia symbiosis
+\details:only relevant for those plants with a nitrogen fixation ability (>0)
+
+# =============================================================================
+#  Soil water demand and limitation
+# =============================================================================
+
+# Grass has the greatest biomass per unit water in this generic temperate,
+# predominantly C3 setting. Values should be revisited for C4 grasses.
+plantWaterUseEfficiency	2.0	1.35	1.55
+\datatype:float-array
+\unit:g(odm) kg(h2O)-1
+\description:water use efficiency coefficient
+
+plantGppReductionBySoilWaterApproach	onesided
+\datatype:string
+\description:choose either onesided or twosided
+
+# Earlier limitation (larger threshold) captures relatively shallow-rooted,
+# drought-sensitive grass and especially acquisitive forb behaviour. The
+# intermediate threshold for legumes reflects deeper roots but high water use.
+lowerSoilWaterFractionForPlantGppReduction	0.48	0.55	0.45
+\datatype:float-array
+\unit:fraction
+\description:fraction between permanent wilting point and field capacity
+\details:used as threshold for soil water content below which plant GPP is reduced linearly
+\details:only used in the onesided approach
+
+# Retained only for runs using the twosided approach.
+lowerSoilWaterContentForPlantGppReduction	30	34	28
+\datatype:float-array
+\unit:volume percent
+\description:soil water content threshold below which plant GPP is reduced linearly to permanent wilting point
+\details:only used in the twosided Approach
+
+upperSoilWaterContentForPlantGppReduction	46	44	43
+\datatype:float-array
+\unit:volume percent
+\description:soil water content threshold above which plant GPP is reduced linearly to porosity
+\details:only used in the twosided approach
+
+h2L	-80000
+\datatype:float
+\unit:
+\description:waterpotential maximal uptake low Respiration (only required for BODIUM coupling)
+
+h2H	-20000
+\datatype:float
+\unit:
+\description:waterpotential maximal uptake high Respiration (only required for BODIUM coupling)
+
+crowdingCalculationFromPlantTopLayer	1
+\datatype:integer
+\unit:
+\description:use top layer for calculation and not fullest layer (only required for BODIUM coupling)
+
+minLayerReductionFactorFromAverage	0
+\datatype:integer
+\unit:
+\description:use top layer for calculation and not fullest layer (only required for BODIUM coupling)
+
+disableRunoff	false
+\datatype:boolean
+\unit:
+\description:disable runoff (only required for BODIUM coupling)

@@ -68,6 +68,9 @@ public:
     /** @brief File stream for the plant-cohort output file. */
     std::ofstream outputPlant;
 
+    /** @brief File stream for the diversity output file. */
+    std::ofstream outputDiversity;
+
     /** @brief File stream for the soil carbon output file. */
     std::ofstream outputSoilCarbon;
 
@@ -97,6 +100,11 @@ public:
      * @brief In-memory write buffer for plant-cohort output.
      */
     std::stringstream bufferPlant;
+
+	/**
+     * @brief In-memory write buffer for diversity output.
+     */
+    std::stringstream bufferDiversity;
 
     /**
      * @brief In-memory write buffer for soil carbon output.
@@ -165,7 +173,7 @@ public:
     /**
      * @brief Constructs output file names and opens one stream per enabled output type.
      */
-    void createAndOpenOutputFiles(UTILS utils, PARAMETER parameter);
+    void createAndOpenOutputFiles(std::string path, UTILS utils, PARAMETER parameter);
 
     /**
      * @brief Writes tab-separated column headers to all open output files.

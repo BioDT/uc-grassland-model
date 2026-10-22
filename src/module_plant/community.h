@@ -97,6 +97,31 @@ public:
     double abovegroundBiomassOfAllPlants;
 
     /**
+     * @brief Total plant biomass of all cohorts weighted by their amount (g ODM).
+     */
+    double plantBiomassOfAllPlants;
+
+    /**
+     * @brief Shannon-Wiener diversity index based on plant numbers for the plant community.
+     */
+    double shannonWienerIndexPlantNumber;
+
+    /**
+     * @brief Shannon-Wiener diversity index based on plant biomass for the plant community.
+     */
+    double shannonWienerIndexPlantBiomass;
+
+    /**
+     * @brief Shannon-Wiener diversity index based on shoot biomass for the plant community.
+     */
+    double shannonWienerIndexShootBiomass;
+
+    /**
+     * @brief Shannon-Wiener diversity index based on covered area for the plant community.
+     */
+    double shannonWienerIndexCoveredArea;
+
+    /**
      * @brief Total aboveground litter biomass derived from surface litter C pools
      *        (g ODM).
      */
@@ -217,9 +242,24 @@ public:
     // =========================================================================
 
     /**
-     * @brief Percentage composition of each PFT (% of total plant count).
+     * @brief Percentage composition of each PFT based on covered area (% of total covered area).
      */
-    std::vector<double> pftComposition;
+    std::vector<double> pftCompositionCoveredArea;
+
+    /**
+     * @brief Percentage composition of each PFT based on shoot biomass (% of total shoot biomass).
+     */
+    std::vector<double> pftCompositionShootBiomass;
+
+    /**
+     * @brief Percentage composition of each PFT based on plant biomass (% of total plant biomass).
+     */
+    std::vector<double> pftCompositionPlantBiomass;
+
+    /**
+     * @brief Percentage composition of each PFT based on plant number (% of total plant count).
+     */
+    std::vector<double> pftCompositionPlantNumber;
 
     /** @brief Total number of individual plants per PFT (weighted by `amount`).
      *         Sized to `parameter.pftCount`. */

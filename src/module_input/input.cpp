@@ -637,7 +637,8 @@ void INPUT::transferConfigParameterValueToModelParameter(PARAMETER &parameter, U
     parameter.communityOutputFile = configParBool["communityOutputFile"];
     parameter.pftOutputFile = configParBool["pftOutputFile"];
     parameter.plantCohortOutputFile = configParBool["plantCohortOutputFile"];
-    parameter.soilCarbonOutputFile = configParBool["soilCarbonOutputFile"];
+    parameter.diversityOutputFile = configParBool["diversityOutputFile"];
+	parameter.soilCarbonOutputFile = configParBool["soilCarbonOutputFile"];
     parameter.soilNitrogenOutputFile = configParBool["soilNitrogenOutputFile"];
     parameter.soilWaterOutputFile = configParBool["soilWaterOutputFile"];
     parameter.soilResourcesPerSoilLayerOutputFile = configParBool["soilResourcesPerSoilLayerOutputFile"];

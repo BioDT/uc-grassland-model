@@ -78,7 +78,7 @@ public:
     std::vector<std::string> configParameterNames =
         {"deimsID", "latitude", "longitude", "lastYear", "firstYear",
          "weatherFile", "soilFile", "managementFile", "plantTraitsFile", "processSetupFile",
-         "communityOutputFile", "pftOutputFile", "plantCohortOutputFile", "soilCarbonOutputFile",
+         "communityOutputFile", "pftOutputFile", "plantCohortOutputFile", "diversityOutputFile","soilCarbonOutputFile",
          "soilNitrogenOutputFile", "soilWaterOutputFile", "soilResourcesPerSoilLayerOutputFile",
          "soilFluxesDetailsOutputFile", "outputWritingDatesFile", "clippingHeightOfBiomassMeasurement",
          "randomNumberGeneratorSeed"};
@@ -124,6 +124,9 @@ public:
 
     /** @brief `true` if the plant-cohort output file should be written. */
     bool plantCohortOutputFile;
+
+    /** @brief `true` if the diversity output file should be written. */
+    bool diversityOutputFile;
 
     /** @brief `true` if the soil carbon output file should be written. */
     bool soilCarbonOutputFile;
