@@ -20,6 +20,7 @@ cdef extern from "../src/pythoninterface/pythoninterface.h":
         void runSimulationStep() except + nogil
         void writeResultsToOutputFiles() except + nogil
         double getShootBiomassAboveClippingHeightPerSquaremeter() except + nogil
+        double getShootBiomassPerSquaremeter() except + nogil
         double getYieldPerSquaremeter() except + nogil
         double getLai() except + nogil
         double getMeanWaterLimitationFactor() except + nogil
@@ -27,6 +28,8 @@ cdef extern from "../src/pythoninterface/pythoninterface.h":
         double getNumberOfPlants() except + nogil
         double getNumberOfPlantsAboveClippingHeight() except + nogil
         double getNumberOfPlantsAbove10cm() except + nogil
+        double getMaximalPlantHeight() except + nogil
+        double getMaximalRootingDepth() except + nogil
         vector[double] getSoilWaterPerLayer() except + nogil
         vector[double] getNumberOfPlantsPerHeight() except + nogil
 

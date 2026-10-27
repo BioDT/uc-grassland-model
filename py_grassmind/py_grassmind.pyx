@@ -52,6 +52,9 @@ cdef class GrassmindModel():
     
     def get_biomass_above_clipping_height_per_squaremeter(self):
         return self.py_grassmind.getShootBiomassAboveClippingHeightPerSquaremeter()
+
+    def get_biomass_per_squaremeter(self):
+        return self.py_grassmind.getShootBiomassPerSquaremeter()
    
     def get_yield_per_squaremeter(self):
         return self.py_grassmind.getYieldPerSquaremeter()
@@ -81,6 +84,12 @@ cdef class GrassmindModel():
 
     def get_number_of_plants_above_10cm(self):
         return self.py_grassmind.getNumberOfPlantsAbove10cm()
+
+    def get_maximal_plant_height(self):
+        return self.py_grassmind.getMaximalPlantHeight()
+
+    def get_maximal_rooting_depth(self):
+        return self.py_grassmind.getMaximalRootingDepth()
 
     ## get selfcoupling variables
 

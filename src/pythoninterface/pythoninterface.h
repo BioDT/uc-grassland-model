@@ -92,6 +92,8 @@ public:
     double getNumberOfPlants();
     double getNumberOfPlantsAboveClippingHeight();
     double getNumberOfPlantsAbove10cm();
+    double getMaximalPlantHeight();
+    double getMaximalRootingDepth();
     std::vector<double> getSoilWaterPerLayer();
     std::vector<double> getNumberOfPlantsPerHeight();
 

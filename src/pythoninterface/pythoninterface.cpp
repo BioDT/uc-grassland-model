@@ -275,6 +275,30 @@ double PYTHONINTERFACE::getNumberOfPlantsAbove10cm()
     }
     return numberOfPlants;}
 
+double PYTHONINTERFACE::getMaximalPlantHeight()
+{
+    // return maximal plant height
+    double maximalHeight = 0.0;
+
+    for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
+    {
+        maximalHeight = std::max(community.allPlants.at(cohortindex)->height, maximalHeight);
+    }
+    return maximalHeight;
+}
+
+double PYTHONINTERFACE::getMaximalRootingDepth()
+{
+    // return maximal plant height
+    double maximalDepth = 0.0;
+
+    for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
+    {
+        maximalDepth = std::max(community.allPlants.at(cohortindex)->rootingDepth, maximalDepth);
+    }
+    return maximalDepth;
+}
+
 std::vector<double> PYTHONINTERFACE::getNumberOfPlantsPerHeight()
 {
     // return number of plants per height in cm up to 1m and number of plants above 1m
