@@ -151,7 +151,7 @@ void MANAGEMENT::checkIfTodayAndDoPlowing(UTILS utils, COMMUNITY &community, PAR
         
                 soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfPlantsToDie, community.allPlants.at(cohortIndex)->shootBiomassGreenLeaves, "surface_green", pft);
                 soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfPlantsToDie, community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves, "surface_brown", pft);
-                soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfPlantsToDie, community.allPlants.at(cohortIndex)->rootBiomass, "soil_root", pft, community.allPlants.at(cohortIndex)->numberOfSoilLayersRooting);
+                soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfPlantsToDie, community.allPlants.at(cohortIndex)->rootBiomass, "soil_root", pft, community.allPlants.at(cohortIndex)->numberOfSoilLayersRooting, community.allPlants.at(cohortIndex)->rootingDepth);
                 soil.transferDyingPlantPartsToLitterPools(utils, parameter, amountOfPlantsToDie, community.allPlants.at(cohortIndex)->recruitmentBiomass, "soil_seed", pft);
                 community.allPlants[cohortIndex]->amount -= amountOfPlantsToDie;
             }

@@ -58,15 +58,43 @@ public:
     void initializeCouplingVariables(PARAMETER &parameter, SOIL &soil);
     void resetCouplingVariablesFluxes(PARAMETER &parameter, SOIL &soil);
     void runSimulationStep();
+    void setInterfacesRunSimulationStepGetInterfaces(
+        const double* waterPotential,
+        const double* theta,
+        const double* waterContent,
+        const double* nh4Concentration,
+        const double* no3Concentration,
+        size_t numberOfSoilLayers,
+        double* rootVolume_managementTime,
+        double* rootVolume_plantTime,
+        double* waterUptake,
+        double* no3Uptake,
+        double* nh4Uptake,
+        double* rootLitterInput,
+        double* rootLitterInputCN,
+        double* exudateInput,
+        double* exudateInputCN,
+        double* rootVolume,
+        double* rootMass,
+        double& soilWaterSurfaceInput,
+        double& ETP,
+        double& surfaceLitterInput,
+        double& surfaceLitterInputCN);
     void setRandomNumberGeneratorSeed(unsigned int seed);
     void writeResultsToOutputFiles();
 
     // get output variables
     double getShootBiomassAboveClippingHeightPerSquaremeter();
+    double getShootBiomassPerSquaremeter();
     double getYieldPerSquaremeter();
     double getLai();
     double getMeanWaterLimitationFactor();
     double getMeanNitrogenLimitationFactor();
+    double getNumberOfPlants();
+    double getNumberOfPlantsAboveClippingHeight();
+    double getNumberOfPlantsAbove10cm();
+    double getMaximalPlantHeight();
+    double getMaximalRootingDepth();
     std::vector<double> getSoilWaterPerLayer();
     std::vector<double> getNumberOfPlantsPerHeight();
 
@@ -103,6 +131,7 @@ public:
 
     // set coupling interface variables from external soil module
     void setWaterPotential(std::vector<double> values);
+    void setTheta(std::vector<double> values);
     void setNh4Concentration(std::vector<double> values);
     void setNo3Concentration(std::vector<double> values);
 

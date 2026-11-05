@@ -507,15 +507,65 @@ void GROWTH::doPlantNPPAllocation(UTILS utils, PARAMETER parameter, COMMUNITY &c
             // transfer exudation to interfaces to external soil module
             if (parameter.useExternalSoilModule_BODIUM)
             {
-                std::for_each(soil.couplingInterface_rootExudatesCarbon.begin(), soil.couplingInterface_rootExudatesCarbon.begin() + community.allPlants.at(cohortindex)->numberOfSoilLayersRooting, [&community, cohortindex](double &x)
-                              { x += community.allPlants.at(cohortindex)->amount * community.allPlants.at(cohortindex)->exudationCarbon; });
-                std::for_each(soil.couplingInterface_rootExudatesNitrogen.begin(), soil.couplingInterface_rootExudatesNitrogen.begin() + community.allPlants.at(cohortindex)->numberOfSoilLayersRooting, [&community, cohortindex](double &x)
-                              { x += community.allPlants.at(cohortindex)->amount * community.allPlants.at(cohortindex)->exudationNitrogen; });
-            }
+                const auto &plant =
+                    *community.allPlants.at(cohortindex);
 
-            // transfer exudation biomass to soil pool
-            soil.carbonContent_soilActivePool += community.allPlants.at(cohortindex)->amount * community.allPlants.at(cohortindex)->exudationBiomass * CARBON_CONTENT_ODM;
-            soil.nitrogenContent_soilActivePool += (community.allPlants.at(cohortindex)->amount * community.allPlants.at(cohortindex)->exudationBiomass * CARBON_CONTENT_ODM) / parameter.plantCNRatioExudates[pft];
+                if (!std::isfinite(plant.rootingDepth) ||
+                    plant.rootingDepth <= 0.0 ||
+                    plant.numberOfSoilLayersRooting <= 0 ||
+                    plant.numberOfSoilLayersRooting >
+                        parameter.numberOfSoilLayers)
+                {
+                    throw std::runtime_error(
+                        "Invalid rooting depth or rooted-layer count "
+                        "while distributing root exudates.");
+                }
+
+                double layerTopDepthCm = 0.0;
+                double rootFractionSum = 0.0;
+
+                for (int soilLayer = 0;
+                    soilLayer < plant.numberOfSoilLayersRooting;
+                    ++soilLayer)
+                {
+                    const double layerThicknessCm =
+                        parameter.soilLayerWidth.at(soilLayer);
+
+                    const double rootedThicknessCm = std::clamp(
+                        plant.rootingDepth - layerTopDepthCm,
+                        0.0,
+                        layerThicknessCm);
+
+                    const double rootFraction =
+                        rootedThicknessCm / plant.rootingDepth;
+
+                    soil.couplingInterface_rootExudatesCarbon.at(soilLayer) +=
+                        plant.amount *
+                        plant.exudationCarbon *
+                        rootFraction;
+
+                    soil.couplingInterface_rootExudatesNitrogen.at(soilLayer) +=
+                        plant.amount *
+                        plant.exudationNitrogen *
+                        rootFraction;
+
+                    rootFractionSum += rootFraction;
+                    layerTopDepthCm += layerThicknessCm;
+                }
+
+                if (std::abs(rootFractionSum - 1.0) >
+                    NUMERIC_TOLERANCE)
+                {
+                    throw std::runtime_error(
+                        "Root fractions for exudate distribution "
+                        "do not sum to one.");
+                }
+            }
+            else {
+                // transfer exudation biomass to soil pool
+                soil.carbonContent_soilActivePool += community.allPlants.at(cohortindex)->amount * community.allPlants.at(cohortindex)->exudationBiomass * CARBON_CONTENT_ODM;
+                soil.nitrogenContent_soilActivePool += (community.allPlants.at(cohortindex)->amount * community.allPlants.at(cohortindex)->exudationBiomass * CARBON_CONTENT_ODM) / parameter.plantCNRatioExudates[pft];
+            }
             community.allPlants.at(cohortindex)->exudationBiomass = 0;
         }
     }
@@ -580,13 +630,8 @@ void GROWTH::doPlantGrowthInSizeAndAging(UTILS utils, PARAMETER parameter, COMMU
         }
 
         /// update all other geometric size variables of the plants
-        community.allPlants.at(cohortindex)->rootingDepth = allometry.rootDepthFromRootBiomassParametersRatioAndShootCorrection(utils, community.allPlants.at(cohortindex)->rootBiomass, parameter.plantRootDepthParamIntercept[pft], parameter.plantRootDepthParamExponent[pft], parameter.plantShootRootRatio[pft], parameter.plantShootCorrectionFactor[pft]);
+        community.allPlants.at(cohortindex)->rootingDepth = allometry.rootDepthFromRootBiomassParametersRatioAndShootCorrection(utils, community.allPlants.at(cohortindex)->rootBiomass, parameter.plantRootDepthParamIntercept[pft], parameter.plantRootDepthParamExponent[pft], parameter.plantShootRootRatio[pft], parameter.plantShootCorrectionFactor[pft], parameter.soilDepth);
         community.allPlants.at(cohortindex)->numberOfSoilLayersRooting = allometry.calculateNumberOfRootingSoillayer(parameter.soilLayerWidth, community.allPlants.at(cohortindex)->rootingDepth);
-
-        if (community.allPlants.at(cohortindex)->numberOfSoilLayersRooting > parameter.numberOfSoilLayers)
-        {
-            community.allPlants.at(cohortindex)->numberOfSoilLayersRooting = parameter.numberOfSoilLayers;
-        }
 
         community.allPlants.at(cohortindex)->laiGreen =
             allometry.laiFromShootBiomassAreaSla(utils, community.allPlants.at(cohortindex)->shootBiomassGreenLeaves, community.allPlants.at(cohortindex)->coveredArea, parameter.plantSpecificLeafArea[pft]);

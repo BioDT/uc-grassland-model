@@ -7,11 +7,11 @@ lai_outputModel = np.zeros(700)
 
 output_model = GrassmindModel()
 
-config_output = "../simulations/exampleProject/lat51.391900_lon11.878700__2013-01-01_2023-12-31__configuration__generic_v1_selfCoupling_setV.txt"
+config_output = "../simulations/exampleCouplingProject/lat51.391900_lon11.878700__2013-01-01_2023-12-31__configuration__generic_v1_selfCoupling_setV.txt"
 
 output_model.initialize(config_output.encode())
 input_model = GrassmindModel()
-config_input = "../simulations/exampleProject/lat51.391900_lon11.878700__2013-01-01_2023-12-31__configuration__generic_v1_selfCoupling_setV.txt"
+config_input = "../simulations/exampleCouplingProject/lat51.391900_lon11.878700__2013-01-01_2023-12-31__configuration__generic_v1_selfCoupling_setV.txt"
 input_model.initialize(config_input.encode())
 
 for i in range(700):

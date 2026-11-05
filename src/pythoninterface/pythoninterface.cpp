@@ -55,12 +55,21 @@ void PYTHONINTERFACE::initializeCouplingVariables(PARAMETER &parameter, SOIL &so
     soil.couplingInterface_surfaceLitterFluxNitrogen = 0.0;
 
     soil.couplingInterface_soilWaterPotentialPerSoilLayer.assign(parameter.numberOfSoilLayers, 0.0);
+    soil.couplingInterface_thetaPerSoilLayer.assign(parameter.numberOfSoilLayers, 0.0);
     soil.couplingInterface_soilWaterNh4Concentration.assign(parameter.numberOfSoilLayers, 0.0);
     soil.couplingInterface_soilWaterNo3Concentration.assign(parameter.numberOfSoilLayers, 0.0);
     soil.couplingInterface_plantNh4UptakePerSoilLayer.assign(parameter.numberOfSoilLayers, 0.0);
     soil.couplingInterface_plantNo3UptakePerSoilLayer.assign(parameter.numberOfSoilLayers, 0.0);
     soil.couplingInterface_plantSoilWaterUptakePerLayer.assign(parameter.numberOfSoilLayers, 0.0);
     soil.couplingInterface_waterUptakeReductionByAvailableWaterPerSoilLayer.assign(parameter.numberOfSoilLayers, 0.0);
+
+    // in case there will be plants at the start of the simulation, calculate values for rootVolume_managementTime and rootVolume_plantTime
+    couplingInterface_rootBiomass =
+        calculateRootBiomassPerLayer();
+
+    couplingInterface_rootVolume =
+        calculateRootVolumeFromRootBiomass(
+            couplingInterface_rootBiomass);
 }
 
 void PYTHONINTERFACE::resetCouplingVariablesFluxes(PARAMETER &parameter, SOIL &soil)
@@ -83,6 +92,7 @@ void PYTHONINTERFACE::resetCouplingVariablesFluxes(PARAMETER &parameter, SOIL &s
     // reset uptake values
     std::fill(soil.couplingInterface_plantNh4UptakePerSoilLayer.begin(), soil.couplingInterface_plantNh4UptakePerSoilLayer.end(), 0.0);
     std::fill(soil.couplingInterface_plantNo3UptakePerSoilLayer.begin(), soil.couplingInterface_plantNo3UptakePerSoilLayer.end(), 0.0);
+    std::fill(soil.couplingInterface_plantSoilWaterUptakePerLayer.begin(), soil.couplingInterface_plantSoilWaterUptakePerLayer.end(), 0.0);
 }
 
 void PYTHONINTERFACE::setRandomNumberGeneratorSeed(unsigned int seed)
@@ -91,6 +101,132 @@ void PYTHONINTERFACE::setRandomNumberGeneratorSeed(unsigned int seed)
     init.initRandomNumberGeneratorSeed(parameter, community);
     std::cout << "Seed of random number generator is changed to: " << std::to_string(seed) << std::endl
               << std::endl;
+}
+
+void PYTHONINTERFACE::setInterfacesRunSimulationStepGetInterfaces(
+    const double* waterPotential,
+    const double* theta,
+    const double* waterContent,
+    const double* nh4Concentration,
+    const double* no3Concentration,
+    size_t numberOfSoilLayers,
+    double* rootVolume_managementTime,
+    double* rootVolume_plantTime,
+    double* waterUptake,
+    double* no3Uptake,
+    double* nh4Uptake,
+    double* rootLitterInput,
+    double* rootLitterInputCN,
+    double* exudateInput,
+    double* exudateInputCN,
+    double* rootVolume,
+    double* rootMass,
+    double& soilWaterSurfaceInput,
+    double& ETP,
+    double& surfaceLitterInput,
+    double& surfaceLitterInputCN)
+{
+    if (numberOfSoilLayers != static_cast<size_t>(parameter.numberOfSoilLayers))
+    {
+        throw std::invalid_argument("Coupling layer-count mismatch");
+    }
+
+    for (std::size_t soilLayer = 0;
+        soilLayer < numberOfSoilLayers;
+        ++soilLayer)
+    {
+        if (!std::isfinite(waterPotential[soilLayer]))
+        {
+            throw std::invalid_argument(
+                "Non-finite water potential in coupling input.");
+        }
+
+        if (!std::isfinite(theta[soilLayer]) ||
+            theta[soilLayer] < 0.0 ||
+            theta[soilLayer] > 1.0)
+        {
+            throw std::invalid_argument(
+                "Theta must be finite and between zero and one "
+                "at soil layer " +
+                std::to_string(soilLayer) + ".");
+        }
+
+        if (!std::isfinite(waterContent[soilLayer]) ||
+            waterContent[soilLayer] < 0.0)
+        {
+            throw std::invalid_argument(
+                "Water content must be finite and nonnegative "
+                "at soil layer " +
+                std::to_string(soilLayer) + ".");
+        }
+
+        if (!std::isfinite(nh4Concentration[soilLayer]) ||
+            nh4Concentration[soilLayer] < 0.0)
+        {
+            throw std::invalid_argument(
+                "NH4 concentration must be finite and nonnegative "
+                "at soil layer " +
+                std::to_string(soilLayer) + ".");
+        }
+
+        if (!std::isfinite(no3Concentration[soilLayer]) ||
+            no3Concentration[soilLayer] < 0.0)
+        {
+            throw std::invalid_argument(
+                "NO3 concentration must be finite and nonnegative "
+                "at soil layer " +
+                std::to_string(soilLayer) + ".");
+        }
+    }
+    soil.couplingInterface_soilWaterPotentialPerSoilLayer.assign(waterPotential, waterPotential + numberOfSoilLayers);
+    soil.couplingInterface_thetaPerSoilLayer.assign(theta, theta + numberOfSoilLayers);
+    soil.couplingInterface_waterContentPerSoilLayer.assign(waterContent, waterContent + numberOfSoilLayers);
+    soil.couplingInterface_soilWaterNh4Concentration.assign(nh4Concentration, nh4Concentration + numberOfSoilLayers);
+    soil.couplingInterface_soilWaterNo3Concentration.assign(no3Concentration, no3Concentration + numberOfSoilLayers);
+
+    // BODIUM requires root-volume values at different times in its code.
+    // Both use Grassmind's root state at the beginning of the timestep.
+    std::copy(couplingInterface_rootVolume.begin(),
+              couplingInterface_rootVolume.end(),
+              rootVolume_managementTime);
+
+    std::copy(couplingInterface_rootVolume.begin(),
+              couplingInterface_rootVolume.end(),
+              rootVolume_plantTime);
+
+    runSimulationStep();
+
+    std::copy(soil.couplingInterface_plantSoilWaterUptakePerLayer.begin(),
+              soil.couplingInterface_plantSoilWaterUptakePerLayer.end(),
+              waterUptake);
+
+    std::copy(soil.couplingInterface_plantNo3UptakePerSoilLayer.begin(),
+              soil.couplingInterface_plantNo3UptakePerSoilLayer.end(),
+              no3Uptake);
+
+    std::copy(soil.couplingInterface_plantNh4UptakePerSoilLayer.begin(),
+              soil.couplingInterface_plantNh4UptakePerSoilLayer.end(),
+              nh4Uptake);
+
+    auto rootLitter = getRootLitter();
+    std::copy(rootLitter.begin(), rootLitter.end(), rootLitterInput);
+
+    auto rootLitterCN = getRootLitterCnRatio();
+    std::copy(rootLitterCN.begin(), rootLitterCN.end(), rootLitterInputCN);
+
+    auto exudates = getRootExudates();
+    std::copy(exudates.begin(), exudates.end(), exudateInput);
+
+    auto exudateCN = getRootExudatesCnRatio();
+    std::copy(exudateCN.begin(), exudateCN.end(), exudateInputCN);
+
+    std::copy(couplingInterface_rootVolume.begin(), couplingInterface_rootVolume.end(), rootVolume);
+    std::copy(couplingInterface_rootBiomass.begin(), couplingInterface_rootBiomass.end(), rootMass);
+
+    soilWaterSurfaceInput = soil.couplingInterface_soilWaterSurfaceInput;
+    ETP = soil.couplingInterface_potentialEvapotranspirationReducedByInterceptionSublimation;
+    surfaceLitterInput = getSurfaceLitter();
+    surfaceLitterInputCN = getSurfaceLitterCnRatio();
 }
 
 void PYTHONINTERFACE::runSimulationStep()
@@ -124,6 +260,11 @@ void PYTHONINTERFACE::writeResultsToOutputFiles()
 double PYTHONINTERFACE::getShootBiomassAboveClippingHeightPerSquaremeter()
 {
     return std::accumulate(community.clippedShootBiomassOfPlantsPerPFT.begin(), community.clippedShootBiomassOfPlantsPerPFT.end(), 0.0);
+}
+
+double PYTHONINTERFACE::getShootBiomassPerSquaremeter()
+{
+    return std::accumulate(community.shootBiomassOfPlantsPerPFT.begin(), community.shootBiomassOfPlantsPerPFT.end(), 0.0);
 }
 
 double PYTHONINTERFACE::getYieldPerSquaremeter()
@@ -165,6 +306,62 @@ double PYTHONINTERFACE::getMeanNitrogenLimitationFactor()
         numberOfPlants += community.allPlants.at(cohortindex)->amount;
     }
     return summedNitrogenLimitationFactor/numberOfPlants;
+}
+
+double PYTHONINTERFACE::getNumberOfPlants()
+{
+    return community.totalNumberOfPlantsInCommunity;
+}
+
+double PYTHONINTERFACE::getNumberOfPlantsAboveClippingHeight()
+{
+    double numberOfPlants = 0;
+
+    for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
+    {
+        if (community.allPlants.at(cohortindex)->height > parameter.clippingHeightOfBiomassMeasurement)
+        {
+            numberOfPlants += community.allPlants.at(cohortindex)->amount;
+        }
+    }
+    return numberOfPlants;
+}
+
+double PYTHONINTERFACE::getNumberOfPlantsAbove10cm()
+{
+    double numberOfPlants = 0;
+
+    for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
+    {
+        if (community.allPlants.at(cohortindex)->height > 10.0) // 10cm is the mowing height
+        {
+            numberOfPlants += community.allPlants.at(cohortindex)->amount;
+        }
+    }
+    return numberOfPlants;}
+
+double PYTHONINTERFACE::getMaximalPlantHeight()
+{
+    // return maximal plant height
+    double maximalHeight = 0.0;
+
+    for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
+    {
+        maximalHeight = std::max(community.allPlants.at(cohortindex)->height, maximalHeight);
+    }
+    return maximalHeight;
+}
+
+double PYTHONINTERFACE::getMaximalRootingDepth()
+{
+    // return maximal plant height
+    double maximalDepth = 0.0;
+
+    for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
+    {
+        maximalDepth = std::max(community.allPlants.at(cohortindex)->rootingDepth, maximalDepth);
+    }
+    return maximalDepth;
 }
 
 std::vector<double> PYTHONINTERFACE::getNumberOfPlantsPerHeight()
@@ -257,11 +454,8 @@ std::vector<double> PYTHONINTERFACE::getPlantNh4Uptake()
 }
 std::vector<double> PYTHONINTERFACE::getRootLitter()
 {
-    std::vector<double> fluxInOdm(soil.couplingInterface_rootLitterFluxCarbon.size());
-    std::transform(soil.couplingInterface_rootLitterFluxCarbon.begin(), soil.couplingInterface_rootLitterFluxCarbon.end(), fluxInOdm.begin(),
-                   [](double x)
-                   { return x / CARBON_CONTENT_ODM; });
-    return fluxInOdm;
+    // in g C
+    return soil.couplingInterface_rootLitterFluxCarbon;
 }
 std::vector<double> PYTHONINTERFACE::getRootLitterCnRatio()
 {
@@ -272,9 +466,14 @@ std::vector<double> PYTHONINTERFACE::getRootLitterCnRatio()
         {
             cnRatios[soilLayer] = soil.couplingInterface_rootLitterFluxCarbon.at(soilLayer) / soil.couplingInterface_rootLitterFluxNitrogen.at(soilLayer);
         }
+        else if (soil.couplingInterface_rootLitterFluxCarbon.at(soilLayer) == 0 && soil.couplingInterface_rootLitterFluxNitrogen.at(soilLayer) == 0)
+        {
+            cnRatios[soilLayer] = 1.0;
+        }
         else
         {
-            cnRatios[soilLayer] =  std::numeric_limits<double>::quiet_NaN();
+            throw std::runtime_error(
+                "Invalid root litter carbon or nitrogen flux");
         }
     }
     return cnRatios;
@@ -282,11 +481,8 @@ std::vector<double> PYTHONINTERFACE::getRootLitterCnRatio()
 
 std::vector<double> PYTHONINTERFACE::getRootExudates()
 {
-    std::vector<double> fluxInOdm(soil.couplingInterface_rootExudatesCarbon.size());
-    std::transform(soil.couplingInterface_rootExudatesCarbon.begin(), soil.couplingInterface_rootExudatesCarbon.end(), fluxInOdm.begin(),
-                   [](double x)
-                   { return x / CARBON_CONTENT_ODM; });
-    return fluxInOdm;
+    // in g C
+    return soil.couplingInterface_rootExudatesCarbon;
 }
 std::vector<double> PYTHONINTERFACE::getRootExudatesCnRatio()
 {
@@ -297,20 +493,40 @@ std::vector<double> PYTHONINTERFACE::getRootExudatesCnRatio()
         {
             cnRatios[soilLayer] = soil.couplingInterface_rootExudatesCarbon.at(soilLayer) / soil.couplingInterface_rootExudatesNitrogen.at(soilLayer);
         }
+        else if (soil.couplingInterface_rootExudatesCarbon.at(soilLayer) == 0 && soil.couplingInterface_rootExudatesNitrogen.at(soilLayer) == 0)
+        {
+            cnRatios[soilLayer] = 1.0;
+        }
         else
         {
-            cnRatios[soilLayer] = std::numeric_limits<double>::quiet_NaN();
+            throw std::runtime_error(
+                "Invalid root exudate carbon or nitrogen flux");
         }
     }
     return cnRatios;
 }
 double PYTHONINTERFACE::getSurfaceLitter()
 {
-    return soil.couplingInterface_surfaceLitterFluxCarbon / CARBON_CONTENT_ODM;
+    // in g C (per m² and timestep)
+    return soil.couplingInterface_surfaceLitterFluxCarbon;
 }
 double PYTHONINTERFACE::getSurfaceLitterCnRatio()
 {
-    return soil.couplingInterface_surfaceLitterFluxCarbon / soil.couplingInterface_surfaceLitterFluxNitrogen;
+    double surfaceLitterCn;
+    if (soil.couplingInterface_surfaceLitterFluxNitrogen > 0)
+    {
+        surfaceLitterCn = soil.couplingInterface_surfaceLitterFluxCarbon / soil.couplingInterface_surfaceLitterFluxNitrogen;
+    }
+    else if (soil.couplingInterface_surfaceLitterFluxCarbon == 0 && soil.couplingInterface_surfaceLitterFluxNitrogen == 0)
+    {
+        surfaceLitterCn = 1.0;
+    }
+    else
+    {
+        throw std::runtime_error(
+            "Invalid surface litter carbon or nitrogen flux");
+    }
+    return surfaceLitterCn;
 }
 
 double PYTHONINTERFACE::getSoilWaterSurfaceInput()
@@ -335,6 +551,10 @@ void PYTHONINTERFACE::setNo3Concentration(std::vector<double> values)
 {
     soil.couplingInterface_soilWaterNo3Concentration = values;
 }
+void PYTHONINTERFACE::setTheta(std::vector<double> values)
+{
+    soil.couplingInterface_thetaPerSoilLayer = values;
+}
 
 // helper functions
 
@@ -345,10 +565,9 @@ std::vector<double> PYTHONINTERFACE::calculateRootBiomassPerLayer()
 
     for (int cohortindex = 0; cohortindex < community.allPlants.size(); cohortindex++)
     {
-
-        for (int lay = 0; lay < community.allPlants.at(cohortindex)->numberOfSoilLayersRooting; lay++)
+        double depth = 0.0;
+        for (int lay = 0; lay < community.allPlants.at(cohortindex)->numberOfSoilLayersRooting && lay < parameter.numberOfSoilLayers; lay++)
         {
-            double depth = 0.0;
             if (lay < (community.allPlants.at(cohortindex)->numberOfSoilLayersRooting - 1))
             {
                 rootMassPerLayer[lay] +=
@@ -369,11 +588,11 @@ std::vector<double> PYTHONINTERFACE::calculateRootVolumeFromRootBiomass(
     std::vector<double> rootMassPerLayer)
 {
     // calculation of volume from mass as in bodium, such that relation of volume to mass is the same as in
-    // bodium
+    // bodium for summeroats
     // TODO: think of changing this calculation to pft specific
     // values as in bodium, such that
-    double meanRootDiameter = 5e-4;              // m
-    double meanSpecificRootLength = 10.5 * 1/1000; // m per kg * g/kg
+    double meanRootDiameter = 7e-4;              // m
+    double meanSpecificRootLength = 120000 * 1/1000; // m per kg * g/kg
     std::vector<double> rootVolumePerLayer(parameter.numberOfSoilLayers);
     std::fill(rootVolumePerLayer.begin(), rootVolumePerLayer.end(), 0.0);
 

@@ -261,7 +261,7 @@ double ALLOMETRY::rootBiomassFromShootBiomass(UTILS utils, double shootBiomass, 
  * @param shootCorrectionFactor Biomass density factor (g ODM cm⁻³); must be > 0.
  * @return Root-zone depth (cm).
  */
-double ALLOMETRY::rootDepthFromRootBiomassParametersRatioAndShootCorrection(UTILS utils, double rootBiomass, double parameterIntercept, double parameterExponent, double shootRootRatio, double shootCorrectionFactor)
+double ALLOMETRY::rootDepthFromRootBiomassParametersRatioAndShootCorrection(UTILS utils, double rootBiomass, double parameterIntercept, double parameterExponent, double shootRootRatio, double shootCorrectionFactor, double soilDepth)
 {
     if (shootCorrectionFactor <= 0.0)
     {
@@ -269,7 +269,13 @@ double ALLOMETRY::rootDepthFromRootBiomassParametersRatioAndShootCorrection(UTIL
     }
     double calcPart1 = std::pow((shootRootRatio / shootCorrectionFactor), parameterExponent);
     double calcPart2 = std::pow(rootBiomass, parameterExponent);
-    return (parameterIntercept * calcPart1 * calcPart2);
+    double rootDepth = (parameterIntercept * calcPart1 * calcPart2);
+    if (rootDepth > soilDepth)
+    {
+        utils.handleWarning("Plant: rootDepth (" + std::to_string(rootDepth) + ") exceeds parameter.soilDepth (" + std::to_string(soilDepth) + "). Capping to maximum.");
+        rootDepth = soilDepth;
+    }
+    return rootDepth;
 }
 
 /**

@@ -3,14 +3,14 @@ import numpy as np
 from py_grassmind import GrassmindModel
 from py_bodium_finam import Model
 
-
 #############global input###########################################
 
 GCEF_data_path = "prepared_field_data_gcef/"
 
 
 bodium_config = "parametrizations/bodium_config.json"
-grassmind_config = "/home/kantzenb/Documents/GitLabProjects/uc-grassland-model/simulations/couplingProject/lat51.391900_lon11.878700__2013-01-01_2024-12-31__configuration__ambient_intensive_v1_coupled.txt"
+# grassmind_config = "/home/kantzenb/Documents/GitLabProjects/uc-grassland-model/simulations/couplingProject/lat51.391900_lon11.878700__2013-01-01_2024-12-31__configuration__ambient_intensive_v1_coupled.txt"
+grassmind_config = "/home/kantzenb/Documents/GitLabProjects/grassmind3-bodium/parametrizations/grassmind/simulations/couplingProject/lat51.391900_lon11.878700__2013-01-01_2024-12-31__configuration__ambient_intensive_v1_coupled_oldGraB.txt"
 
 
 #############calibration ############################################
@@ -131,6 +131,7 @@ def run_one_instances():
         )
 
         print(grassmind_instance.get_lai())
+        # print(grassmind_instance.get_mean_water_limitation_factor())
 
     # return biomass_yield_moisture
 

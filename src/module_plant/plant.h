@@ -120,7 +120,7 @@ public:
         plantNitrogen = shootNitrogen + rootNitrogen;
 
         /* root architecture */
-        rootingDepth = allometry.rootDepthFromRootBiomassParametersRatioAndShootCorrection(utils, rootBiomass, parameter.plantRootDepthParamIntercept[pft], parameter.plantRootDepthParamExponent[pft], parameter.plantShootRootRatio[pft], parameter.plantShootCorrectionFactor[pft]);
+        rootingDepth = allometry.rootDepthFromRootBiomassParametersRatioAndShootCorrection(utils, rootBiomass, parameter.plantRootDepthParamIntercept[pft], parameter.plantRootDepthParamExponent[pft], parameter.plantShootRootRatio[pft], parameter.plantShootCorrectionFactor[pft], parameter.soilDepth);
         numberOfSoilLayersRooting = allometry.calculateNumberOfRootingSoillayer(parameter.soilLayerWidth, rootingDepth);
 
         /* leaf area and structure */

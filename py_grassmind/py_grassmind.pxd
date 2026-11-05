@@ -7,6 +7,7 @@
 from libcpp cimport bool
 from libcpp.string cimport string
 from libcpp.vector cimport vector
+from libc.stddef cimport size_t
 
 
 
@@ -19,10 +20,16 @@ cdef extern from "../src/pythoninterface/pythoninterface.h":
         void runSimulationStep() except + nogil
         void writeResultsToOutputFiles() except + nogil
         double getShootBiomassAboveClippingHeightPerSquaremeter() except + nogil
+        double getShootBiomassPerSquaremeter() except + nogil
         double getYieldPerSquaremeter() except + nogil
         double getLai() except + nogil
         double getMeanWaterLimitationFactor() except + nogil
         double getMeanNitrogenLimitationFactor() except + nogil
+        double getNumberOfPlants() except + nogil
+        double getNumberOfPlantsAboveClippingHeight() except + nogil
+        double getNumberOfPlantsAbove10cm() except + nogil
+        double getMaximalPlantHeight() except + nogil
+        double getMaximalRootingDepth() except + nogil
         vector[double] getSoilWaterPerLayer() except + nogil
         vector[double] getNumberOfPlantsPerHeight() except + nogil
 
@@ -59,7 +66,31 @@ cdef extern from "../src/pythoninterface/pythoninterface.h":
 
         ## set extern soil module coupling variables
         void setWaterPotential(vector[double] values) except + nogil
+        void setTheta(vector[double] values) except + nogil
         void setNh4Concentration(vector[double] values) except + nogil
         void setNo3Concentration(vector[double] values) except + nogil
 
+        ## fast coupling
+        void setInterfacesRunSimulationStepGetInterfaces(
+            const double* waterPotential,
+            const double* theta,
+            const double* waterContent,
+            const double* nh4Concentration,
+            const double* no3Concentration,
+            size_t numberOfSoilLayers,
+            double* rootVolume_managementTime,
+            double* rootVolume_plantTime,
+            double* waterUptake,
+            double* no3Uptake,
+            double* nh4Uptake,
+            double* rootLitterInput,
+            double* rootLitterInputCN,
+            double* exudateInput,
+            double* exudateInputCN,
+            double* rootVolume,
+            double* rootMass,
+            double& soilWaterSurfaceInput,
+            double& ETP,
+            double& surfaceLitterInput,
+            double& surfaceLitterInputCN) except + nogil
 
