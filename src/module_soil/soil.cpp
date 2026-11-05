@@ -26,7 +26,7 @@ SOIL::~SOIL() {};
  *                               `useExternalSoilModule_BODIUM` is active;
  *                               default = 0 for surface material).
  */
-void SOIL::transferDyingPlantPartsToLitterPools(UTILS utils, PARAMETER parameter, double number, double biomass, std::string typeOfMaterial, int pft, int numberOfTargetSoilLayers)
+void SOIL::transferDyingPlantPartsToLitterPools(UTILS utils, PARAMETER parameter, double number, double biomass, std::string typeOfMaterial, int pft, int numberOfTargetSoilLayers, double rootingDepthCm)
 {
 
     double carbonFlux = number * (biomass * CARBON_CONTENT_ODM);
@@ -77,16 +77,51 @@ void SOIL::transferDyingPlantPartsToLitterPools(UTILS utils, PARAMETER parameter
         }
         else if (typeOfMaterial == "soil_root")
         {
-            if (numberOfTargetSoilLayers == 0)
+            if (!std::isfinite(rootingDepthCm) ||
+                rootingDepthCm <= 0.0 ||
+                numberOfTargetSoilLayers <= 0 ||
+                numberOfTargetSoilLayers >
+                    parameter.numberOfSoilLayers)
             {
-                utils.handleError("External soil module require number of target layers for root litter.");
+                throw std::runtime_error(
+                    "Invalid rooting depth or rooted-layer count "
+                    "while distributing root litter.");
             }
-            // distribute dying root flux equally among rooting layers
-            for (int soilLayer = 0; soilLayer < numberOfTargetSoilLayers; soilLayer++)
+            double layerTopDepthCm = 0.0;
+            double rootFractionSum = 0.0;
+
+            // distribute dying root flux equally along rooting depth
+            for (int soilLayer = 0;
+                soilLayer < numberOfTargetSoilLayers;
+                ++soilLayer)
             {
-                couplingInterface_rootLitterFluxCarbon[soilLayer] +=
-                    carbonFlux / numberOfTargetSoilLayers;
-                couplingInterface_rootLitterFluxNitrogen[soilLayer] += (carbonFlux / parameter.plantCNRatioRoots[pft]) / numberOfTargetSoilLayers;
+                const double layerThicknessCm =
+                    parameter.soilLayerWidth.at(soilLayer);
+
+                const double rootedThicknessCm = std::clamp(
+                    rootingDepthCm - layerTopDepthCm,
+                    0.0,
+                    layerThicknessCm);
+
+                const double rootFraction =
+                    rootedThicknessCm / rootingDepthCm;
+
+                couplingInterface_rootLitterFluxCarbon.at(soilLayer) +=
+                    carbonFlux * rootFraction;
+
+                couplingInterface_rootLitterFluxNitrogen.at(soilLayer) +=
+                    (carbonFlux / parameter.plantCNRatioRoots[pft]) * rootFraction;
+
+                rootFractionSum += rootFraction;
+                layerTopDepthCm += layerThicknessCm;
+            }
+
+            if (std::abs(rootFractionSum - 1.0) >
+                NUMERIC_TOLERANCE)
+            {
+                throw std::runtime_error(
+                    "Root fractions for root-litter distribution "
+                    "do not sum to one.");
             }
         }
         else
@@ -1069,7 +1104,7 @@ void SOIL::calculateBodiumSoilWaterLimitationAndWaterUptake(UTILS utils, PARAMET
     double h2L = parameter.h2L; //-300000; //-80000;
     double h2H = parameter.h2H; //-50000; //-20000;
     double h1 = -2500;
-    double h0 = -1000;
+    double h0 = -100;
     double transp_low = 1;  // lower potential transpiration rate
     double transp_high = 5; // higher potential transpiration rate
 
@@ -1087,14 +1122,24 @@ void SOIL::calculateBodiumSoilWaterLimitationAndWaterUptake(UTILS utils, PARAMET
             // assuming root equally distributed between rooting layers
             double waterPotentialPlantRootAverage = 0.;
             double waterUptakeWeightingFactorSum = 0.;
+            double relativeRootVolume;
 
+            double depth = 0.0;
+            double checkRelativeRootVolumeSum = 0.0;
             for (int soilLayer = 0; soilLayer < community.allPlants.at(cohortindex)->numberOfSoilLayersRooting; soilLayer++)
             {
+                relativeRootVolume = (std::min(community.allPlants.at(cohortindex)->rootingDepth - depth, parameter.soilLayerWidth[soilLayer]))/community.allPlants.at(cohortindex)->rootingDepth;
                 waterPotentialPlantRootAverage +=
-                    couplingInterface_soilWaterPotentialPerSoilLayer[soilLayer] / community.allPlants.at(cohortindex)->numberOfSoilLayersRooting;
+                    couplingInterface_soilWaterPotentialPerSoilLayer[soilLayer] * relativeRootVolume;
                 waterUptakeWeightingFactorSum += couplingInterface_soilWaterPotentialPerSoilLayer[soilLayer] < h3
                                                      ? 0
-                                                     : (couplingInterface_soilWaterPotentialPerSoilLayer[soilLayer] - h3);
+                                                     : (couplingInterface_soilWaterPotentialPerSoilLayer[soilLayer] - h3) * relativeRootVolume;
+                depth += parameter.soilLayerWidth[soilLayer];
+                checkRelativeRootVolumeSum += relativeRootVolume;
+            }
+            if (std::abs(checkRelativeRootVolumeSum-1) > NUMERIC_TOLERANCE)
+            {
+                throw std::runtime_error("Calculation of relative root volumes do not sum up to one!");
             }
             community.allPlants.at(cohortindex)->limitingFactorGppWater =
                 (waterPotentialPlantRootAverage < h3)   ? 0
@@ -1109,15 +1154,22 @@ void SOIL::calculateBodiumSoilWaterLimitationAndWaterUptake(UTILS utils, PARAMET
 
             if (community.allPlants.at(cohortindex)->soilWaterUptake > 0)
             {
+                depth = 0.0;
                 for (int soilLayer = 0; soilLayer < community.allPlants.at(cohortindex)->numberOfSoilLayersRooting; soilLayer++)
                 {
+                    relativeRootVolume = (std::min(community.allPlants.at(cohortindex)->rootingDepth - depth, parameter.soilLayerWidth[soilLayer]))/community.allPlants.at(cohortindex)->rootingDepth;
                     community.allPlants.at(cohortindex)->soilWaterUptakePerSoilLayer.at(soilLayer) =
                         community.allPlants.at(cohortindex)->soilWaterUptake *
                         (couplingInterface_soilWaterPotentialPerSoilLayer[soilLayer] < h3
                              ? 0
-                             : (couplingInterface_soilWaterPotentialPerSoilLayer[soilLayer] - h3)) /
+                             : (couplingInterface_soilWaterPotentialPerSoilLayer[soilLayer] - h3)) * relativeRootVolume/
                         waterUptakeWeightingFactorSum;
                     community.totalSoilWaterUptakePerSoilLayer.at(soilLayer) += community.allPlants.at(cohortindex)->amount * community.allPlants.at(cohortindex)->soilWaterUptakePerSoilLayer.at(soilLayer);
+                    depth += parameter.soilLayerWidth[soilLayer];
+                    if (community.totalSoilWaterUptakePerSoilLayer.at(soilLayer) > couplingInterface_waterContentPerSoilLayer.at(soilLayer))
+                    {
+                        utils.handleError("Water uptake is bigger than water content in layer: " + std::to_string(soilLayer));
+                    }
                 }
             }
         }
@@ -1738,164 +1790,361 @@ void SOIL::calculateSoilNitrogenUptakePerPlant(UTILS utils, PARAMETER parameter,
 }
 
 /**
+ * @brief Calculates root length per plant in each rooted soil layer.
+ *
+ * Root biomass is distributed uniformly over the rooting depth and converted
+ * to root length using the specific root length:
+ *
+ * @f[
+ * L_i = B_{root}\frac{z_{root,i}}{z_{root}}SRL
+ * @f]
+ *
+ * where @f$B_{root}@f$ is root biomass per plant (g),
+ * @f$z_{root,i}@f$ is rooted thickness in layer @f$i@f$ (cm),
+ * @f$z_{root}@f$ is total rooting depth (cm), and @f$SRL@f$ is specific
+ * root length (m g⁻¹).
+ *
+ * @param parameter Soil-layer count and layer widths (cm).
+ * @param plant Plant and its root properties.
+ * @param specificRootLengthMPerG Specific root length (m root g⁻¹ root biomass).
+ * @return Root length per plant in each soil layer (m root plant⁻¹).
+ */
+std::vector<double> SOIL::calculateRootLengthPerSoilLayer(
+    PARAMETER parameter,
+    PLANT &plant,
+    double specificRootLengthMPerG)
+{
+    if (!std::isfinite(specificRootLengthMPerG) ||
+        specificRootLengthMPerG <= 0.0)
+    {
+        throw std::runtime_error("Specific root length must be positive and finite.");
+    }
+
+    if (!std::isfinite(plant.rootBiomass) ||
+        !std::isfinite(plant.rootingDepth) ||
+        plant.rootBiomass <= 0.0 ||
+        plant.rootingDepth <= 0.0)
+    {
+        throw std::runtime_error(
+            "Plant has nonpositive or non-finite root biomass or rooting depth.");
+    }
+    if (plant.numberOfSoilLayersRooting < 0 ||
+        plant.numberOfSoilLayersRooting > parameter.numberOfSoilLayers)
+    {
+        throw std::runtime_error("Invalid number of rooted soil layers.");
+    }
+
+    std::vector<double> rootLengthMPerPlantBySoilLayer(
+        parameter.numberOfSoilLayers,
+        0.0);
+    double layerTopDepthCm = 0.0;
+    double rootedThicknessCmSumCheck= 0.0; // for debugging, check that sum of rooted thicknesses equals rooting depth
+    for (int soilLayer = 0; soilLayer < plant.numberOfSoilLayersRooting; soilLayer++)
+    {
+        const double layerThicknessCm = parameter.soilLayerWidth.at(soilLayer);
+        const double rootedThicknessCm = std::clamp(
+            plant.rootingDepth - layerTopDepthCm,
+            0.0,
+            layerThicknessCm);
+        const double rootBiomassGPerPlantInLayer =
+            plant.rootBiomass * rootedThicknessCm / plant.rootingDepth;
+        rootLengthMPerPlantBySoilLayer.at(soilLayer) =
+            rootBiomassGPerPlantInLayer * specificRootLengthMPerG;
+        layerTopDepthCm += layerThicknessCm;
+        rootedThicknessCmSumCheck += rootedThicknessCm;
+    }
+    if (std::abs(rootedThicknessCmSumCheck - plant.rootingDepth) > NUMERIC_TOLERANCE)
+    {
+        throw std::runtime_error("Error (soil calculateRootLengthPerSoilLayer): Sum of rooted thicknesses does not equal rooting depth.");
+    }
+
+    return rootLengthMPerPlantBySoilLayer;
+}
+
+/**
+ * @brief Calculates root-length density in each soil layer.
+ *
+ * Calls `calculateRootLengthPerSoilLayer()` for each living cohort and sums the resulting
+ * root lengths over all living cohorts. Root length per unit ground area is
+ * divided by layer thickness to obtain root-length density:
+ *
+ * @f[
+ * RLD_i = \frac{\sum_c n_c L_{c,i}}{A z_i}
+ * @f]
+ *
+ * where @f$n_c@f$ is the number of plants in cohort @f$c@f$,
+ * @f$L_{c,i}@f$ is root length per plant in layer @f$i@f$ (m),
+ * @f$A@f$ is simulation area (m²), and @f$z_i@f$ is layer thickness (m).
+ *
+ * @param parameter Soil-layer count and layer widths (cm).
+ * @param community Plant cohorts, including abundance and root properties.
+ * @param specificRootLengthMPerG Specific root length (m root g⁻¹ root biomass).
+ * @return Aggregate root-length density per soil layer (m root m⁻³ soil).
+ */
+std::vector<double> SOIL::calculateRootLengthDensityPerSoilLayer(
+    PARAMETER parameter,
+    COMMUNITY &community,
+    double specificRootLengthMPerG)
+{
+    constexpr double squareMetresPerSquareCentimetre = 1e-4;
+    const double simulationAreaM2 = SIMULATION_AREA * squareMetresPerSquareCentimetre;
+    std::vector<double> totalRootLengthMPerM2BySoilLayer(parameter.numberOfSoilLayers, 0.0);
+    std::vector<double> rootLengthDensityMPerM3BySoilLayer(parameter.numberOfSoilLayers, 0.0);
+
+    for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
+    {
+        auto plant = community.allPlants.at(cohortindex);
+        if (plant->amount > 0.0)
+        {
+            const std::vector<double> rootLengthMPerPlantBySoilLayer =
+                calculateRootLengthPerSoilLayer(
+                    parameter,
+                    *plant,
+                    specificRootLengthMPerG);
+            for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
+            {
+                totalRootLengthMPerM2BySoilLayer.at(soilLayer) +=
+                    plant->amount * rootLengthMPerPlantBySoilLayer.at(soilLayer) /
+                    simulationAreaM2;
+            }
+        }
+    }
+
+    for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
+    {
+        const double layerThicknessM = parameter.soilLayerWidth.at(soilLayer) * 0.01;
+        rootLengthDensityMPerM3BySoilLayer.at(soilLayer) =
+            totalRootLengthMPerM2BySoilLayer.at(soilLayer) / layerThicknessM;
+    }
+
+    return rootLengthDensityMPerM3BySoilLayer;
+}
+
+/**
  * @brief Calculates N uptake via the BODIUM coupling model (convection +
  *        diffusion) for each plant cohort.
  *
  * First computes convective N uptake from water flow and pore-water
- * NH4/NO3 concentrations (capped at a minimum `n_lim`). If convection is
+ * NH4/NO3 concentrations (capped at a maximum `maximumNitrogenUptakeKgPerPlant`). If convection is
  * insufficient to meet demand, adds diffusive uptake proportional to root
  * surface area and concentration gradients. Exports per-layer NH4/NO3 uptake
  * to the coupling interface.
  *
  * @param utils     Utility object (reserved).
- * @param parameter Provides BODIUM coupling constants (h2L, h2H) and soil-layer
- *                  widths for root-surface calculation.
+ * @param parameter Provides number of soil-layer and their widths for root-surface calculation.
  * @param community Plant community; `soilNitrogenUptakePerSoilLayer` and
  *                  `totalSoilNitrogenUptake` updated per cohort.
  * @cite Approach adapted from BODIUM soil model.
  */
-void SOIL::calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, COMMUNITY &community)
+void SOIL::calculateBodiumSoilNitrogenUptake(UTILS utils,PARAMETER parameter, COMMUNITY &community)
 {
-    double meanRootDiameter = 7e-4; // m
-    double meanSpecificRootLength =
-        120000 / 1000; // BODIUM config summeroats (m per kg), conversion to m per g
+    constexpr double maxDissolvedNitrogenConcentration = 0.043;
+    // The 0.043 kg N kg-1 cap is an uptake safeguard,
+    // not a solubility law.
+    constexpr double meanRootDiameterM = 7e-4; // m
+    constexpr double meanSpecificRootLengthMPerG =
+        120.0; // BODIUM config summeroats: 120,000 m kg^-1 = 120 m g^-1
+    std::vector<double> rootLengthDensityMPerM3BySoilLayer = calculateRootLengthDensityPerSoilLayer(
+        parameter,
+        community,
+        meanSpecificRootLengthMPerG);
 
     for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
     {
         community.allPlants.at(cohortindex)->totalSoilNitrogenUptake = 0.0;
         if (community.allPlants.at(cohortindex)->amount > 0)
         {
-            double n_demand =
+            const double nitrogenDemandKgPerPlant =
                 community.allPlants.at(cohortindex)->totalSoilNitrogenDemand / 1000; // concversion from g to kg (per squaremeter and day)
-            double total_n = 0, n_conv = 0, n_diff = 0;
-            double water_up_n = 0;
-            double n_lim = 0.0004;                         // value from BODIUM TODO: different values for different plants?
-            n_lim = (n_lim > n_demand) ? n_demand : n_lim; // convective update should not be bigger than demand
-            double surface;
+            double potentialConvectiveUptakeKgPerPlant = 0;
+            const double maximumNitrogenUptakeKgPerPlant = nitrogenDemandKgPerPlant;    // nitrogen demand is limited by fixed CN ratios in Grassmind (not like Bodium, where CN ratios are more flexible)                            
 
             for (int soilLayer = 0; soilLayer < community.allPlants.at(cohortindex)->numberOfSoilLayersRooting; soilLayer++)
             {
-                double n_conv_node = 0;
-                // water uptake per node
-                water_up_n = community.allPlants.at(cohortindex)->soilWaterUptakePerSoilLayer[soilLayer]; // mm per layer (on one m**2) per day
+                // water uptake per layer
+                const double waterUptakePerPlantInLayer = community.allPlants.at(cohortindex)->soilWaterUptakePerSoilLayer[soilLayer]; // mm per layer (on one m**2) per day
 
-                // N uptake by convection per node
-                double nh4conc =
-                    couplingInterface_soilWaterNh4Concentration[soilLayer]; // TODO: check in coupling, that dim = dim
-                                                                            // of par.Water_SoilLayer or .at() here
-                double no3conc = couplingInterface_soilWaterNo3Concentration[soilLayer];
-                nh4conc =
-                    nh4conc > 0.043 ? 0.043 : nh4conc; // set a maximum concentration to prevent too high uptake
-                no3conc = no3conc > 0.043 ? 0.043 : no3conc;
-                n_conv_node = water_up_n * (nh4conc + no3conc);
+                // N uptake by convection per layer
+                double nh4ConcentrationPlantUptakeInLayer = std::min(couplingInterface_soilWaterNh4Concentration[soilLayer], maxDissolvedNitrogenConcentration);
+                double no3ConcentrationPlantUptakeInLayer = std::min(couplingInterface_soilWaterNo3Concentration[soilLayer], maxDissolvedNitrogenConcentration);
+                const double convectiveUptakePerPlantInLayer = waterUptakePerPlantInLayer * (nh4ConcentrationPlantUptakeInLayer + no3ConcentrationPlantUptakeInLayer);
 
                 // total N uptake by convection
-                n_conv += n_conv_node;
+                potentialConvectiveUptakeKgPerPlant += convectiveUptakePerPlantInLayer;
             }
-            // compare n_conv with n_lim per node
+            // Compare convective supply with the plant limit per layer.  Record only
+            // the nitrogen that can actually be removed from the mineral pools.
+            const double convectiveDemandLimitationFactor=(potentialConvectiveUptakeKgPerPlant>maximumNitrogenUptakeKgPerPlant && potentialConvectiveUptakeKgPerPlant>0)? maximumNitrogenUptakeKgPerPlant/potentialConvectiveUptakeKgPerPlant : 1.0;
             for (int soilLayer = 0; soilLayer < community.allPlants.at(cohortindex)->numberOfSoilLayersRooting; soilLayer++)
             {
-                double n_conv_node = 0;
-                water_up_n = community.allPlants.at(cohortindex)->soilWaterUptakePerSoilLayer[soilLayer];
-                double nh4conc = couplingInterface_soilWaterNh4Concentration[soilLayer];
-                double no3conc = couplingInterface_soilWaterNo3Concentration[soilLayer];
-                nh4conc = nh4conc > 0.043 ? 0.043 : nh4conc;
-                no3conc = no3conc > 0.043 ? 0.043 : no3conc;
+                const double waterUptakePerPlantInLayer = community.allPlants.at(cohortindex)->soilWaterUptakePerSoilLayer[soilLayer];
+                double nh4ConcentrationPlantUptakeInLayer = std::min(couplingInterface_soilWaterNh4Concentration[soilLayer], maxDissolvedNitrogenConcentration);
+                double no3ConcentrationPlantUptakeInLayer = std::min(couplingInterface_soilWaterNo3Concentration[soilLayer], maxDissolvedNitrogenConcentration);
+                const double convectiveUptakePerPlantInLayer = waterUptakePerPlantInLayer * (nh4ConcentrationPlantUptakeInLayer + no3ConcentrationPlantUptakeInLayer);
 
-                n_conv_node = water_up_n * (nh4conc + no3conc);
+                const double requestedConvectiveUptakeKgPerPlantInLayer=convectiveUptakePerPlantInLayer*convectiveDemandLimitationFactor;
+                const double fractionNh4=(nh4ConcentrationPlantUptakeInLayer + no3ConcentrationPlantUptakeInLayer)>0
+                        ? nh4ConcentrationPlantUptakeInLayer/(nh4ConcentrationPlantUptakeInLayer + no3ConcentrationPlantUptakeInLayer) : 0;
+                // full nitrogen from interface available 
+                const double actualConvectiveNh4UptakeKgPerPlantInLayer = requestedConvectiveUptakeKgPerPlantInLayer*fractionNh4;
+                const double actualConvectiveNo3UptakeKgPerPlantInLayer = requestedConvectiveUptakeKgPerPlantInLayer*(1-fractionNh4);
+                const double actualConvectiveUptakeKgPerPlantInLayer = actualConvectiveNh4UptakeKgPerPlantInLayer + actualConvectiveNo3UptakeKgPerPlantInLayer;
 
-                if (n_conv > n_lim)
-                {
-                    double new_nup = (n_conv_node / n_conv) * n_lim;
-                    double ratio_nh4 = nh4conc / (nh4conc + no3conc);
-                    ratio_nh4 = (std::isnan(ratio_nh4)) ? 0 : ratio_nh4;
-                    couplingInterface_plantNh4UptakePerSoilLayer[soilLayer] += community.allPlants.at(cohortindex)->amount * (new_nup * ratio_nh4);       // kg
-                    couplingInterface_plantNo3UptakePerSoilLayer[soilLayer] += community.allPlants.at(cohortindex)->amount * (new_nup * (1 - ratio_nh4)); // kg
-                    community.allPlants.at(cohortindex)->soilNitrogenUptakePerSoilLayer[soilLayer] += new_nup * 1000;                                     // in g
-                    community.allPlants.at(cohortindex)->totalSoilNitrogenUptake += new_nup * 1000;                                                       // g
-                }
-                else
-                {
-                    couplingInterface_plantNh4UptakePerSoilLayer[soilLayer] += community.allPlants.at(cohortindex)->amount * (water_up_n * nh4conc); // kg
-                    couplingInterface_plantNo3UptakePerSoilLayer[soilLayer] += community.allPlants.at(cohortindex)->amount * (water_up_n * no3conc); // kg
-                    community.allPlants.at(cohortindex)->soilNitrogenUptakePerSoilLayer[soilLayer] +=
-                        water_up_n * (nh4conc + no3conc) * 1000;                                                             // in g
-                    community.allPlants.at(cohortindex)->totalSoilNitrogenUptake += water_up_n * (nh4conc + no3conc) * 1000; // g
-                }
+                couplingInterface_plantNh4UptakePerSoilLayer[soilLayer] += community.allPlants.at(cohortindex)->amount * actualConvectiveNh4UptakeKgPerPlantInLayer;       // kg
+                couplingInterface_plantNo3UptakePerSoilLayer[soilLayer] += community.allPlants.at(cohortindex)->amount * actualConvectiveNo3UptakeKgPerPlantInLayer; // kg
+                community.allPlants.at(cohortindex)->soilNitrogenUptakePerSoilLayer[soilLayer] += actualConvectiveUptakeKgPerPlantInLayer * 1000;                                     // in g
+                community.allPlants.at(cohortindex)->totalSoilNitrogenUptake += actualConvectiveUptakeKgPerPlantInLayer * 1000;      
+               
+                if ((couplingInterface_soilWaterNh4Concentration[soilLayer] * couplingInterface_waterContentPerSoilLayer[soilLayer]) < couplingInterface_plantNh4UptakePerSoilLayer[soilLayer] || (couplingInterface_soilWaterNo3Concentration[soilLayer] * couplingInterface_waterContentPerSoilLayer[soilLayer]) < couplingInterface_plantNo3UptakePerSoilLayer[soilLayer])
+                    {
+                        utils.handleError("Convective nitrogen uptake is bigger than nitrogen in layer: " + std::to_string(soilLayer));
+                    }
+
             }
-            n_conv = (n_conv > n_lim) ? n_lim : n_conv;
-            n_demand = (n_demand > n_lim) ? n_lim : n_demand;
-            // TODO also check, that conv isnt bigger than demand? (change here and above)
+        }
+    }
+    std::vector<double> totalRequestedNo3(parameter.numberOfSoilLayers, 0.0);
+    std::vector<double> totalRequestedNh4(parameter.numberOfSoilLayers, 0.0);
+    std::vector<std::vector<double>> requestedDiffusionPerPlant(community.totalNumberOfCohortsInCommunity, std::vector<double>(parameter.numberOfSoilLayers, 0.0));
+    constexpr double diffusionConst = 1.9e-9;
+    for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
+    {
+        if (community.allPlants.at(cohortindex)->amount > 0)
+        {
+            const double nitrogenDemandKgPerPlant = community.allPlants.at(cohortindex)->totalSoilNitrogenDemand / 1000; // concversion from g to kg (per squaremeter and day)
+            const double actualConvectiveUptakeKgPerPlant = community.allPlants.at(cohortindex)->totalSoilNitrogenUptake / 1000; // concversion from g to kg (per squaremeter and day)
+            double totalDiffusiveCapacityKgPerPlant = 0;
+            std::vector<double> diffusiveCapacityPerPlantByLayer(community.allPlants.at(cohortindex)->numberOfSoilLayersRooting, 0.0);
 
             // if convection is not enough, we need diffusion
-            if (n_conv < n_demand)
+            if (actualConvectiveUptakeKgPerPlant < nitrogenDemandKgPerPlant)
             {
-                double diff_coeff = 5E-7; // diff_coeff = D(theta)/l_d in m/s, D is 5e-11 m²/s,
-                double n_diff_pot = n_demand - n_conv;
-                bool usepot;
-                double depth = 0.0;
-                double rootBiomassInLayer;
+                const std::vector<double> rootLengthMPerPlantBySoilLayer =
+                    calculateRootLengthPerSoilLayer(
+                        parameter,
+                        *community.allPlants.at(cohortindex),
+                        meanSpecificRootLengthMPerG);
+                const double remainingNitrogenDemandKgPerPlant = nitrogenDemandKgPerPlant - actualConvectiveUptakeKgPerPlant;
 
                 //  calculate max diffusion  (all layers)
                 for (int soilLayer = 0; soilLayer < community.allPlants.at(cohortindex)->numberOfSoilLayersRooting; soilLayer++)
                 {
-                    double n_diff_node = 0;
+                    double nh4ConcentrationPlantUptakeInLayer = std::min(couplingInterface_soilWaterNh4Concentration[soilLayer], maxDissolvedNitrogenConcentration);
+                    double no3ConcentrationPlantUptakeInLayer = std::min(couplingInterface_soilWaterNo3Concentration[soilLayer], maxDissolvedNitrogenConcentration);
+                    double diffusiveCapacityKgPerPlantInLayer = 0;
 
-                    if (soilLayer < (community.allPlants.at(cohortindex)->numberOfSoilLayersRooting - 1))
-                    {
-                        rootBiomassInLayer = community.allPlants.at(cohortindex)->rootBiomass * parameter.soilLayerWidth[soilLayer] / community.allPlants.at(cohortindex)->rootingDepth;
-                        depth += parameter.soilLayerWidth[soilLayer];
-                    }
-                    else
-                    {
-                        rootBiomassInLayer = community.allPlants.at(cohortindex)->rootBiomass * (1 - (depth / community.allPlants.at(cohortindex)->rootingDepth));
-                    }
-                    surface = rootBiomassInLayer * meanSpecificRootLength * 2 * PI * (meanRootDiameter / 2); // m^2
-                    // double surface=2*(theRoot->getVolume()/(mean_dia/2)); // pi r² -> 2pi r, m²/Node
-                    n_diff_node = (surface * couplingInterface_diffusionFactor[soilLayer]*(couplingInterface_soilWaterNh4Concentration[soilLayer]+couplingInterface_soilWaterNo3Concentration[soilLayer])/std::pow(M_PI*rootBiomassInLayer*meanSpecificRootLength,-0.5));
-                    
+                    const double rootLengthMPerPlantInLayer =
+                        rootLengthMPerPlantBySoilLayer.at(soilLayer);
+                    const double rootLengthDensityMPerM3 =
+                        rootLengthDensityMPerM3BySoilLayer.at(soilLayer);
+                    const double rootRadius = meanRootDiameterM/2;
+                    const double rx=(rootLengthDensityMPerM3>0)?1/sqrt(M_PI*rootLengthDensityMPerM3):0; // half distance between the roots
+                    const double impedance=fmax(0.0,1.58*couplingInterface_thetaPerSoilLayer[soilLayer]-0.17); // impedance/ tortuosity factor
+                    const double nitrogenConcentrationKgPerM3Water=(nh4ConcentrationPlantUptakeInLayer + no3ConcentrationPlantUptakeInLayer)*1000;
+                    diffusiveCapacityKgPerPlantInLayer = (rx>1.5*rootRadius && impedance>0)? 2*M_PI*diffusionConst*couplingInterface_thetaPerSoilLayer[soilLayer]*impedance*nitrogenConcentrationKgPerM3Water/(log(rx/rootRadius)-0.5)*rootLengthMPerPlantInLayer*DAY_IN_SECONDS : 0;
+
+                    if (!std::isfinite(diffusiveCapacityKgPerPlantInLayer) || diffusiveCapacityKgPerPlantInLayer < 0) diffusiveCapacityKgPerPlantInLayer = 0;
                     // total N uptake per diffusion
-                    n_diff += n_diff_node;
+                    totalDiffusiveCapacityKgPerPlant += diffusiveCapacityKgPerPlantInLayer;
+                    diffusiveCapacityPerPlantByLayer[soilLayer] = diffusiveCapacityKgPerPlantInLayer;
                 }
 
                 // is the maximum possible diffusion smaller than the potential demand?
-                usepot = (n_diff <= n_diff_pot) ? false : true;
-
-                for (int soilLayer = 0; soilLayer < community.allPlants.at(cohortindex)->numberOfSoilLayersRooting; soilLayer++)
+                if (totalDiffusiveCapacityKgPerPlant > remainingNitrogenDemandKgPerPlant)
                 {
-                    double n_diff_node = 0;
-
-                    if (soilLayer < (community.allPlants.at(cohortindex)->numberOfSoilLayersRooting - 1))
+                    for (int soilLayer = 0; soilLayer < community.allPlants.at(cohortindex)->numberOfSoilLayersRooting; soilLayer++)
                     {
-                        surface = community.allPlants.at(cohortindex)->rootBiomass * parameter.soilLayerWidth[soilLayer] / community.allPlants.at(cohortindex)->rootingDepth *
-                                  meanSpecificRootLength * 2 * PI * (meanRootDiameter / 2);
-                    }
-                    else
-                    {
-                        surface = community.allPlants.at(cohortindex)->rootBiomass * (1 - (depth / community.allPlants.at(cohortindex)->rootingDepth)) *
-                                  meanSpecificRootLength * 2 * PI * (meanRootDiameter / 2);
-                    }
-                    // double surface=2*(theRoot->getVolume()/(mean_dia/2));
-
-                    double ratio_NH4 = (couplingInterface_soilWaterNh4Concentration[soilLayer] +
-                                            couplingInterface_soilWaterNo3Concentration[soilLayer] >
+                        double nh4ConcentrationPlantUptakeInLayer = std::min(couplingInterface_soilWaterNh4Concentration[soilLayer], maxDissolvedNitrogenConcentration);
+                        double no3ConcentrationPlantUptakeInLayer = std::min(couplingInterface_soilWaterNo3Concentration[soilLayer], maxDissolvedNitrogenConcentration);
+                        double fractionNh4 = (nh4ConcentrationPlantUptakeInLayer +
+                                            no3ConcentrationPlantUptakeInLayer >
                                         0)
-                                           ? (couplingInterface_soilWaterNh4Concentration[soilLayer]) /
-                                                 (couplingInterface_soilWaterNh4Concentration[soilLayer] +
-                                                  couplingInterface_soilWaterNo3Concentration[soilLayer])
+                                           ? (nh4ConcentrationPlantUptakeInLayer) /
+                                                 (nh4ConcentrationPlantUptakeInLayer +
+                                                  no3ConcentrationPlantUptakeInLayer)
                                            : 0;
+                        requestedDiffusionPerPlant[cohortindex][soilLayer] = diffusiveCapacityPerPlantByLayer[soilLayer] * remainingNitrogenDemandKgPerPlant / totalDiffusiveCapacityKgPerPlant;
+                        totalRequestedNh4[soilLayer] += community.allPlants.at(cohortindex)->amount * requestedDiffusionPerPlant[cohortindex][soilLayer] * fractionNh4;
+                        totalRequestedNo3[soilLayer] += community.allPlants.at(cohortindex)->amount * requestedDiffusionPerPlant[cohortindex][soilLayer] * (1-fractionNh4);
 
-                    n_diff_node = (surface * couplingInterface_diffusionFactor[soilLayer]*(couplingInterface_soilWaterNh4Concentration[soilLayer]+couplingInterface_soilWaterNo3Concentration[soilLayer])/std::pow(M_PI*rootBiomassInLayer*meanSpecificRootLength,-0.5));
-
-                    n_diff_node = (usepot) ? n_diff_pot * (n_diff_node / n_diff) : n_diff_node;
-
-                    couplingInterface_plantNh4UptakePerSoilLayer[soilLayer] += community.allPlants.at(cohortindex)->amount * (n_diff_node * ratio_NH4);       // kg
-                    couplingInterface_plantNo3UptakePerSoilLayer[soilLayer] += community.allPlants.at(cohortindex)->amount * (n_diff_node * (1 - ratio_NH4)); // kg
-                    community.allPlants.at(cohortindex)->soilNitrogenUptakePerSoilLayer[soilLayer] += n_diff_node * 1000;                                     // g
-                    community.allPlants.at(cohortindex)->totalSoilNitrogenUptake += n_diff_node * 1000;                                                       // g
+                    }
                 }
-                n_diff = (usepot) ? n_diff_pot : n_diff;
-                total_n = n_conv + n_diff;
+                else
+                {
+                    for (int soilLayer = 0; soilLayer < community.allPlants.at(cohortindex)->numberOfSoilLayersRooting; soilLayer++)
+                    {
+                        double nh4ConcentrationPlantUptakeInLayer = std::min(couplingInterface_soilWaterNh4Concentration[soilLayer], maxDissolvedNitrogenConcentration);
+                        double no3ConcentrationPlantUptakeInLayer = std::min(couplingInterface_soilWaterNo3Concentration[soilLayer], maxDissolvedNitrogenConcentration);
+                        double fractionNh4 = (nh4ConcentrationPlantUptakeInLayer +
+                                            no3ConcentrationPlantUptakeInLayer >
+                                        0)
+                                           ? (nh4ConcentrationPlantUptakeInLayer) /
+                                                 (nh4ConcentrationPlantUptakeInLayer +
+                                                  no3ConcentrationPlantUptakeInLayer)
+                                           : 0;
+                        requestedDiffusionPerPlant[cohortindex][soilLayer] = diffusiveCapacityPerPlantByLayer[soilLayer];
+                        totalRequestedNh4[soilLayer] += community.allPlants.at(cohortindex)->amount * requestedDiffusionPerPlant[cohortindex][soilLayer] * fractionNh4;
+                        totalRequestedNo3[soilLayer] += community.allPlants.at(cohortindex)->amount * requestedDiffusionPerPlant[cohortindex][soilLayer] * (1-fractionNh4);
+                    }
+                }
+            }
+        }
+    }
+    
+    for (int soilLayer = 0; soilLayer < parameter.numberOfSoilLayers; soilLayer++)
+    {
+        double nh4ConcentrationPlantUptakeInLayer = std::min(couplingInterface_soilWaterNh4Concentration[soilLayer], maxDissolvedNitrogenConcentration);
+        double no3ConcentrationPlantUptakeInLayer = std::min(couplingInterface_soilWaterNo3Concentration[soilLayer], maxDissolvedNitrogenConcentration);
+        double fractionNh4 = (nh4ConcentrationPlantUptakeInLayer +
+                                no3ConcentrationPlantUptakeInLayer >
+                            0)
+                                ? (nh4ConcentrationPlantUptakeInLayer) /
+                                        (nh4ConcentrationPlantUptakeInLayer +
+                                        no3ConcentrationPlantUptakeInLayer)
+                                : 0;
+            
+
+        // esure not more nitrogen is uptaken than available
+        const double remainingNh4 = std::max(
+            0.0,
+            couplingInterface_soilWaterNh4Concentration[soilLayer] *
+                couplingInterface_waterContentPerSoilLayer[soilLayer]
+                - couplingInterface_plantNh4UptakePerSoilLayer[soilLayer]);
+
+        const double remainingNo3 = std::max(
+            0.0,
+            couplingInterface_soilWaterNo3Concentration[soilLayer] *
+                couplingInterface_waterContentPerSoilLayer[soilLayer]
+                - couplingInterface_plantNo3UptakePerSoilLayer[soilLayer]);
+        const double nh4Factor = totalRequestedNh4[soilLayer] > 0
+            ? std::min(1.0, remainingNh4 / totalRequestedNh4[soilLayer])
+            : 0.0;
+
+        const double no3Factor = totalRequestedNo3[soilLayer] > 0
+            ? std::min(1.0, remainingNo3 / totalRequestedNo3[soilLayer])
+            : 0.0;
+        for (int cohortindex = 0; cohortindex < community.totalNumberOfCohortsInCommunity; cohortindex++)
+        {
+            if (community.allPlants.at(cohortindex)->amount > 0 && community.allPlants.at(cohortindex)->numberOfSoilLayersRooting > soilLayer)
+            {
+                const double nitrogenDemandKgPerPlant = community.allPlants.at(cohortindex)->totalSoilNitrogenDemand / 1000; // concversion from g to kg (per squaremeter and day)
+                const double actualConvectiveUptakeKgPerPlant = community.allPlants.at(cohortindex)->totalSoilNitrogenUptake / 1000; // concversion from g to kg (per squaremeter and day)
+
+                // if convection is not enough, we need diffusion
+                if (actualConvectiveUptakeKgPerPlant < nitrogenDemandKgPerPlant)
+                {
+                
+                    
+                    const double actualDiffusiveNh4UptakePerPlantInLayer = requestedDiffusionPerPlant[cohortindex][soilLayer] * fractionNh4 * nh4Factor;
+                    const double actualDiffusiveNo3UptakePerPlantInLayer = requestedDiffusionPerPlant[cohortindex][soilLayer] * (1 - fractionNh4) * no3Factor;
+            
+                    const double actualDiffusiveUptakePerPlantInLayer = actualDiffusiveNh4UptakePerPlantInLayer+actualDiffusiveNo3UptakePerPlantInLayer;
+
+                    couplingInterface_plantNh4UptakePerSoilLayer[soilLayer] += community.allPlants.at(cohortindex)->amount * actualDiffusiveNh4UptakePerPlantInLayer;       // kg all plants
+                    couplingInterface_plantNo3UptakePerSoilLayer[soilLayer] += community.allPlants.at(cohortindex)->amount * actualDiffusiveNo3UptakePerPlantInLayer;       // kg all plants
+                    community.allPlants.at(cohortindex)->soilNitrogenUptakePerSoilLayer[soilLayer] += actualDiffusiveUptakePerPlantInLayer * 1000;                      // g per plant
+                    community.allPlants.at(cohortindex)->totalSoilNitrogenUptake += actualDiffusiveUptakePerPlantInLayer * 1000;                                        // g per plant
+                }
             }
         }
     }

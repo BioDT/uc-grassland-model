@@ -177,19 +177,22 @@ cdef class GrassmindModel():
     ## set extern soil module coupling variables
     def set_water_potential_per_soil_layer(self, np.ndarray[np.double_t, ndim=1] values):
         self.py_grassmind.setWaterPotential(values)
+    def set_theta_per_soil_layer(self, np.ndarray[np.double_t, ndim=1] values):
+        self.py_grassmind.setTheta(values)
+    def set_water_content_per_soil_layer(self, np.ndarray[np.double_t, ndim=1] values):
+        self.py_grassmind.setWaterContent_plantSoilWaterUptake(values) # use existing self-coupling variable setter
     def set_nh4_concentration_per_soil_layer(self, np.ndarray[np.double_t, ndim=1] values):
         self.py_grassmind.setNh4Concentration(values)
     def set_no3_concentration_per_soil_layer(self, np.ndarray[np.double_t, ndim=1] values):
         self.py_grassmind.setNo3Concentration(values)
-    def set_diffusion_factor_per_soil_layer(self, np.ndarray[np.double_t, ndim=1] values):
-        self.py_grassmind.setDiffusionFactor(values)
 
     ## fast coupling
     def set_interfaces_run_simulation_step_get_interfaces(self,
             np.ndarray[np.double_t, ndim=1, mode="c"] waterPotential,
+            np.ndarray[np.double_t, ndim=1, mode="c"] theta,
+            np.ndarray[np.double_t, ndim=1, mode="c"] waterContent,
             np.ndarray[np.double_t, ndim=1, mode="c"] nh4Concentration,
-            np.ndarray[np.double_t, ndim=1, mode="c"] no3Concentration,
-            np.ndarray[np.double_t, ndim=1, mode="c"] diffusionFactor,):
+            np.ndarray[np.double_t, ndim=1, mode="c"] no3Concentration):
         """Run one simulation step and exchange interface data with raw pointers.
 
         All array arguments are modified in-place. Returns a tuple of
@@ -199,7 +202,8 @@ cdef class GrassmindModel():
         cdef size_t n = <size_t>waterPotential.shape[0]
         if (nh4Concentration.shape[0] != n or
                 no3Concentration.shape[0] != n or
-                diffusionFactor.shape[0] != n):
+                theta.shape[0] != n or
+                waterContent.shape[0] != n):
             raise ValueError("All input arrays must have the same length")
 
         cdef double soilWaterSurfaceInput = 0.0
@@ -221,9 +225,10 @@ cdef class GrassmindModel():
 
         self.py_grassmind.setInterfacesRunSimulationStepGetInterfaces(
             <const double*>waterPotential.data,
+            <const double*>theta.data,
+            <const double*>waterContent.data,
             <const double*>nh4Concentration.data,
             <const double*>no3Concentration.data,
-            <const double*>diffusionFactor.data,
             n,
             <double*>rootVolume_managementTime.data,
             <double*>rootVolume_plantTime.data,

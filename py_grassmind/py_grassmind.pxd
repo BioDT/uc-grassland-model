@@ -66,16 +66,17 @@ cdef extern from "../src/pythoninterface/pythoninterface.h":
 
         ## set extern soil module coupling variables
         void setWaterPotential(vector[double] values) except + nogil
+        void setTheta(vector[double] values) except + nogil
         void setNh4Concentration(vector[double] values) except + nogil
         void setNo3Concentration(vector[double] values) except + nogil
-        void setDiffusionFactor(vector[double] values) except + nogil
 
         ## fast coupling
         void setInterfacesRunSimulationStepGetInterfaces(
             const double* waterPotential,
+            const double* theta,
+            const double* waterContent,
             const double* nh4Concentration,
             const double* no3Concentration,
-            const double* diffusionFactor,
             size_t numberOfSoilLayers,
             double* rootVolume_managementTime,
             double* rootVolume_plantTime,

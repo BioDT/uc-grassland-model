@@ -127,7 +127,7 @@ public:
 
     /**
      * @brief Per-layer pore-water NH₄ concentration provided by BODIUM
-     *        (kg N m⁻³ or equivalent). Replaces `couplingInterface_nitrogenContentPerSoilLayer`.
+     *        (kg N kg⁻¹ water). Replaces `couplingInterface_nitrogenContentPerSoilLayer`.
      */
     std::vector<double> couplingInterface_soilWaterNh4Concentration;
 
@@ -135,12 +135,12 @@ public:
      * @brief Per-layer pore-water NO₃ concentration provided by BODIUM
      *        (same units as `couplingInterface_soilWaterNh4Concentration`).
      */
-    std::vector<double> couplingInterface_soilWaterNo3Concentration;
-
+    std::vector<double> couplingInterface_soilWaterNo3Concentration; 
+    
     /**
-     * @brief Per-layer diffusion factor (BODIUMs "dispcoef" times "theWaterpore->watercontent()") provided by BODIUM for the calculation of diffusive nitrogen uptake.
+     * @brief Per-layer theta (volumetric water content).
      */
-    std::vector<double> couplingInterface_diffusionFactor;              
+    std::vector<double>couplingInterface_thetaPerSoilLayer;
 
     /**
      * @brief Per-layer plant NH₄ uptake exported to BODIUM (kg N m⁻² d⁻¹).
@@ -733,7 +733,7 @@ public:
     /**
      * @brief Routes dying plant biomass C/N to the appropriate litter pool.
      */
-    void transferDyingPlantPartsToLitterPools(UTILS utils, PARAMETER parameter, double number, double biomass, std::string typeOfMaterial, int pft, int numberOfTargetSoilLayers = 0);
+    void transferDyingPlantPartsToLitterPools(UTILS utils, PARAMETER parameter, double number, double biomass, std::string typeOfMaterial, int pft, int numberOfTargetSoilLayers = 0, double rootingDepthCm = 0.0);
 
     /**
      * @brief Calculates water limitation and plant water uptake using the BODIUM
@@ -745,6 +745,23 @@ public:
      * @brief Calculates plant N uptake using the BODIUM convection + diffusion model.
      */
     void calculateBodiumSoilNitrogenUptake(UTILS utils, PARAMETER parameter, COMMUNITY &community);
+
+    /**
+     * @brief Calculates one plant's root length in each soil layer.
+     */
+    std::vector<double> calculateRootLengthPerSoilLayer(
+        PARAMETER parameter,
+        PLANT &plant,
+        double specificRootLengthMPerG);
+
+    /**
+     * @brief Distributes cohort roots over soil layers and calculates aggregate
+     *        root-length density (m root m⁻³ soil) in each layer.
+     */
+    std::vector<double> calculateRootLengthDensityPerSoilLayer(
+        PARAMETER parameter,
+        COMMUNITY &community,
+        double specificRootLengthMPerG);
 
     /**
      * @brief Orchestrates all soil resource dynamics (water + C/N) for one day.

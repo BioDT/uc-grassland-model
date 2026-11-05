@@ -1396,6 +1396,10 @@ void INPUT::openAndReadSoilFile(std::string path, UTILS utils, PARAMETER &parame
                     parameter.numberOfSoilLayers += 1;
 
                     value = utils.strings.at(1).c_str();
+                    if (atof(value) <= 0)
+                    {
+                        throw std::runtime_error("Error (soil input): soil layer width is negative. Please check the soil file.");
+                    }
                     parameter.soilLayerWidth.push_back(atof(value));
                     parameter.soilDepth += atof(value);
 
