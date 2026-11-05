@@ -179,7 +179,11 @@ void MORTALITY::doLeafLitterFall(UTILS utils, COMMUNITY &community, ALLOMETRY al
         double fractionLeavesFalling = parameter.brownBiomassFractionFalling;
         (parameter.day % 365 == 0) ? (fractionLeavesFalling = 1) : (fractionLeavesFalling = fractionLeavesFalling);
 
-        if (fractionLeavesFalling > 0)
+        if (fractionLeavesFalling > 1 || fractionLeavesFalling < 0)
+        {
+            throw std::runtime_error("MORTALITY::doLeafLitterFall(): brownBiomassFractionFalling must be between 0 and 1.");
+        }
+        else if (fractionLeavesFalling > 0)
         {
             double fallingLeafBiomass = fractionLeavesFalling * community.allPlants.at(cohortIndex)->shootBiomassBrownLeaves;
 

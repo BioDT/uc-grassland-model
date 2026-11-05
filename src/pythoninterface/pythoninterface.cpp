@@ -473,8 +473,7 @@ std::vector<double> PYTHONINTERFACE::getRootLitterCnRatio()
         else
         {
             throw std::runtime_error(
-                "Positive root litter carbon flux without "
-                "a positive nitrogen flux.");
+                "Invalid root litter carbon or nitrogen flux");
         }
     }
     return cnRatios;
@@ -501,8 +500,7 @@ std::vector<double> PYTHONINTERFACE::getRootExudatesCnRatio()
         else
         {
             throw std::runtime_error(
-                "Positive exudate carbon flux without "
-                "a positive nitrogen flux.");
+                "Invalid root exudate carbon or nitrogen flux");
         }
     }
     return cnRatios;
@@ -526,8 +524,7 @@ double PYTHONINTERFACE::getSurfaceLitterCnRatio()
     else
     {
         throw std::runtime_error(
-            "Positive surface litter carbon flux without "
-            "a positive nitrogen flux.");
+            "Invalid surface litter carbon or nitrogen flux");
     }
     return surfaceLitterCn;
 }

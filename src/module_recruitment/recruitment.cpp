@@ -334,7 +334,7 @@ void RECRUITMENT::seedlingCrowdingMortality(UTILS utils, PARAMETER parameter, CO
 
     if (newCoveredAreaOfAllPlants > SIMULATION_AREA)
     {
-        availableSpaceForNewSeedlings = std::max(SIMULATION_AREA - community.coveredAreaOfAllPlants, 0.0);
+        availableSpaceForNewSeedlings = std::max(SIMULATION_AREA - coveredAreaOfAllPlants, 0.0);
         reductionOfNewSeedlingsByCrowding = availableSpaceForNewSeedlings / requiredSpaceForNewSeedlings;
 
         for (int pft = 0; pft < parameter.pftCount; pft++)
