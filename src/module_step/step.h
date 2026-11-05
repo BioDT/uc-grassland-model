@@ -80,6 +80,12 @@ public:
     void fillPFTBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, OUTPUT &output, std::string date);
 
     /**
+     * @brief Appends one row per PFT of diversity-level variables to
+     *        `output.bufferDiversity`.
+     */
+    void fillDiversityBuffer(UTILS utils, PARAMETER parameter, COMMUNITY community, OUTPUT &output, std::string date);
+
+    /**
      * @brief Appends one row per cohort of individual-level variables to
      *        `output.bufferPlant`.
      */

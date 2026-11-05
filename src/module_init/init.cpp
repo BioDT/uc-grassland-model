@@ -187,11 +187,20 @@ void INIT::resetVegetationProcessVariables(PARAMETER parameter, RECRUITMENT &rec
 
     /// Output-related variables
     community.totalNumberOfPlantsInCommunity = 0;
+    community.plantBiomassOfAllPlants = 0.0;
     community.greenBiomassYield = 0.0;
     community.brownBiomassYield = 0.0;
     community.biomassYield = 0.0;
 
-    community.pftComposition.assign(parameter.pftCount, 0);
+    community.shannonWienerIndexPlantNumber = 0.0;
+    community.shannonWienerIndexPlantBiomass = 0.0;
+    community.shannonWienerIndexShootBiomass = 0.0;
+    community.shannonWienerIndexCoveredArea = 0.0;
+
+    community.pftCompositionPlantNumber.assign(parameter.pftCount, 0);
+    community.pftCompositionPlantBiomass.assign(parameter.pftCount, 0);
+    community.pftCompositionShootBiomass.assign(parameter.pftCount, 0);
+    community.pftCompositionCoveredArea.assign(parameter.pftCount, 0);
     community.numberOfPlantsPerPFT.assign(parameter.pftCount, 0);
 
     community.coveredAreaOfPlantsPerPFT.assign(parameter.pftCount, 0.0);

@@ -1,0 +1,16 @@
+remote_theme: pages-themes/minimal@v0.2.0
+
+plugins:
+  - jekyll-remote-theme
+
+title:         
+description: An individual-based and process-oriented grassland model combining biodiversity and biogeochemical cycles
+logo: assets/images/255605_logo_grassmind_long.jpg
+show_downloads: true
+
+github:
+  zip_url: https://github.com/BioDT/uc-grassland-model/archive/refs/heads/main.zip
+  tar_url: https://github.com/BioDT/uc-grassland-model/archive/refs/heads/main.tar.gz
+
+baseurl: /uc-grassland-model
+url: https://biodt.github.io

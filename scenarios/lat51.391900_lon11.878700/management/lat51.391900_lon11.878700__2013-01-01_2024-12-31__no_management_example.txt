@@ -1,0 +1,2 @@
+Date	MowHeight[m]	Fertilizer[gm-2]	Irrigation[mm]	Seeds_PFT1	Seeds_PFT2	Seeds_PFT3	Data source
+2013-09-24	NaN	NaN	NaN	2845	1200	500	Event observed

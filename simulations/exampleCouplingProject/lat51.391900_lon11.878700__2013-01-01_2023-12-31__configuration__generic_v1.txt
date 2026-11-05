@@ -74,6 +74,10 @@ plantCohortOutputFile	false
 \datatype:boolean
 \description:results on vegetation state variables for each single plant cohort
 
+diversityOutputFile	false
+\datatype:boolean
+\description:results on fractions of PFTs (plant number, biomass, cover) and the respective Shannon Wiener Index
+
 soilCarbonOutputFile	true
 \datatype:boolean
 \description:results on soil carbon dynamics (state variables and fluxes)

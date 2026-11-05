@@ -42,7 +42,11 @@ void OUTPUT::updateVegetationStateVariablesForOutput(PARAMETER parameter, COMMUN
         for (int cohortindex = 0; cohortindex < community.allPlants.size(); cohortindex++)
         {
             // PFT-specific calculations
-            community.pftComposition[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->amount;
+            community.pftCompositionPlantNumber[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->amount;
+            community.pftCompositionShootBiomass[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->shootBiomass * community.allPlants[cohortindex]->amount;
+            community.pftCompositionPlantBiomass[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->plantBiomass * community.allPlants[cohortindex]->amount;
+            community.pftCompositionCoveredArea[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->coveredArea * community.allPlants[cohortindex]->amount;
+
             community.numberOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->amount;
             community.coveredAreaOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->coveredArea * community.allPlants[cohortindex]->amount;
             community.shootBiomassOfPlantsPerPFT[community.allPlants[cohortindex]->pft] += community.allPlants[cohortindex]->shootBiomass * community.allPlants[cohortindex]->amount;
@@ -69,6 +73,7 @@ void OUTPUT::updateVegetationStateVariablesForOutput(PARAMETER parameter, COMMUN
             community.carbonRespirationOfAllPlants += community.allPlants[cohortindex]->totalRespiration * community.allPlants[cohortindex]->amount * CARBON_CONTENT_ODM;
             community.carbonNPPOfAllPlants += community.allPlants[cohortindex]->npp * community.allPlants[cohortindex]->amount * CARBON_CONTENT_ODM;
             community.abovegroundBiomassOfAllPlants += community.allPlants[cohortindex]->shootBiomass * community.allPlants[cohortindex]->amount;
+            community.plantBiomassOfAllPlants += community.allPlants[cohortindex]->plantBiomass * community.allPlants[cohortindex]->amount;
         }
 
         // Normalizations
@@ -76,8 +81,53 @@ void OUTPUT::updateVegetationStateVariablesForOutput(PARAMETER parameter, COMMUN
         {
             for (int pft = 0; pft < parameter.pftCount; pft++)
             {
-                community.pftComposition[pft] *= 100.0 / community.totalNumberOfPlantsInCommunity;
+                community.pftCompositionPlantNumber[pft] *= 100.0 / community.totalNumberOfPlantsInCommunity;
             }
+        }
+
+        if (community.abovegroundBiomassOfAllPlants > 0)
+        {
+            for (int pft = 0; pft < parameter.pftCount; pft++)
+            {
+                community.pftCompositionShootBiomass[pft] *= 100.0 / community.abovegroundBiomassOfAllPlants;
+            }
+        }
+
+        if (community.plantBiomassOfAllPlants > 0)
+        {
+            for (int pft = 0; pft < parameter.pftCount; pft++)
+            {
+                community.pftCompositionPlantBiomass[pft] *= 100.0 / community.plantBiomassOfAllPlants;
+            }
+        }
+
+        if (community.coveredAreaOfAllPlants > 0)
+        {
+            for (int pft = 0; pft < parameter.pftCount; pft++)
+            {
+                community.pftCompositionCoveredArea[pft] *= 100.0 / community.coveredAreaOfAllPlants;
+            }
+        }
+    }
+
+    // calculations of Shannon-Wiener indices
+    for (int pft = 0; pft < parameter.pftCount; pft++)
+    {
+        if (community.pftCompositionPlantNumber[pft] > 0)
+        {
+            community.shannonWienerIndexPlantNumber += (-(community.pftCompositionPlantNumber[pft] / 100) * std::log(community.pftCompositionPlantNumber[pft] / 100));
+        }
+        if (community.pftCompositionPlantBiomass[pft] > 0)
+        {
+            community.shannonWienerIndexPlantBiomass += (-(community.pftCompositionPlantBiomass[pft] / 100) * std::log(community.pftCompositionPlantBiomass[pft] / 100));
+        }
+        if (community.pftCompositionShootBiomass[pft] > 0)
+        {
+            community.shannonWienerIndexShootBiomass += (-(community.pftCompositionShootBiomass[pft] / 100) * std::log(community.pftCompositionShootBiomass[pft] / 100));
+        }
+        if (community.pftCompositionCoveredArea[pft] > 0)
+        {
+            community.shannonWienerIndexCoveredArea += (-(community.pftCompositionCoveredArea[pft] / 100) * std::log(community.pftCompositionCoveredArea[pft] / 100));
         }
     }
     // calculations from soil state variables
@@ -115,7 +165,7 @@ void OUTPUT::updateVegetationStateVariablesForOutput(PARAMETER parameter, COMMUN
 void OUTPUT::prepareModelOutput(std::string path, UTILS utils, PARAMETER &parameter)
 {
     createOutputFolder(path, utils);
-    createAndOpenOutputFiles(utils, parameter);
+    createAndOpenOutputFiles(path, utils, parameter);
     writeHeaderInOutputFiles(utils, parameter);
     openAndReadOutputWritingDates(path, utils, parameter);
 }
@@ -149,7 +199,7 @@ void OUTPUT::prepareModelOutput(std::string path, UTILS utils, PARAMETER &parame
  * @param parameter Read-only; provides coordinates, year range, RNG seed, file flags,
  *                  and `plantTraitsFile` for suffix derivation.
  */
-void OUTPUT::createAndOpenOutputFiles(UTILS utils, PARAMETER parameter)
+void OUTPUT::createAndOpenOutputFiles(std::string path, UTILS utils, PARAMETER parameter)
 {
     utils.strings.clear();
     utils.splitString(parameter.plantTraitsFile, '/');
@@ -158,6 +208,7 @@ void OUTPUT::createAndOpenOutputFiles(UTILS utils, PARAMETER parameter)
     std::string runNumber = (parameter.randomNumberGeneratorSeed < 10) ? ("00" + std::to_string(parameter.randomNumberGeneratorSeed)) : ((parameter.randomNumberGeneratorSeed < 100) ? ("0" + std::to_string(parameter.randomNumberGeneratorSeed)) : (std::to_string(parameter.randomNumberGeneratorSeed)));
     std::string endingRandomSeed = "__run" + runNumber;
     std::string plantTraitsFile = utils.strings.at(1);
+
     utils.strings.clear();
     utils.splitString(plantTraitsFile, '_');
     std::string endingParameter = utils.strings.at(utils.strings.size() - 2) + "_" + utils.strings.at(utils.strings.size() - 1);
@@ -165,6 +216,7 @@ void OUTPUT::createAndOpenOutputFiles(UTILS utils, PARAMETER parameter)
     std::string filenameCommunity = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputCommunity__" + endingParameter;
     std::string filenamePFTPopulation = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputPFT__" + endingParameter;
     std::string filenamePlant = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputPlant__" + endingParameter;
+    std::string filenameDiversity = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputDiversity__" + endingParameter;
     std::string filenameSoilCarbon = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputSoilCarbon__" + endingParameter;
     std::string filenameSoilNitrogen = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputSoilNitrogen__" + endingParameter;
     std::string filenameSoilWater = outputDirectory + endingLocation + endingYears + endingRandomSeed + "__outputSoilWater__" + endingParameter;
@@ -195,6 +247,15 @@ void OUTPUT::createAndOpenOutputFiles(UTILS utils, PARAMETER parameter)
         if (!outputPlant.is_open())
         {
             utils.handleError("Error writing to the plant / cohorte output file.");
+        }
+    }
+
+    if (parameter.diversityOutputFile)
+    {
+        outputDiversity.open(filenameDiversity);
+        if (!outputDiversity.is_open())
+        {
+            utils.handleError("Error writing to the diversity output file.");
         }
     }
 
@@ -323,6 +384,21 @@ void OUTPUT::writeHeaderInOutputFiles(UTILS utils, PARAMETER parameter)
             outputPlant << "Radiation\tShadingIndicator\tLimitingFactorWater\tLimitingFactorNitrogen\t";
             outputPlant << "AllocationShoot\tAllocationRoot\tAllocationRecruitment\tAllocationExudation";
             outputPlant << std::endl;
+        }
+    }
+
+    if (parameter.diversityOutputFile)
+    {
+        if (!outputDiversity.is_open())
+        {
+            utils.handleError("Error writing to the diversity output file.");
+        }
+        else
+        {
+            outputDiversity << "Date\tDayCount\tPFT\tFractionNumber\t";
+            outputDiversity << "FractionShootBiomass\tFractionPlantBiomass\t";
+            outputDiversity << "FractionCover";
+            outputDiversity << std::endl;
         }
     }
 
@@ -595,6 +671,20 @@ void OUTPUT::writeSimulationResultsToOutputFiles(UTILS utils, PARAMETER paramete
         }
     }
 
+    if (parameter.diversityOutputFile)
+    {
+        if (outputDiversity.is_open())
+        {
+            outputDiversity << bufferDiversity.str();
+            bufferDiversity.str("");
+            bufferDiversity.clear();
+        }
+        else
+        {
+            utils.handleError("The output file of diversity variables is not open for writing.");
+        }
+    }
+
     if (parameter.soilCarbonOutputFile)
     {
         if (outputSoilCarbon.is_open())
@@ -711,6 +801,18 @@ void OUTPUT::closeOutputFiles(UTILS utils, PARAMETER parameter)
         else
         {
             utils.handleError("The output file of single plant variables / cohorts is not open.");
+        }
+    }
+
+    if (parameter.diversityOutputFile)
+    {
+        if (outputDiversity.is_open())
+        {
+            outputDiversity.close();
+        }
+        else
+        {
+            utils.handleError("The output file of diversity variables is not open.");
         }
     }
 
