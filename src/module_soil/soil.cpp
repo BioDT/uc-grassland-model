@@ -378,12 +378,18 @@ double SOIL::evaporationOfSnow(UTILS utils, WEATHER weather, PARAMETER parameter
 
         if (solidSnowContent < 0.0)
         {
-            utils.handleError("Solid snow pack is below 0 through evaporation / sublimation.");
+            if (solidSnowContent < -NUMERIC_TOLERANCE)
+            {
+                utils.handleWarning("Solid snow pack is below 0 through evaporation / sublimation; clamping to 0.");
+            }
             solidSnowContent = 0.0;
         }
         if (liquidSnowContent < 0.0)
         {
-            utils.handleError("Liquid snow pack is below 0 through evaporation / sublimation.");
+            if (liquidSnowContent < -NUMERIC_TOLERANCE)
+            {
+                utils.handleWarning("Liquid snow pack is below 0 through evaporation / sublimation; clamping to 0.");
+            }
             liquidSnowContent = 0.0;
         }
 
@@ -590,8 +596,11 @@ double SOIL::estimateSoilSurfaceAffectedBySoilEvaporation(UTILS utils, COMMUNITY
 
     if (canopyClosure > 1.0)
     {
+        if (canopyClosure > 1.0 + NUMERIC_TOLERANCE)
+        {
+            utils.handleWarning("Canopy closure exceeds 1.0; clamping to 1.0.");
+        }
         canopyClosure = 1.0;
-        utils.handleWarning("Canopy closure is above 1.0, setting to 1.0");
     }
 
     return (1.0 - canopyClosure);
